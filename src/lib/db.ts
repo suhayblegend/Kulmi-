@@ -298,6 +298,32 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
   return (data as Profile[]).filter((p) => !excluded.has(p.id)).slice(0, 50);
 }
 
+export interface SentInvitation {
+  id: string;
+  receiver_id: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+  receiver: Profile;
+}
+
+/** Invitations the user has sent, so they can see progress (awaiting / declined). */
+export async function listMySentInvitations(): Promise<SentInvitation[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data } = await supabase
+    .from('invitations')
+    .select('id, receiver_id, status, created_at')
+    .eq('sender_id', uid)
+    .in('status', ['pending', 'declined'])
+    .order('created_at', { ascending: false });
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+  const ids = [...new Set(rows.map((r: any) => r.receiver_id))];
+  const { data: profs } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.in('id', ids));
+  const byId = new Map(((profs as any[]) ?? []).map((p: any) => [p.id, p as Profile]));
+  return rows.filter((r: any) => byId.has(r.receiver_id)).map((r: any) => ({ ...r, receiver: byId.get(r.receiver_id)! }));
+}
+
 /** How many introductions the user has open right now (pending sent invites + active sessions). */
 export async function countMyOpenThreads(): Promise<number> {
   const uid = await getCurrentUserId();

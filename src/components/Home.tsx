@@ -5,6 +5,7 @@ import {
   discoverCandidates,
   listIncomingInvitations,
   listActiveSessions,
+  listMySentInvitations,
   countMyOpenThreads,
   sendInvitation,
   respondToInvitation,
@@ -12,9 +13,15 @@ import {
   COMPATIBILITY_QUESTIONS,
   type Profile,
   type InvitationWithProfile,
+  type SentInvitation,
   type SessionSummary,
   type DiscoverFilters,
 } from '../lib/db';
+
+const DISMISSED_KEY = 'kulmi_dismissed_declines';
+const loadDismissed = (): Set<string> => {
+  try { return new Set(JSON.parse(localStorage.getItem(DISMISSED_KEY) || '[]')); } catch { return new Set(); }
+};
 
 interface HomeProps {
   onOpenSession: (sessionId: string) => void;
@@ -37,6 +44,16 @@ export function Home({ onOpenSession }: HomeProps) {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [viewingInvite, setViewingInvite] = useState<InvitationWithProfile | null>(null);
   const [openThreads, setOpenThreads] = useState(0);
+  const [sent, setSent] = useState<SentInvitation[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(loadDismissed);
+
+  const dismissDecline = (id: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev).add(id);
+      try { localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
@@ -47,16 +64,18 @@ export function Home({ onOpenSession }: HomeProps) {
     setLoading(true);
     setError('');
     try {
-      const [cands, incoming, active, open] = await Promise.all([
+      const [cands, incoming, active, open, mySent] = await Promise.all([
         discoverCandidates(f),
         listIncomingInvitations(),
         listActiveSessions(),
         countMyOpenThreads(),
+        listMySentInvitations(),
       ]);
       setCandidates(cands);
       setInvites(incoming);
       setSessions(active);
       setOpenThreads(open);
+      setSent(mySent);
       setIndex(0);
     } catch (err: any) {
       setError(err.message || 'Could not load matches.');
@@ -289,6 +308,8 @@ export function Home({ onOpenSession }: HomeProps) {
               const total = COMPATIBILITY_QUESTIONS.length;
               const label = s.status === 'completed'
                 ? "It's a match — open chat"
+                : s.myAnsweredCount === 0
+                ? '🎉 Accepted — start your session'
                 : s.myAnsweredCount < total
                 ? `Continue — ${s.myAnsweredCount}/${total} answered`
                 : s.bothFinished
@@ -314,6 +335,42 @@ export function Home({ onOpenSession }: HomeProps) {
           </div>
         </div>
       )}
+
+      {/* Your sent invitations — progress feedback */}
+      {(() => {
+        const pendingSent = sent.filter((s) => s.status === 'pending');
+        const declinedSent = sent.filter((s) => s.status === 'declined' && !dismissed.has(s.id));
+        if (pendingSent.length === 0 && declinedSent.length === 0) return null;
+        return (
+          <div className="w-full border border-[#E5E0D8] bg-white shadow-sm rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#E5E0D8] bg-[#FDFBF7] flex items-center gap-2">
+              <Send className="w-4 h-4 text-[#1B4332]" />
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[#1B4332]">Your invitations</h3>
+            </div>
+            <div className="divide-y divide-[#F0EEE8]">
+              {pendingSent.map((s) => (
+                <div key={s.id} className="flex items-center gap-4 p-4">
+                  <img src={avatarFor(s.receiver)} alt="" className="w-11 h-11 rounded-full object-cover border border-[#E5E0D8]" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-serif font-medium text-[#1B4332] truncate">{s.receiver.first_name}{s.receiver.age ? `, ${s.receiver.age}` : ''}</p>
+                    <p className="text-xs text-[#8B7355]">⏳ Awaiting their response</p>
+                  </div>
+                </div>
+              ))}
+              {declinedSent.map((s) => (
+                <div key={s.id} className="flex items-center gap-4 p-4 opacity-80">
+                  <img src={avatarFor(s.receiver)} alt="" className="w-11 h-11 rounded-full object-cover border border-[#E5E0D8] grayscale" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-serif font-medium text-[#5C574F] truncate">{s.receiver.first_name}</p>
+                    <p className="text-xs text-[#8B7355]">Not this time — it wasn't the right fit. Keep going, in shaa Allah.</p>
+                  </div>
+                  <button onClick={() => dismissDecline(s.id)} className="text-xs font-medium text-[#8B7355] hover:text-[#1B4332] px-2">Dismiss</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Candidate to invite */}
       {invites.length > 0 ? (
