@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Search, Heart, Loader2 } from 'lucide-react';
+import { Search, Heart, Loader2, BadgeCheck } from 'lucide-react';
 import { listChats, avatarFor, type ChatSummary } from '../lib/db';
 
 interface ChatsProps {
@@ -90,9 +90,11 @@ export function Chats({ onSelectChat }: ChatsProps) {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-serif font-medium text-lg text-[#1B4332] truncate pr-4">
-                      {chat.partner.first_name}
-                      {chat.partner.age ? `, ${chat.partner.age}` : ''}
+                    <h3 className="font-serif font-medium text-lg text-[#1B4332] truncate pr-4 flex items-center gap-1.5">
+                      <span className="truncate">{chat.partner.first_name}{chat.partner.age ? `, ${chat.partner.age}` : ''}</span>
+                      {(chat.partner.verification_status === 'verified' || chat.partner.photo_verified) && (
+                        <BadgeCheck className="w-4 h-4 text-[#1B4332] shrink-0" />
+                      )}
                     </h3>
                     <span className="text-xs whitespace-nowrap text-[#8B7355]">{timeAgo(chat.lastMessageAt)}</span>
                   </div>

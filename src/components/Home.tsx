@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, UserMinus, Check, X, MapPin, Send, Inbox, SlidersHorizontal } from 'lucide-react';
+import { Loader2, UserMinus, Check, X, MapPin, Send, Inbox, SlidersHorizontal, BadgeCheck } from 'lucide-react';
 import {
   discoverCandidates,
   listIncomingInvitations,
@@ -312,20 +312,39 @@ export function Home({ onOpenSession }: HomeProps) {
             exit={{ opacity: 0, y: -12 }}
             className="w-full border border-[#E5E0D8] bg-white shadow-sm rounded-2xl overflow-hidden"
           >
-            <div className="h-56 bg-[#F0EEE8] relative">
+            <div className="relative h-72 bg-[#F0EEE8]">
               <img src={avatarFor(current)} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+              <div className="absolute bottom-4 left-5 right-5 text-white">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-2xl font-serif drop-shadow-sm">
+                    {current.first_name}{current.age ? `, ${current.age}` : ''}
+                  </h2>
+                  {(current.verification_status === 'verified' || current.photo_verified) && (
+                    <span className="flex items-center gap-1 bg-white/90 text-[#1B4332] text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
+                      <BadgeCheck className="w-3 h-3" /> Verified
+                    </span>
+                  )}
+                </div>
+                {(current.location || current.city) && (
+                  <p className="flex items-center gap-1.5 text-sm opacity-90 mt-0.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {current.location || [current.city, current.country].filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="p-6">
-              <h2 className="text-2xl font-serif text-[#1B4332]">
-                {current.first_name}
-                {current.age ? `, ${current.age}` : ''}
-              </h2>
-              {(current.location || current.city) && (
-                <p className="flex items-center gap-1.5 text-sm text-[#8B7355] mt-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  {current.location || [current.city, current.country].filter(Boolean).join(', ')}
-                </p>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {[current.prayer_level, current.marital_status, current.occupation, current.children]
+                  .filter(Boolean)
+                  .slice(0, 4)
+                  .map((chip) => (
+                    <span key={chip as string} className="px-3 py-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">
+                      {chip}
+                    </span>
+                  ))}
+              </div>
               {current.bio && (
                 <p className="text-sm text-[#5C574F] leading-relaxed mt-4 font-serif italic">
                   "{current.bio}"
@@ -335,18 +354,6 @@ export function Home({ onOpenSession }: HomeProps) {
                 <div className="mt-4">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1.5 flex items-center gap-1.5">🎤 Voice intro</p>
                   <audio controls src={current.intro_audio_url} className="w-full" />
-                </div>
-              )}
-              {current.prayer_level && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">
-                    {current.prayer_level}
-                  </span>
-                  {current.marriage_intent && (
-                    <span className="px-3 py-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">
-                      {current.marriage_intent}
-                    </span>
-                  )}
                 </div>
               )}
 
