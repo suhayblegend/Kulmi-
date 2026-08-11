@@ -63,7 +63,21 @@ const IS_RECOVERY = typeof window !== 'undefined' && /type=recovery/.test(window
 
 export default function App() {
   if (IS_RECOVERY) {
-    return <ResetPassword onDone={() => { window.location.hash = ''; window.location.replace('/'); }} />;
+    // After resetting, send admins/walis to their dashboard, members to the app.
+    return (
+      <ResetPassword
+        onDone={async () => {
+          let dest = '/';
+          try {
+            const p = await getMyProfile(true);
+            if (p?.role === 'admin') dest = '/admin';
+            else if (p?.role === 'wali') dest = '/wali';
+          } catch { /* ignore */ }
+          window.location.hash = '';
+          window.location.replace(dest);
+        }}
+      />
+    );
   }
   const path = (typeof window !== 'undefined' ? window.location.pathname : '/').replace(/\/+$/, '') || '/';
   if (path === '/admin') return <StaffArea kind="admin" />;

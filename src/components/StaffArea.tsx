@@ -23,6 +23,22 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
 
   const goHome = () => { window.location.href = '/'; };
 
+  const [notice, setNotice] = useState('');
+  const handleForgot = async () => {
+    setError(''); setNotice('');
+    if (!email) { setError('Enter your email above first, then tap "Forgot password?".'); return; }
+    setSubmitting(true);
+    try {
+      const { error: e } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+      if (e) throw e;
+      setNotice('Password reset link sent — check your email. After resetting, you\'ll return here.');
+    } catch (err: any) {
+      setError(err.message || 'Could not send reset email.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       const p = await getMyProfile();
@@ -87,7 +103,10 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Password</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider">Password</label>
+                <button type="button" onClick={handleForgot} className="text-xs font-medium text-[#8B7355] hover:text-[#1B4332] hover:underline">Forgot password?</button>
+              </div>
               <input
                 type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent"
@@ -95,6 +114,9 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
               />
             </div>
 
+            {notice && (
+              <div className="p-3 bg-[#E8F3ED] text-[#1B4332] text-sm rounded-xl border border-[#1B4332]/10">{notice}</div>
+            )}
             {error && (
               <div className="p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">{error}</div>
             )}
