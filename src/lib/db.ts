@@ -630,6 +630,27 @@ export async function sendVoiceMessage(chatId: string, blob: Blob): Promise<Mess
 }
 
 // -------------------------------------------------------------
+// Relationship status / success tracking
+// -------------------------------------------------------------
+export async function setChatStatus(chatId: string, status: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { error } = await supabase
+    .from('chat_status')
+    .upsert({ chat_id: chatId, user_id: uid, status, updated_at: new Date().toISOString() }, { onConflict: 'chat_id,user_id' });
+  if (error) throw error;
+}
+
+export async function getChatMeta(chatId: string): Promise<{ confirmedStatus: string | null; myStatus: string | null }> {
+  const uid = await getCurrentUserId();
+  const [{ data: chat }, { data: mine }] = await Promise.all([
+    supabase.from('chats').select('confirmed_status').eq('id', chatId).maybeSingle(),
+    supabase.from('chat_status').select('status').eq('chat_id', chatId).eq('user_id', uid ?? '').maybeSingle(),
+  ]);
+  return { confirmedStatus: (chat as any)?.confirmed_status ?? null, myStatus: (mine as any)?.status ?? null };
+}
+
+// -------------------------------------------------------------
 // Moderation / reports
 // -------------------------------------------------------------
 export async function reportUser(reportedId: string, reason: string): Promise<void> {
@@ -670,16 +691,18 @@ export interface AdminStats {
   matches: number;
   activeSessions: number;
   pendingReports: number;
+  successes: number;
 }
 
 export async function getAdminStats(): Promise<AdminStats> {
-  const [users, verified, pendingV, matches, sessions, reports] = await Promise.all([
+  const [users, verified, pendingV, matches, sessions, reports, successes] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('verification_status', 'verified'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('verification_status', 'pending'),
     supabase.from('chats').select('id', { count: 'exact', head: true }),
     supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('chats').select('id', { count: 'exact', head: true }).not('confirmed_status', 'is', null),
   ]);
   return {
     users: users.count ?? 0,
@@ -688,7 +711,26 @@ export async function getAdminStats(): Promise<AdminStats> {
     matches: matches.count ?? 0,
     activeSessions: sessions.count ?? 0,
     pendingReports: reports.count ?? 0,
+    successes: successes.count ?? 0,
   };
+}
+
+export async function adminListSuccesses(): Promise<AdminPair[]> {
+  const { data } = await supabase
+    .from('chats')
+    .select('id, user1_id, user2_id, confirmed_status, confirmed_at')
+    .not('confirmed_status', 'is', null)
+    .order('confirmed_at', { ascending: false })
+    .limit(200);
+  const rows = data ?? [];
+  const names = await namesFor(rows.flatMap((r: any) => [r.user1_id, r.user2_id]));
+  return rows.map((r: any) => ({
+    id: r.id,
+    userA: names.get(r.user1_id) ?? '—',
+    userB: names.get(r.user2_id) ?? '—',
+    status: r.confirmed_status,
+    created_at: r.confirmed_at,
+  }));
 }
 
 export async function adminListUsers(): Promise<Profile[]> {

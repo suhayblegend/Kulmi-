@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 import {
   getAdminStats, adminListUsers, adminListPendingVerifications, adminReviewVerification,
   adminSetRole, adminSetDiscovery, adminDeleteUser,
-  adminListSessions, adminListChats, adminListReports, adminUpdateReport, readTranscript,
+  adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   getMyProfile, signOut, avatarFor,
   type AdminStats, type Profile, type AdminPair, type ReportRow, type Message,
 } from '../lib/db';
@@ -30,6 +30,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [sessions, setSessions] = useState<AdminPair[]>([]);
   const [chats, setChats] = useState<AdminPair[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
+  const [successes, setSuccesses] = useState<AdminPair[]>([]);
   const [loading, setLoading] = useState(true);
   const [transcript, setTranscript] = useState<{ title: string; messages: Message[] } | null>(null);
   const [userSearch, setUserSearch] = useState('');
@@ -72,11 +73,11 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
   const reload = async () => {
     setLoading(true);
-    const [s, u, p, se, c, r] = await Promise.all([
+    const [s, u, p, se, c, r, su] = await Promise.all([
       getAdminStats(), adminListUsers(), adminListPendingVerifications(),
-      adminListSessions(), adminListChats(), adminListReports(),
+      adminListSessions(), adminListChats(), adminListReports(), adminListSuccesses(),
     ]);
-    setStats(s); setUsers(u); setPending(p); setSessions(se); setChats(c); setReports(r);
+    setStats(s); setUsers(u); setPending(p); setSessions(se); setChats(c); setReports(r); setSuccesses(su);
     setLoading(false);
   };
 
@@ -91,6 +92,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     { id: 'sessions', label: 'Sessions', icon: <Heart className="w-5 h-5" /> },
     { id: 'conversations', label: 'Conversations', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'reports', label: `Reports${stats?.pendingReports ? ` (${stats.pendingReports})` : ''}`, icon: <AlertTriangle className="w-5 h-5" /> },
+    { id: 'successes', label: `Successes${stats?.successes ? ` (${stats.successes})` : ''}`, icon: <Star className="w-5 h-5" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -132,8 +134,23 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       <StatCard label="Matches (Chats)" value={stats?.matches ?? 0} icon={<Heart className="w-6 h-6 text-pink-500" />} />
       <StatCard label="Active Sessions" value={stats?.activeSessions ?? 0} icon={<Activity className="w-6 h-6 text-blue-500" />} />
       <StatCard label="Open Reports" value={stats?.pendingReports ?? 0} icon={<AlertTriangle className="w-6 h-6 text-red-500" />} />
+      <StatCard label="Success Stories" value={stats?.successes ?? 0} icon={<Star className="w-6 h-6 text-yellow-500" />} />
     </div>
   );
+
+  const renderSuccesses = () =>
+    successes.length === 0 ? <Empty text="No confirmed engagements or marriages yet." /> : (
+      <Table head={['Person A', 'Person B', 'Outcome', 'Confirmed']}>
+        {successes.map((s) => (
+          <tr key={s.id} className="hover:bg-[#FDFBF7]/50">
+            <td className="p-4 font-medium text-[#1B4332]">{s.userA}</td>
+            <td className="p-4 font-medium text-[#1B4332]">{s.userB}</td>
+            <td className="p-4"><span className={`px-2 py-1 rounded-md text-xs font-medium capitalize ${s.status === 'married' ? 'bg-pink-100 text-pink-800' : 'bg-yellow-100 text-yellow-800'}`}>{s.status}</span></td>
+            <td className="p-4 text-[#5C574F]">{s.created_at ? fmtDate(s.created_at) : '—'}</td>
+          </tr>
+        ))}
+      </Table>
+    );
 
   const Table = ({ head, children }: { head: string[]; children: React.ReactNode }) => (
     <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm overflow-hidden">
@@ -314,6 +331,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       case 'sessions': return renderSessions();
       case 'conversations': return renderConversations();
       case 'reports': return renderReports();
+      case 'successes': return renderSuccesses();
       case 'settings': return renderSettings();
       default: return <Empty text="Coming soon." />;
     }

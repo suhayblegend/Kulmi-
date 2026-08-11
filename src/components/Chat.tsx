@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase';
 import {
   getChatPartner,
   getMatchGallery,
+  setChatStatus,
+  getChatMeta,
   listMessages,
   sendMessage,
   sendVoiceMessage,
@@ -278,12 +280,19 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setShowStatusModal(false);
-                    if (relationshipStatus === 'married' || relationshipStatus === 'engaged') {
-                      setTimeout(() => setShowSuccessForm(true), 500);
-                    } else if (relationshipStatus === 'ended') {
-                      setShowEndConfirm(true);
+                    if (relationshipStatus === 'ended') { setShowEndConfirm(true); return; }
+                    try {
+                      await setChatStatus(chatId, relationshipStatus);
+                      const meta = await getChatMeta(chatId);
+                      if (meta.confirmedStatus === 'married' || meta.confirmedStatus === 'engaged') {
+                        setShowSuccessForm(true); // both agreed → confirmed success
+                      } else if (relationshipStatus === 'married' || relationshipStatus === 'engaged') {
+                        alert(`Saved. Once ${partnerName} also marks "${relationshipStatus}", it's confirmed.`);
+                      }
+                    } catch {
+                      alert('Could not update status.');
                     }
                   }}
                   className="flex-1 px-6 py-3 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors"
