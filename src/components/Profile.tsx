@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Mic, Square, Trash2, Loader2 } from 'lucide-react';
-import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
+import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, getMyCompatQuestions, setMyCompatQuestions, COMPATIBILITY_QUESTIONS, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
 
@@ -110,6 +110,28 @@ export function Profile() {
     } finally {
       setGalleryBusy(false);
     }
+  };
+
+  // ---- Compatibility questions ----
+  const [compatQs, setCompatQs] = useState<string[]>([]);
+  const [newQ, setNewQ] = useState('');
+  const [compatBusy, setCompatBusy] = useState(false);
+  const [compatSaved, setCompatSaved] = useState(false);
+
+  useEffect(() => { getMyCompatQuestions().then(setCompatQs).catch(() => {}); }, []);
+
+  const moveQ = (i: number, dir: -1 | 1) => setCompatQs((qs) => {
+    const j = i + dir; if (j < 0 || j >= qs.length) return qs;
+    const n = [...qs]; [n[i], n[j]] = [n[j], n[i]]; return n;
+  });
+  const removeQ = (i: number) => setCompatQs((qs) => qs.filter((_, idx) => idx !== i));
+  const addQ = () => { const q = newQ.trim(); if (q.length < 8) return; setCompatQs((qs) => [...qs, q].slice(0, 10)); setNewQ(''); };
+  const resetQs = () => setCompatQs([...COMPATIBILITY_QUESTIONS]);
+  const saveQs = async () => {
+    setCompatBusy(true);
+    try { await setMyCompatQuestions(compatQs); setCompatSaved(true); setTimeout(() => setCompatSaved(false), 2500); }
+    catch (e: any) { alert(e.message || 'Could not save questions.'); }
+    finally { setCompatBusy(false); }
   };
 
   // ---- Voice intro ----
@@ -397,6 +419,51 @@ export function Profile() {
                 {galleryBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Camera className="w-5 h-5 mb-1" /><span className="text-[10px] font-medium">Add photo</span></>}
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Compatibility questions — the user's own set for sessions they start */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#E5E0D8] shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-[#8B7355] mb-2 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" /> Your Compatibility Questions
+          </h3>
+          <p className="text-xs text-[#8B7355] mb-5">
+            These are the questions you and a match answer during a compatibility session. Reorder them by priority, remove any, or add your own.
+            When <span className="font-medium text-[#1B4332]">you send</span> an introduction, your set is the one you'll both answer. Keep 3–10.
+          </p>
+
+          <div className="space-y-2">
+            {compatQs.map((q, i) => (
+              <div key={i} className="flex items-start gap-2 bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-3">
+                <span className="text-xs font-bold text-[#8B7355] mt-1 w-5 shrink-0">{i + 1}.</span>
+                <p className="flex-1 text-sm text-[#2D2926] leading-snug">{q}</p>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => moveQ(i, -1)} disabled={i === 0} className="p-1 text-[#8B7355] hover:text-[#1B4332] disabled:opacity-30" title="Move up">▲</button>
+                  <button onClick={() => moveQ(i, 1)} disabled={i === compatQs.length - 1} className="p-1 text-[#8B7355] hover:text-[#1B4332] disabled:opacity-30" title="Move down">▼</button>
+                  <button onClick={() => removeQ(i)} disabled={compatQs.length <= 3} className="p-1 text-[#8B7355] hover:text-red-500 disabled:opacity-30" title="Remove"><X className="w-4 h-4" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {compatQs.length < 10 && (
+            <div className="flex gap-2 mt-4">
+              <input
+                value={newQ}
+                onChange={(e) => setNewQ(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addQ(); } }}
+                placeholder="Add your own question…"
+                className="flex-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2.5 text-sm text-[#2D2926] focus:outline-none focus:border-[#1B4332]"
+              />
+              <button onClick={addQ} disabled={newQ.trim().length < 8} className="px-4 py-2.5 rounded-xl bg-[#F0EEE8] text-[#1B4332] text-sm font-medium hover:bg-[#E5E0D8] transition-colors disabled:opacity-50">Add</button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mt-5">
+            <button onClick={saveQs} disabled={compatBusy || compatQs.length < 3} className="px-5 py-2.5 rounded-xl bg-[#1B4332] text-white text-sm font-medium hover:bg-[#143326] transition-colors disabled:opacity-50 flex items-center gap-2">
+              {compatBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : compatSaved ? <><CheckCircle2 className="w-4 h-4" /> Saved</> : 'Save questions'}
+            </button>
+            <button onClick={resetQs} disabled={compatBusy} className="text-sm font-medium text-[#8B7355] hover:text-[#1B4332] transition-colors">Reset to default</button>
           </div>
         </div>
 

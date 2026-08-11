@@ -39,6 +39,7 @@ export interface Profile {
   verification_selfie_url?: string | null;
   wali_email?: string | null;
   gallery?: string[] | null;
+  compat_questions?: string[] | null;
   intro_audio_url?: string | null;
   intro_public?: boolean | null;
   latitude?: number | null;
@@ -188,7 +189,7 @@ export async function uploadPhoto(file: File): Promise<string> {
 // -------------------------------------------------------------
 const SECURE_BUCKET = 'secure';
 
-async function uploadSecure(data: File | Blob, category: 'selfie' | 'gallery' | 'voice', ext: string): Promise<string> {
+async function uploadSecure(data: File | Blob, category: 'selfie' | 'gallery' | 'voice' | 'answer', ext: string): Promise<string> {
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
   const path = `${uid}/${category}/${Date.now()}.${ext}`;
@@ -490,6 +491,7 @@ export interface SessionSummary {
   id: string;
   partner: Profile;
   status: 'active' | 'completed' | 'ended';
+  questions: string[];
   myAnsweredCount: number;
   partnerAnsweredCount: number;
   bothFinished: boolean;
@@ -499,7 +501,27 @@ export interface SessionSummary {
 export interface SessionAnswers {
   mine: Record<number, string>;
   theirs: Record<number, string>;
+  mineAudio: Record<number, string>;   // signed URLs
+  theirsAudio: Record<number, string>; // signed URLs
   partnerAnsweredCount: number;
+}
+
+/** The default question set, or the user's own customised/ordered list. */
+export async function getMyCompatQuestions(): Promise<string[]> {
+  const me = await getMyProfile();
+  const custom = (me as any)?.compat_questions as string[] | null | undefined;
+  return custom && custom.length ? custom : [...COMPATIBILITY_QUESTIONS];
+}
+
+/** Save the user's preferred question set (pass the default list to reset). */
+export async function setMyCompatQuestions(questions: string[]): Promise<void> {
+  const cleaned = questions.map((q) => q.trim()).filter(Boolean);
+  await updateMyProfile({ compat_questions: cleaned.length ? cleaned : null } as any);
+}
+
+/** Upload a recorded voice answer to the private bucket; returns its path. */
+export async function uploadSessionAnswerAudio(blob: Blob): Promise<string> {
+  return uploadSecure(blob, 'answer', 'webm');
 }
 
 export interface CompatibilityAnalysis {
@@ -518,7 +540,7 @@ export async function listActiveSessions(): Promise<SessionSummary[]> {
   if (!uid) return [];
   const { data: sessions } = await supabase
     .from('sessions')
-    .select('id, user1_id, user2_id, status')
+    .select('id, user1_id, user2_id, status, questions')
     .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
     .neq('status', 'ended')
     .order('created_at', { ascending: false });
@@ -540,15 +562,17 @@ export async function listActiveSessions(): Promise<SessionSummary[]> {
     ]);
     const myAnsweredCount = mine ?? 0;
     const partnerAnsweredCount = theirs ?? 0;
+    const questions = (s.questions as string[] | null)?.length ? (s.questions as string[]) : [...COMPATIBILITY_QUESTIONS];
     out.push({
       id: s.id,
       partner,
       status: s.status,
+      questions,
       myAnsweredCount,
       partnerAnsweredCount,
       bothFinished:
-        myAnsweredCount >= COMPATIBILITY_QUESTIONS.length &&
-        partnerAnsweredCount >= COMPATIBILITY_QUESTIONS.length,
+        myAnsweredCount >= questions.length &&
+        partnerAnsweredCount >= questions.length,
       myDecision: (myDec.data?.decision as 'yes' | 'no') ?? null,
     });
   }
@@ -564,23 +588,34 @@ export async function getSessionAnswers(sessionId: string): Promise<SessionAnswe
   const uid = await getCurrentUserId();
   const { data } = await supabase
     .from('session_answers')
-    .select('user_id, question_index, answer')
+    .select('user_id, question_index, answer, answer_audio')
     .eq('session_id', sessionId);
   const mine: Record<number, string> = {};
   const theirs: Record<number, string> = {};
-  (data ?? []).forEach((r: any) => {
-    if (r.user_id === uid) mine[r.question_index] = r.answer;
-    else theirs[r.question_index] = r.answer;
-  });
-  return { mine, theirs, partnerAnsweredCount: Object.keys(theirs).length };
+  const mineAudio: Record<number, string> = {};
+  const theirsAudio: Record<number, string> = {};
+  await Promise.all((data ?? []).map(async (r: any) => {
+    const audioUrl = r.answer_audio ? await resolveMediaUrl(r.answer_audio) : null;
+    if (r.user_id === uid) {
+      mine[r.question_index] = r.answer ?? '';
+      if (audioUrl) mineAudio[r.question_index] = audioUrl;
+    } else {
+      theirs[r.question_index] = r.answer ?? '';
+      if (audioUrl) theirsAudio[r.question_index] = audioUrl;
+    }
+  }));
+  return { mine, theirs, mineAudio, theirsAudio, partnerAnsweredCount: Object.keys(theirs).length };
 }
 
-export async function submitSessionAnswer(sessionId: string, questionIndex: number, answer: string): Promise<void> {
+export async function submitSessionAnswer(sessionId: string, questionIndex: number, answer: string, audioPath?: string | null): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
   const { error } = await supabase
     .from('session_answers')
-    .upsert({ session_id: sessionId, user_id: uid, question_index: questionIndex, answer }, { onConflict: 'session_id,user_id,question_index' });
+    .upsert(
+      { session_id: sessionId, user_id: uid, question_index: questionIndex, answer, answer_audio: audioPath ?? null },
+      { onConflict: 'session_id,user_id,question_index' }
+    );
   if (error) throw error;
 }
 
