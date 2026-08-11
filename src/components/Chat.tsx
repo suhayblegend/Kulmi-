@@ -13,6 +13,7 @@ import {
   sendVoiceMessage,
   reportUser,
   stopContact,
+  resolveMediaUrl,
   getCurrentUserId,
   avatarFor,
   type Message,
@@ -40,6 +41,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   const [consentPublic, setConsentPublic] = useState(false);
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
   const [partner, setPartner] = useState<Profile | null>(null);
   const [gallery, setGallery] = useState<string[]>([]);
   const [partnerIntro, setPartnerIntro] = useState<string | null>(null);
@@ -95,6 +97,23 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
+
+  // Voice notes are private (stored as paths) — sign them for playback on demand.
+  useEffect(() => {
+    let active = true;
+    const pending = messages.filter((m) => m.type === 'audio' && m.content && !audioUrls[m.id]);
+    if (pending.length === 0) return;
+    (async () => {
+      const resolved = await Promise.all(pending.map(async (m) => [m.id, await resolveMediaUrl(m.content)] as const));
+      if (!active) return;
+      setAudioUrls((prev) => {
+        const next = { ...prev };
+        for (const [id, url] of resolved) if (url) next[id] = url;
+        return next;
+      });
+    })();
+    return () => { active = false; };
+  }, [messages, audioUrls]);
 
   const handleSendMessage = async () => {
     const text = message.trim();
@@ -585,7 +604,11 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
                     }`}
                   >
                     {msg.type === 'audio' ? (
-                      <audio controls src={msg.content} className="max-w-[240px]" />
+                      audioUrls[msg.id] ? (
+                        <audio controls src={audioUrls[msg.id]} className="max-w-[240px]" />
+                      ) : (
+                        <span className="text-xs opacity-70">Loading voice note…</span>
+                      )
                     ) : (
                       msg.content
                     )}

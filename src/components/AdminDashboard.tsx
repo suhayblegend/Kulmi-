@@ -10,7 +10,7 @@ import {
   getAdminStats, adminListUsers, adminListPendingVerifications, adminReviewVerification,
   adminSetRole, adminSetDiscovery, adminDeleteUser,
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
-  getMyProfile, signOut, avatarFor,
+  getMyProfile, signOut, avatarFor, resolveMediaUrl,
   type AdminStats, type Profile, type AdminPair, type ReportRow, type Message,
 } from '../lib/db';
 
@@ -27,6 +27,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<Profile[]>([]);
   const [pending, setPending] = useState<Profile[]>([]);
+  const [selfieUrls, setSelfieUrls] = useState<Record<string, string>>({});
   const [sessions, setSessions] = useState<AdminPair[]>([]);
   const [chats, setChats] = useState<AdminPair[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
@@ -78,6 +79,13 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       adminListSessions(), adminListChats(), adminListReports(), adminListSuccesses(),
     ]);
     setStats(s); setUsers(u); setPending(p); setSessions(se); setChats(c); setReports(r); setSuccesses(su);
+    // Selfies live in the private bucket — resolve to short-lived signed URLs for review.
+    const selfies: Record<string, string> = {};
+    await Promise.all(p.map(async (v: any) => {
+      const url = await resolveMediaUrl(v.verification_selfie_url);
+      if (url) selfies[v.id] = url;
+    }));
+    setSelfieUrls(selfies);
     setLoading(false);
   };
 
@@ -250,9 +258,9 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                 <img src={avatarFor(v)} alt="profile" className="w-full h-full object-cover" />
               </div>
               <div className="bg-[#E5E0D8] flex items-center justify-center overflow-hidden border-l border-[#E5E0D8]">
-                {v.verification_selfie_url
-                  ? <img src={v.verification_selfie_url} alt="selfie" className="w-full h-full object-cover" />
-                  : <span className="text-xs text-[#8B7355] uppercase tracking-widest">No selfie</span>}
+                {selfieUrls[v.id]
+                  ? <img src={selfieUrls[v.id]} alt="selfie" className="w-full h-full object-cover" />
+                  : <span className="text-xs text-[#8B7355] uppercase tracking-widest">{v.verification_selfie_url ? 'Loading…' : 'No selfie'}</span>}
               </div>
             </div>
             <div className="p-5">

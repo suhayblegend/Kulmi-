@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { uploadPhoto, updateMyProfile } from '../../lib/db';
+import { uploadPhoto, uploadGalleryPhoto, updateMyProfile } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X, MapPin } from 'lucide-react';
 
@@ -178,14 +178,16 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       }]);
       if (dbError) throw dbError;
 
-      // Upload all photos: the highlighted one is the public main photo,
-      // the rest go to the gallery (revealed only to a match). A profile
+      // The highlighted photo is the public main photo (shown in Discover);
+      // the rest go to the PRIVATE gallery (revealed only to a match). A profile
       // without a main photo is not allowed, so a failure here blocks completion.
-      const urls = await Promise.all(photos.map((p) => uploadPhoto(p.file)));
-      const main = urls[highlight] ?? urls[0];
+      const mainFile = (photos[highlight] ?? photos[0]).file;
+      const main = await uploadPhoto(mainFile);
       if (!main) throw new Error('Your main photo did not upload. Please check your connection and try again.');
-      const galleryUrls = urls.filter((_, i) => i !== highlight);
-      await updateMyProfile({ profile_picture_url: main, gallery: galleryUrls });
+      const galleryPaths = await Promise.all(
+        photos.filter((_, i) => i !== highlight).map((p) => uploadGalleryPhoto(p.file))
+      );
+      await updateMyProfile({ profile_picture_url: main, gallery: galleryPaths });
       onComplete();
     } catch (err: any) {
       setError(err.message || 'Failed to save profile');

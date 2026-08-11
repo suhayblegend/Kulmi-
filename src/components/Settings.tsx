@@ -141,13 +141,13 @@ export function Settings({ onTerms, onPrivacy }: SettingsProps) {
           {/* Notifications */}
           <div className="p-6 border-b border-[#E5E0D8]">
             <div className="flex items-center gap-3 mb-2"><Bell className="w-5 h-5 text-[#1B4332]" /><h3 className="font-bold text-[#2D2926]">Notifications</h3></div>
-            <div className="space-y-4 mt-4">
+            <div className="flex items-start gap-2 mt-3 mb-4 text-xs text-[#5C574F] bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-3 py-2.5">
+              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+              <span>In-app alerts are on. The bell at the top shows you new introductions, matches and messages in real time.</span>
+            </div>
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div><p className="font-medium text-sm text-[#2D2926]">Push Notifications</p><p className="text-xs text-[#8B7355]">Get alerted for new matches and messages</p></div>
-                <Toggle on={profile.push_notifications !== false} onChange={(v) => setToggle('push_notifications', v)} />
-              </div>
-              <div className="flex items-center justify-between">
-                <div><p className="font-medium text-sm text-[#2D2926]">Email Summaries</p><p className="text-xs text-[#8B7355]">Weekly updates on your activity</p></div>
+                <div><p className="font-medium text-sm text-[#2D2926]">Email Summaries</p><p className="text-xs text-[#8B7355]">Also email me about new activity <span className="italic">(coming soon)</span></p></div>
                 <Toggle on={profile.email_summaries === true} onChange={(v) => setToggle('email_summaries', v)} />
               </div>
             </div>

@@ -175,9 +175,44 @@ async function uploadToAvatars(file: File, prefix: string): Promise<string> {
   return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
 }
 
-/** Upload a photo to storage and return its public URL (does not touch the profile). */
+/** Upload a photo to storage and return its public URL (does not touch the profile).
+ *  Used for the MAIN profile photo only — that one is shown in Discover. */
 export async function uploadPhoto(file: File): Promise<string> {
   return uploadToAvatars(file, 'photo');
+}
+
+// -------------------------------------------------------------
+// Private media (bucket "secure": selfies, gallery, chat voice notes)
+// Stored as PATHS, never public URLs. Read back via short-lived signed URLs
+// gated by storage RLS (owner / admin / a match who shares a chat).
+// -------------------------------------------------------------
+const SECURE_BUCKET = 'secure';
+
+async function uploadSecure(data: File | Blob, category: 'selfie' | 'gallery' | 'voice', ext: string): Promise<string> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const path = `${uid}/${category}/${Date.now()}.${ext}`;
+  const contentType = (data as File).type || (category === 'voice' ? 'audio/webm' : undefined);
+  const { error } = await supabase.storage.from(SECURE_BUCKET).upload(path, data, { upsert: true, contentType });
+  if (error) throw error;
+  return path;
+}
+
+const isUrlLike = (ref: string) => /^(https?:|data:|blob:)/.test(ref);
+
+/** Turn a stored media reference into a loadable URL. Full URLs / data URIs
+ *  (public or legacy) pass through unchanged; bare paths are signed against the
+ *  private bucket (1h). Returns null if it can't be resolved. */
+export async function resolveMediaUrl(ref?: string | null): Promise<string | null> {
+  if (!ref) return null;
+  if (isUrlLike(ref)) return ref;
+  const { data } = await supabase.storage.from(SECURE_BUCKET).createSignedUrl(ref, 60 * 60);
+  return data?.signedUrl ?? null;
+}
+
+export async function resolveMediaUrls(refs: string[]): Promise<string[]> {
+  const out = await Promise.all(refs.map((r) => resolveMediaUrl(r)));
+  return out.filter((u): u is string => !!u);
 }
 
 /** Upload a profile picture and save its URL on the profile. Returns the URL. */
@@ -187,27 +222,44 @@ export async function uploadAvatar(file: File): Promise<string> {
   return url;
 }
 
-/** Add an extra photo to the gallery (revealed only to matches). Returns the new gallery. */
-export async function addGalleryPhoto(file: File): Promise<string[]> {
-  const me = await getMyProfile();
-  const url = await uploadToAvatars(file, 'photo');
-  const gallery = [...(me?.gallery ?? []), url];
-  await updateMyProfile({ gallery });
-  return gallery;
+export interface GalleryPhoto { path: string; url: string }
+
+/** Upload one gallery image to the private bucket and return its PATH (no profile write). */
+export async function uploadGalleryPhoto(file: File): Promise<string> {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  return uploadSecure(file, 'gallery', ext);
 }
 
-export async function removeGalleryPhoto(url: string): Promise<string[]> {
-  const me = await getMyProfile();
-  const gallery = (me?.gallery ?? []).filter((u) => u !== url);
+/** Add an extra photo to the gallery (revealed only to matches). Stored privately. */
+export async function addGalleryPhoto(file: File): Promise<void> {
+  const me = await getMyProfile(true);
+  const path = await uploadGalleryPhoto(file);
+  const gallery = [...(me?.gallery ?? []), path];
   await updateMyProfile({ gallery });
-  return gallery;
 }
 
-/** A matched partner's extra photos (empty unless you share a chat with them). */
+export async function removeGalleryPhoto(ref: string): Promise<void> {
+  const me = await getMyProfile(true);
+  const gallery = (me?.gallery ?? []).filter((u) => u !== ref);
+  await updateMyProfile({ gallery });
+  if (!isUrlLike(ref)) {
+    try { await supabase.storage.from(SECURE_BUCKET).remove([ref]); } catch { /* best effort */ }
+  }
+}
+
+/** My own gallery as {path, signed-url} pairs for display + management. */
+export async function getMyGallery(): Promise<GalleryPhoto[]> {
+  const me = await getMyProfile();
+  const refs = me?.gallery ?? [];
+  const pairs = await Promise.all(refs.map(async (path) => ({ path, url: (await resolveMediaUrl(path)) ?? '' })));
+  return pairs.filter((p) => p.url);
+}
+
+/** A matched partner's extra photos as signed URLs (empty unless you share a chat). */
 export async function getMatchGallery(partnerId: string): Promise<string[]> {
   const { data, error } = await supabase.rpc('get_gallery', { target: partnerId });
   if (error) return [];
-  return (data as string[]) ?? [];
+  return resolveMediaUrls((data as string[]) ?? []);
 }
 
 // -------------------------------------------------------------
@@ -244,8 +296,9 @@ export async function getMatchIntro(partnerId: string): Promise<string | null> {
  * reviews — it does NOT auto-verify. (A DB trigger blocks self-verification.)
  */
 export async function submitPhotoVerification(selfie: File): Promise<void> {
-  const url = await uploadToAvatars(selfie, 'selfie');
-  await updateMyProfile({ verification_status: 'pending', verification_selfie_url: url });
+  const ext = (selfie.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = await uploadSecure(selfie, 'selfie', ext); // PRIVATE — only admins can view
+  await updateMyProfile({ verification_status: 'pending', verification_selfie_url: path });
 }
 
 // -------------------------------------------------------------
@@ -737,15 +790,8 @@ export async function sendMessage(
 
 /** Upload a recorded voice note to the "media" bucket and send it as an audio message. */
 export async function sendVoiceMessage(chatId: string, blob: Blob): Promise<Message | null> {
-  const uid = await getCurrentUserId();
-  if (!uid) throw new Error('Not signed in');
-  const path = `${uid}/voice_${Date.now()}.webm`;
-  const { error: upErr } = await supabase.storage
-    .from('media')
-    .upload(path, blob, { contentType: blob.type || 'audio/webm', upsert: true });
-  if (upErr) throw upErr;
-  const url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
-  return sendMessage(chatId, url, 'audio');
+  const path = await uploadSecure(blob, 'voice', 'webm'); // PRIVATE — only the two matched people can play it
+  return sendMessage(chatId, path, 'audio');
 }
 
 // -------------------------------------------------------------
@@ -767,6 +813,49 @@ export async function getChatMeta(chatId: string): Promise<{ confirmedStatus: st
     supabase.from('chat_status').select('status').eq('chat_id', chatId).eq('user_id', uid ?? '').maybeSingle(),
   ]);
   return { confirmedStatus: (chat as any)?.confirmed_status ?? null, myStatus: (mine as any)?.status ?? null };
+}
+
+// -------------------------------------------------------------
+// Notifications (in-app; created by DB triggers on invite/match/message)
+// -------------------------------------------------------------
+export interface AppNotification {
+  id: string;
+  type: 'invitation' | 'match' | 'message' | string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+export async function listNotifications(limit = 30): Promise<AppNotification[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data } = await supabase
+    .from('notifications')
+    .select('id, type, body, link, read, created_at')
+    .eq('user_id', uid)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  return (data as AppNotification[]) ?? [];
+}
+
+export async function countUnreadNotifications(): Promise<number> {
+  const uid = await getCurrentUserId();
+  if (!uid) return 0;
+  const { count } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', uid)
+    .eq('read', false);
+  return count ?? 0;
+}
+
+export async function markNotificationsRead(ids?: string[]): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) return;
+  let q = supabase.from('notifications').update({ read: true }).eq('user_id', uid).eq('read', false);
+  if (ids && ids.length) q = q.in('id', ids);
+  await q;
 }
 
 // -------------------------------------------------------------

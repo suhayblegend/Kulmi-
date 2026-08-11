@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Mic, Square, Trash2, Loader2 } from 'lucide-react';
-import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, type Profile as DbProfile } from '../lib/db';
+import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
 
@@ -82,7 +82,7 @@ export function Profile() {
   const [profile, setProfile] = useState<ProfileForm>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<ProfileForm>(EMPTY_FORM);
 
-  const [gallery, setGallery] = useState<string[]>([]);
+  const [gallery, setGallery] = useState<GalleryPhoto[]>([]);
   const [galleryBusy, setGalleryBusy] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +92,8 @@ export function Profile() {
     if (!file) return;
     setGalleryBusy(true);
     try {
-      setGallery(await addGalleryPhoto(file));
+      await addGalleryPhoto(file);
+      setGallery(await getMyGallery());
     } catch (err: any) {
       alert(err.message || 'Could not add photo.');
     } finally {
@@ -101,10 +102,11 @@ export function Profile() {
     }
   };
 
-  const handleGalleryRemove = async (url: string) => {
+  const handleGalleryRemove = async (path: string) => {
     setGalleryBusy(true);
     try {
-      setGallery(await removeGalleryPhoto(url));
+      await removeGalleryPhoto(path);
+      setGallery(await getMyGallery());
     } finally {
       setGalleryBusy(false);
     }
@@ -199,7 +201,7 @@ export function Profile() {
         setPhotoVerified(!!p.photo_verified);
         setVerificationStatus((p.verification_status as any) ?? (p.photo_verified ? 'verified' : 'unverified'));
         setRole(p.role || 'user');
-        setGallery(p.gallery ?? []);
+        getMyGallery().then((g) => { if (active) setGallery(g); }).catch(() => {});
         setIntroUrl(p.intro_audio_url ?? null);
         setIntroPublicState(!!p.intro_public);
       })
@@ -373,11 +375,11 @@ export function Profile() {
           </p>
           <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleGalleryPick} />
           <div className="flex flex-wrap gap-3">
-            {gallery.map((url) => (
-              <div key={url} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-[#E5E0D8] group">
-                <img src={url} alt="" className="w-full h-full object-cover" />
+            {gallery.map((g) => (
+              <div key={g.path} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-[#E5E0D8] group">
+                <img src={g.url} alt="" className="w-full h-full object-cover" />
                 <button
-                  onClick={() => handleGalleryRemove(url)}
+                  onClick={() => handleGalleryRemove(g.path)}
                   disabled={galleryBusy}
                   className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Remove"

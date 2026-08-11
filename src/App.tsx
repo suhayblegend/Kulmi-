@@ -21,6 +21,7 @@ import { Onboarding } from './components/Onboarding/Onboarding';
 import { VerificationGate } from './components/VerificationGate';
 import { ResetPassword } from './components/ResetPassword';
 import { StaffArea } from './components/StaffArea';
+import { NotificationBell } from './components/NotificationBell';
 import { supabase } from './lib/supabase';
 import { getMyProfile, type Profile as DbProfile } from './lib/db';
 
@@ -266,6 +267,8 @@ function MemberApp() {
               </button>
             </nav>
           ) : (
+            <div className="flex items-center gap-3 sm:gap-6">
+              <NotificationBell onNavigate={(link) => { const s = pathToState(link); if (s) setAppState(s); }} />
             <nav className="hidden sm:flex items-center gap-8 text-sm font-medium tracking-wide text-[#8B7355] uppercase">
               <button
                 onClick={() => setAppState('discover')}
@@ -298,6 +301,7 @@ function MemberApp() {
                 {(myProfile?.first_name?.[0] ?? 'A').toUpperCase()}
               </button>
             </nav>
+            </div>
           )}
         </div>
       </header>
