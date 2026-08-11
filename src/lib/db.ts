@@ -7,6 +7,7 @@ export interface Profile {
   id: string;
   email?: string | null;
   first_name: string | null;
+  last_name?: string | null;
   age: number | null;
   gender: string | null;
   location: string | null;

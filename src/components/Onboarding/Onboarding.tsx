@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { uploadPhoto, updateMyProfile } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
@@ -85,7 +85,17 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [form, setForm] = useState<Form>(EMPTY);
   const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
   const [highlight, setHighlight] = useState(0);
+  const [lastName, setLastName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Prefill the name captured at signup.
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const md: any = data.user?.user_metadata || {};
+      if (md.first_name) setForm((f) => ({ ...f, first_name: f.first_name || md.first_name }));
+      if (md.last_name) setLastName(md.last_name);
+    });
+  }, []);
 
   const set = (k: keyof Form, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const toggle = (k: 'personality_traits' | 'communication_style' | 'future_goals', item: string) =>
@@ -129,7 +139,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
 
       const { error: dbError } = await supabase.from('profiles').insert([{
         id: user.id, email: user.email,
-        first_name: form.first_name, age: parseInt(form.age, 10), gender: form.gender,
+        first_name: form.first_name, last_name: lastName || null, age: parseInt(form.age, 10), gender: form.gender,
         marital_status: form.marital_status, country: form.country, city: form.city,
         location: [form.city, form.country].filter(Boolean).join(', '),
         bio: form.bio, occupation: form.occupation, education: form.education,

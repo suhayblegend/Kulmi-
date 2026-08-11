@@ -16,8 +16,11 @@ export function Auth({ onSuccess, onTerms, onPrivacy }: AuthProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [seriousPledge, setSeriousPledge] = useState(false);
 
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -45,15 +48,26 @@ export function Auth({ onSuccess, onTerms, onPrivacy }: AuthProps) {
 
     try {
       if (mode === 'signup') {
+        if (!firstName.trim() || !lastName.trim()) {
+          setError('Please enter your first and last name.');
+          setIsLoading(false);
+          return;
+        }
         if (!termsAccepted || !privacyAccepted) {
           setError('You must agree to the Terms of Service and Privacy Policy.');
           setIsLoading(false);
           return;
         }
-        
+        if (!seriousPledge) {
+          setError('Please confirm you are here for marriage with sincere intention.');
+          setIsLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
+          options: { data: { first_name: firstName.trim(), last_name: lastName.trim() } },
         });
 
         if (error) throw error;
@@ -102,6 +116,18 @@ export function Auth({ onSuccess, onTerms, onPrivacy }: AuthProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {mode === 'signup' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">First Name</label>
+                <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent text-[#2D2926]" placeholder="First" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Last Name</label>
+                <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent text-[#2D2926]" placeholder="Last" />
+              </div>
+            </div>
+          )}
           <div>
             <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Email Address</label>
             <input 
@@ -165,6 +191,16 @@ export function Auth({ onSuccess, onTerms, onPrivacy }: AuthProps) {
                     I have read and agree to the <button type="button" onClick={onPrivacy} className="text-[#1B4332] font-medium hover:underline">Privacy Policy</button>.
                   </span>
                 </label>
+
+                <label className="flex items-start gap-3 cursor-pointer group bg-[#FDFBF7] border border-[#1B4332]/20 rounded-xl p-3">
+                  <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${seriousPledge ? 'bg-[#1B4332] border-[#1B4332]' : 'border-[#E5E0D8] bg-white group-hover:border-[#1B4332]'}`}>
+                    {seriousPledge && <Check className="w-3.5 h-3.5 text-white" />}
+                    <input type="checkbox" className="hidden" checked={seriousPledge} onChange={(e) => setSeriousPledge(e.target.checked)} />
+                  </div>
+                  <span className="text-sm text-[#2D2926] leading-snug">
+                    <span className="font-bold text-[#1B4332]">Wallahi</span>, I am here for <span className="font-medium">marriage</span> with sincere and serious intention.
+                  </span>
+                </label>
               </motion.div>
             )}
           </AnimatePresence>
@@ -183,7 +219,7 @@ export function Auth({ onSuccess, onTerms, onPrivacy }: AuthProps) {
 
           <button 
             type="submit"
-            disabled={isLoading || (mode === 'signup' && (!termsAccepted || !privacyAccepted))}
+            disabled={isLoading || (mode === 'signup' && (!termsAccepted || !privacyAccepted || !seriousPledge || !firstName.trim() || !lastName.trim()))}
             className="w-full bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium tracking-wide transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
           >
             <span>{isLoading ? 'Loading...' : (mode === 'signin' ? 'Sign In' : 'Create Account')}</span>
