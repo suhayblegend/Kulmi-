@@ -35,9 +35,14 @@ export function Chats({ onSelectChat }: ChatsProps) {
     };
   }, []);
 
-  const filtered = chats.filter((c) =>
-    (c.partner.first_name || '').toLowerCase().includes(query.toLowerCase())
-  );
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? chats.filter((c) =>
+        `${c.partner.first_name ?? ''} ${c.partner.location ?? ''} ${c.partner.city ?? ''} ${c.lastMessage ?? ''}`
+          .toLowerCase()
+          .includes(q)
+      )
+    : chats;
 
   return (
     <div className="w-full max-w-3xl mx-auto h-[80vh] flex flex-col bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden mt-4">

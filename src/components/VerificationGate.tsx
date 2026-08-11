@@ -30,7 +30,7 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
   const load = async (fromButton = false) => {
     if (fromButton) setChecking(true);
     try {
-      const p = await getMyProfile();
+      const p = await getMyProfile(true); // always fresh — verification status changes server-side
       if (p?.verification_status === 'verified' || p?.photo_verified) {
         onVerified();
         return;

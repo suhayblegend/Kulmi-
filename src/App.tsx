@@ -385,6 +385,12 @@ function MemberApp() {
           >
             <span className="text-[10px] uppercase font-bold tracking-wider">Profile</span>
           </button>
+          <button
+            onClick={() => setAppState('settings')}
+            className={`flex flex-col items-center gap-1 ${appState === 'settings' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
+          >
+            <span className="text-[10px] uppercase font-bold tracking-wider">Settings</span>
+          </button>
         </nav>
       )}
     </div>

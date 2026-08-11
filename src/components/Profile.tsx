@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Video, Loader2 } from 'lucide-react';
-import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, submitPhotoVerification, avatarFor, type Profile as DbProfile } from '../lib/db';
+import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, submitPhotoVerification, signOut, avatarFor, type Profile as DbProfile } from '../lib/db';
+import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
 
 type ProfileForm = {
@@ -298,6 +299,13 @@ export function Profile() {
               </>
             )}
           </div>
+        </div>
+
+        {/* Quick actions */}
+        <div className="flex justify-end">
+          <button onClick={() => signOut()} className="flex items-center gap-2 text-sm font-medium text-red-600 border border-red-200 bg-white px-4 py-2 rounded-xl hover:bg-red-50 transition-colors">
+            <LogOut className="w-4 h-4" /> Log Out
+          </button>
         </div>
 
         {/* More photos — revealed only to matches */}

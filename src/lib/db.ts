@@ -101,27 +101,39 @@ export function avatarFor(p: Pick<Profile, 'profile_picture_url'>): string {
 // -------------------------------------------------------------
 // Session
 // -------------------------------------------------------------
+// Uses getSession() (reads the local session — instant) instead of getUser()
+// which makes a network round-trip on EVERY call. This is called by almost
+// every query, so it was the main source of lag.
 export async function getCurrentUserId(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
 }
 
 // -------------------------------------------------------------
 // Profile
 // -------------------------------------------------------------
-export async function getMyProfile(): Promise<Profile | null> {
+// Short-lived cache: getMyProfile is called many times per screen render.
+let profileCache: { uid: string; profile: Profile | null; at: number } | null = null;
+export function clearProfileCache() { profileCache = null; }
+
+export async function getMyProfile(force = false): Promise<Profile | null> {
   const uid = await getCurrentUserId();
   if (!uid) return null;
+  if (!force && profileCache && profileCache.uid === uid && Date.now() - profileCache.at < 8000) {
+    return profileCache.profile;
+  }
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', uid)
     .maybeSingle();
   if (error) throw error;
-  return data as Profile | null;
+  profileCache = { uid, profile: (data as Profile) ?? null, at: Date.now() };
+  return profileCache.profile;
 }
 
 export async function updateMyProfile(fields: Partial<Profile>): Promise<void> {
+  clearProfileCache();
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
   // never let the client change privileged columns (the DB trigger also enforces this).
@@ -671,6 +683,7 @@ export async function reportUser(reportedId: string, reason: string): Promise<vo
 // Settings
 // -------------------------------------------------------------
 export async function signOut(): Promise<void> {
+  clearProfileCache();
   await supabase.auth.signOut();
 }
 

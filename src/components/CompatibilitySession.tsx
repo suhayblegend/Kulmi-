@@ -134,7 +134,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
       // If the session has ended (partner declined), stop waiting and show it.
       const s = await getSession(sessionId);
       if (!s) { stopPoll(); setEnded(true); }
-    }, 2500);
+    }, 5000);
   };
 
   const handleDecision = async (decision: 'yes' | 'no') => {
