@@ -115,17 +115,21 @@ function MemberApp() {
 
   const loadProfileAndRoute = async () => {
     routedRef.current = true;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const profile = await getMyProfile();
         setMyProfile(profile);
         setAppState(routeFor(profile));
         return;
       } catch {
-        // transient error (e.g. network) — retry once before giving up
-        await new Promise((r) => setTimeout(r, 400));
+        // transient error (e.g. network) — back off and retry before giving up
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       }
     }
+    // Couldn't load the profile after retries. Don't leave a signed-in user
+    // stranded on the landing page — release the guard so the next auth event
+    // (token refresh, focus) re-attempts routing.
+    routedRef.current = false;
   };
 
   useEffect(() => {

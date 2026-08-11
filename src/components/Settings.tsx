@@ -4,7 +4,7 @@ import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Load
 import { supabase } from '../lib/supabase';
 import { getMyProfile, updateMyProfile, setWaliEmail, signOut, deleteMyAccount, type Profile } from '../lib/db';
 
-const SUPPORT_EMAIL = 'support@kulmi.uk'; // TODO: replace with your real support inbox
+const SUPPORT_EMAIL = 'support@kulmi.uk';
 const APP_VERSION = '1.0';
 
 type ToggleKey = 'show_in_discovery' | 'push_notifications' | 'email_summaries' | 'read_receipts';
@@ -93,9 +93,18 @@ export function Settings({ onTerms, onPrivacy }: SettingsProps) {
     }
   };
 
+  const [deleting, setDeleting] = useState(false);
   const handleDelete = async () => {
-    if (!window.confirm('Delete your account and profile? This cannot be undone.')) return;
-    await deleteMyAccount();
+    if (deleting) return;
+    if (!window.confirm('Delete your account and profile? This permanently removes your profile, photos and conversations. This cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await deleteMyAccount();
+      await signOut();
+    } catch (e: any) {
+      setDeleting(false);
+      alert(e?.message || 'Could not delete your account. Please try again or contact support.');
+    }
   };
 
   if (loading || !profile) {
@@ -203,7 +212,7 @@ export function Settings({ onTerms, onPrivacy }: SettingsProps) {
             <div className="flex items-center gap-3 mb-2 text-red-600"><LogOut className="w-5 h-5" /><h3 className="font-bold">Account</h3></div>
             <div className="space-y-3 mt-4">
               <button onClick={() => signOut()} className="w-full text-left text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">Log Out</button>
-              <button onClick={handleDelete} className="w-full text-left text-sm font-medium text-red-600 hover:text-red-700 py-2">Delete Account</button>
+              <button onClick={handleDelete} disabled={deleting} className="w-full text-left text-sm font-medium text-red-600 hover:text-red-700 py-2 disabled:opacity-50 flex items-center gap-2">{deleting && <Loader2 className="w-4 h-4 animate-spin" />}Delete Account</button>
             </div>
           </div>
         </div>

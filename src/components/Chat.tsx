@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ShieldAlert, Paperclip, Smile, Mic, Trash2, Users, AlertTriangle, Send } from 'lucide-react';
+import { ArrowLeft, ShieldAlert, Mic, Trash2, Users, AlertTriangle, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import {
@@ -122,7 +122,20 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleConfirmEnd = () => onEndIntroduction();
+  const [endingChat, setEndingChat] = useState(false);
+  const handleConfirmEnd = async () => {
+    if (endingChat) return;
+    setEndingChat(true);
+    try {
+      await setChatStatus(chatId, 'ended');
+    } catch {
+      /* still leave the chat even if the status write fails */
+    } finally {
+      setEndingChat(false);
+      setShowEndConfirm(false);
+      onEndIntroduction();
+    }
+  };
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -472,7 +485,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
         <div className="bg-[#F0EEE8] px-6 py-2.5 flex items-start sm:items-center gap-3 border-b border-[#E5E0D8]">
           <Users className="w-4 h-4 text-[#8B7355] shrink-0 mt-0.5 sm:mt-0" />
           <p className="text-xs text-[#5C574F]">
-            <span className="font-bold text-[#2D2926]">Family Mode Active:</span> {partnerName}'s Wali is observing this chat to ensure respectful communication.
+            <span className="font-bold text-[#2D2926]">Marriage-focused space:</span> please keep this conversation respectful. Chats may be reviewed by a guardian (Wali) or our team.
           </p>
         </div>
 
@@ -550,23 +563,17 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <button className="p-2 text-[#8B7355] hover:text-[#1B4332] transition-colors shrink-0 hidden sm:block">
-                <Paperclip className="w-5 h-5" />
-              </button>
               <div className="flex-1 relative flex items-center">
                 <input
                   type="text"
                   placeholder="Type a message..."
-                  className="w-full bg-[#FDFBF7] rounded-xl pl-5 pr-12 py-4 text-sm focus:outline-none border border-[#E5E0D8] focus:border-[#1B4332] transition-all text-[#2D2926] placeholder-[#8B7355]/50"
+                  className="w-full bg-[#FDFBF7] rounded-xl pl-5 pr-5 py-4 text-sm focus:outline-none border border-[#E5E0D8] focus:border-[#1B4332] transition-all text-[#2D2926] placeholder-[#8B7355]/50"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && message.trim()) handleSendMessage();
                   }}
                 />
-                <button className="absolute right-4 text-[#8B7355] hover:text-[#1B4332] transition-colors">
-                  <Smile className="w-5 h-5" />
-                </button>
               </div>
               {message.trim() ? (
                 <button

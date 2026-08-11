@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Phone, Video, MoreVertical } from 'lucide-react';
+import { ArrowLeft, MoreVertical } from 'lucide-react';
 
 interface ChatHeaderProps {
   partnerName: string;
@@ -27,12 +27,6 @@ export function ChatHeader({ partnerName, partnerAvatar, onExit, setShowStatusMo
         </div>
       </div>
       <div className="flex items-center gap-3 text-[#8B7355]">
-        <button className="p-2 hover:text-[#1B4332] transition-colors">
-          <Phone className="w-5 h-5" />
-        </button>
-        <button className="p-2 hover:text-[#1B4332] transition-colors">
-          <Video className="w-5 h-5" />
-        </button>
         <div className="relative group">
           <button className="p-2 hover:text-[#1B4332] transition-colors">
             <MoreVertical className="w-5 h-5" />

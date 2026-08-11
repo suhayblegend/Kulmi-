@@ -98,13 +98,22 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
   const iFinished = summary ? summary.myAnsweredCount >= COMPATIBILITY_QUESTIONS.length : false;
   const bothFinished = summary?.bothFinished ?? false;
 
-  // Fetch the AI analysis once both have finished.
+  // Fetch the compatibility analysis once both have finished.
   useEffect(() => {
     if (bothFinished && !analysis) {
       analyzeCompatibility(sessionId).then(setAnalysis).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bothFinished]);
+
+  // Auto-refresh while I've finished but my partner hasn't — so the reveal
+  // appears the moment they're done, without needing "Check again".
+  useEffect(() => {
+    if (!iFinished || bothFinished) return;
+    const t = setInterval(() => { refresh().catch(() => {}); }, 5000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iFinished, bothFinished]);
 
   const total = COMPATIBILITY_QUESTIONS.length;
   const setDraft = (v: string) => setDrafts((d) => d.map((x, i) => (i === qIndex ? v : x)));
@@ -207,7 +216,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
                 className="w-full p-5 rounded-2xl border border-[#E5E0D8] bg-[#FDFBF7] focus:border-[#1B4332] outline-none resize-none text-[#2D2926] font-serif text-lg leading-relaxed"
                 placeholder="Take your time and be honest…"
               />
-              <p className="text-xs text-[#8B7355] mt-2">Answers are private until you both finish all {total} questions.</p>
+              <p className="text-xs text-[#8B7355] mt-2">You'll each see the other's answers once you've both finished all {total} questions.</p>
             </motion.div>
           </AnimatePresence>
 
@@ -260,7 +269,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
           </div>
           {!analysis ? (
             <div className="flex items-center gap-3 text-[#8B7355] py-4">
-              <Loader2 className="w-5 h-5 animate-spin" /> Analyzing your answers…
+              <Loader2 className="w-5 h-5 animate-spin" /> Preparing your compatibility summary…
             </div>
           ) : (
             <div className="space-y-4">

@@ -18,7 +18,7 @@ export function Terms({ onBack }: { onBack?: () => void }) {
             <FileText className="w-8 h-8 text-[#1B4332]" />
           </div>
           <h1 className="text-4xl font-serif text-[#1B4332] mb-4">Terms of Service</h1>
-          <p className="text-[#8B7355]">Last updated: October 2023</p>
+          <p className="text-[#8B7355]">Last updated: August 2026</p>
         </div>
 
         <div className="bg-white rounded-3xl p-8 md:p-12 border border-[#E5E0D8] shadow-sm space-y-8 prose prose-[#2D2926] max-w-none">
@@ -46,14 +46,14 @@ export function Terms({ onBack }: { onBack?: () => void }) {
           <section>
             <h2 className="text-2xl font-serif text-[#1B4332] mb-4">4. Privacy & Wali (Guardian) Integration</h2>
             <p className="text-[#5C574F] leading-relaxed">
-              We respect your privacy and adhere strictly to Islamic principles of modesty (Haya). Photos are blurred by default and only revealed upon mutual agreement after a guided compatibility session. Furthermore, the platform fully supports Wali access. Sisters are encouraged to involve their Wali in the process, allowing them to oversee conversations and profile matches if opted in, ensuring adherence to Islamic boundaries.
+              We respect your privacy and adhere to Islamic principles of modesty (Haya). Only your chosen main photo is shown to other verified members; any additional photos stay private and are revealed only after you mutually match. The platform fully supports Wali access — sisters are encouraged to involve their Wali, who can oversee conversations and matches when opted in, helping uphold Islamic boundaries.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-serif text-[#1B4332] mb-4">5. Code of Conduct (Adab)</h2>
             <p className="text-[#5C574F] leading-relaxed">
-              All interactions on the platform must be respectful, modest, and purposeful. Users must communicate with the highest level of Adab (good manners). Abusive language, harassment, discrimination, or solicitation of any kind will not be tolerated. Our AI moderators and human review team actively monitor the platform to ensure compliance with our code of conduct.
+              All interactions on the platform must be respectful, modest, and purposeful. Users must communicate with the highest level of Adab (good manners). Abusive language, harassment, discrimination, or solicitation of any kind will not be tolerated. Members can report any conversation or profile, and our team reviews every report. Where a member has enabled Wali oversight, a guardian may also review their conversations.
             </p>
           </section>
 

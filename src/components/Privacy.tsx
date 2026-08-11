@@ -18,7 +18,7 @@ export function Privacy({ onBack }: { onBack?: () => void }) {
             <Shield className="w-8 h-8 text-[#1B4332]" />
           </div>
           <h1 className="text-4xl font-serif text-[#1B4332] mb-4">Privacy Policy</h1>
-          <p className="text-[#8B7355]">Last updated: October 2023</p>
+          <p className="text-[#8B7355]">Last updated: August 2026</p>
         </div>
 
         <div className="bg-white rounded-3xl p-8 md:p-12 border border-[#E5E0D8] shadow-sm space-y-8 prose prose-[#2D2926] max-w-none">
@@ -32,21 +32,21 @@ export function Privacy({ onBack }: { onBack?: () => void }) {
           <section>
             <h2 className="text-2xl font-serif text-[#1B4332] mb-4">2. How We Use Your Information</h2>
             <p className="text-[#5C574F] leading-relaxed">
-              Your information is exclusively used to match you with compatible potential spouses based on your shared Deen (faith), values, and life goals. We utilize this data to provide our services, maintain safety and security through active moderation, process identity verifications, and refine our matchmaking algorithms to better serve the Kulmi community.
+              Your information is exclusively used to match you with compatible potential spouses based on your shared Deen (faith), values, and life goals. We use this data to provide our services, keep the community safe (including reviewing reports raised by members), process identity verifications, and improve our matching. Reports are reviewed by our team.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-serif text-[#1B4332] mb-4">3. Privacy by Design (Haya)</h2>
             <p className="text-[#5C574F] leading-relaxed">
-              Our platform is architected with Islamic privacy principles at its core. Your photos are blurred by default across the platform. They are only revealed to a specific match when both parties mutually agree after establishing compatibility. Your full name, exact location, and direct contact information are never shared publicly.
+              Our platform is built around Islamic privacy principles. Only the single main photo you choose is visible to other verified members in Discover. Any additional photos you add stay private and are revealed only after you and another member mutually match. Your last name, email, exact location (precise coordinates), guardian details, and deal-breakers are never shared with other members.
             </p>
           </section>
 
           <section>
             <h2 className="text-2xl font-serif text-[#1B4332] mb-4">4. Data Security & Storage</h2>
             <p className="text-[#5C574F] leading-relaxed">
-              We implement industry-standard security measures, including end-to-end encryption for sensitive data and private chats, to protect your personal information from unauthorized access, alteration, or disclosure. We do not sell your personal data to third parties for marketing purposes.
+              We use industry-standard security measures to protect your data. All traffic is encrypted in transit (HTTPS/TLS), and access to your profile, photos, and messages is restricted by strict database access controls so that only you — and, where you match, your match — can see gated content. Note that messages are not end-to-end encrypted and may be reviewed by our team or a guardian (Wali) where you have enabled oversight. We do not sell your personal data to third parties for marketing purposes.
             </p>
           </section>
 

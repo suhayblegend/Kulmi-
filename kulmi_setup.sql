@@ -1,5 +1,13 @@
--- KULMI complete DB setup — run once in Supabase SQL editor. Safe to re-run.
+-- =============================================================
+-- KULMI — combined idempotent setup (all migrations concatenated)
+-- Run this whole file in the Supabase SQL editor. Safe to re-run.
+-- Regenerated v10 — includes audit fixes.
+-- =============================================================
 
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI — end-to-end migration
 --  Run this ONCE in the Supabase SQL editor (Dashboard → SQL).
@@ -131,6 +139,9 @@ create policy "Admins view all messages" on public.messages for select to authen
 -- =============================================================
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_sessions.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI — compatibility sessions (the guided Q&A that gates a match)
 --  Run in the Supabase SQL editor AFTER migration.sql. Idempotent.
@@ -277,6 +288,9 @@ create trigger on_session_decision
   for each row execute function public.handle_session_decision();
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_storage.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI — storage setup for profile photos
 --  Run ONCE in the Supabase SQL editor (after migration.sql).
@@ -312,6 +326,9 @@ create policy "Users delete own avatar"
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v2.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v2 — real verification review, wali linkage,
 --  user settings, reports, and voice notes.
@@ -451,6 +468,9 @@ create policy "Users delete own media" on storage.objects for delete to authenti
   using (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v3.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v3 — profile privacy hardening + extra
 --  onboarding fields. Run in the Supabase SQL editor AFTER the
@@ -502,6 +522,9 @@ grant select on public.public_profiles to authenticated;
 notify pgrst, 'reload schema';
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v4.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v4 — SECURITY HARDENING (audit fixes)
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -610,6 +633,9 @@ $$;
 notify pgrst, 'reload schema';
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v5.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v5 — photo gallery with gated reveal
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -643,6 +669,9 @@ grant execute on function public.get_gallery(uuid) to authenticated;
 notify pgrst, 'reload schema';
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v6.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v6 — success tracking (engagements / marriages)
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -708,6 +737,9 @@ create trigger on_chat_status
 notify pgrst, 'reload schema';
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v7.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v7 — voice intro (replaces video)
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -753,6 +785,9 @@ grant execute on function public.get_intro(uuid) to authenticated;
 notify pgrst, 'reload schema';
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v8.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v8 — collect last name at signup
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -764,6 +799,9 @@ alter table public.profiles add column if not exists last_name text;
 notify pgrst, 'reload schema';
 
 
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v9.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v9 — auto-detected location coordinates
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -775,4 +813,59 @@ alter table public.profiles add column if not exists longitude double precision;
 
 notify pgrst, 'reload schema';
 
+
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- >>> migration_v10.sql
+-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+-- =============================================================
+--  KULMI migration v10 — audit fixes (delete cascade, enforce
+--  verification server-side, 18+). Run AFTER earlier migrations. Idempotent.
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- C1: account deletion was blocked by RESTRICT foreign keys on chats/messages.
+--     Cascade so deleting a profile removes their chats + messages.
+-- -------------------------------------------------------------
+alter table public.chats drop constraint if exists chats_user1_id_fkey;
+alter table public.chats add  constraint chats_user1_id_fkey foreign key (user1_id) references public.profiles(id) on delete cascade;
+alter table public.chats drop constraint if exists chats_user2_id_fkey;
+alter table public.chats add  constraint chats_user2_id_fkey foreign key (user2_id) references public.profiles(id) on delete cascade;
+alter table public.messages drop constraint if exists messages_sender_id_fkey;
+alter table public.messages add  constraint messages_sender_id_fkey foreign key (sender_id) references public.profiles(id) on delete cascade;
+alter table public.messages drop constraint if exists messages_chat_id_fkey;
+alter table public.messages add  constraint messages_chat_id_fkey foreign key (chat_id) references public.chats(id) on delete cascade;
+
+-- -------------------------------------------------------------
+-- C3: enforce identity verification in the DATABASE, not just the UI.
+--     Unverified members can no longer send invitations or take part in a
+--     session via direct API calls. (Admins exempt.)
+-- -------------------------------------------------------------
+create or replace function public.is_verified()
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce((select verification_status = 'verified' from public.profiles where id = auth.uid()), false);
+$$;
+
+drop policy if exists "Send invitations" on public.invitations;
+create policy "Send invitations" on public.invitations for insert to authenticated
+  with check (auth.uid() = sender_id and (public.is_verified() or public.is_admin()));
+
+drop policy if exists "Write own answers" on public.session_answers;
+create policy "Write own answers" on public.session_answers for insert to authenticated
+  with check (user_id = auth.uid() and (public.is_verified() or public.is_admin()) and exists (
+    select 1 from public.sessions s where s.id = session_id and (s.user1_id = auth.uid() or s.user2_id = auth.uid())
+  ));
+
+drop policy if exists "Write own decision" on public.session_decisions;
+create policy "Write own decision" on public.session_decisions for insert to authenticated
+  with check (user_id = auth.uid() and (public.is_verified() or public.is_admin()) and exists (
+    select 1 from public.sessions s where s.id = session_id and (s.user1_id = auth.uid() or s.user2_id = auth.uid())
+  ));
+
+-- -------------------------------------------------------------
+-- H5: 18+ only (child-safety). Enforced for new/updated rows.
+-- -------------------------------------------------------------
+alter table public.profiles drop constraint if exists profiles_age_18plus;
+alter table public.profiles add constraint profiles_age_18plus check (age is null or age >= 18) not valid;
+
+notify pgrst, 'reload schema';
 

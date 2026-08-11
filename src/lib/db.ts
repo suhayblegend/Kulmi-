@@ -96,8 +96,17 @@ async function readProfiles(cols: string, build: (q: any) => any): Promise<{ dat
   return res;
 }
 
+// Neutral placeholder (no human face) — a real photo is required at onboarding,
+// so this only shows for edge cases, never as someone's apparent face.
 const FALLBACK_AVATAR =
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400';
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">' +
+      '<rect width="400" height="400" fill="#E5E0D8"/>' +
+      '<circle cx="200" cy="160" r="60" fill="#C9C1B4"/>' +
+      '<path d="M90 340c0-60 50-104 110-104s110 44 110 104z" fill="#C9C1B4"/>' +
+    '</svg>'
+  );
 
 export function avatarFor(p: Pick<Profile, 'profile_picture_url'>): string {
   return p.profile_picture_url || FALLBACK_AVATAR;
@@ -768,8 +777,10 @@ export async function setWaliEmail(email: string): Promise<void> {
  *  requires a server-side admin call — do that from Supabase if needed.) */
 export async function deleteMyAccount(): Promise<void> {
   const uid = await getCurrentUserId();
-  if (uid) await supabase.from('profiles').delete().eq('id', uid);
-  await supabase.auth.signOut();
+  if (uid) {
+    const { error } = await supabase.from('profiles').delete().eq('id', uid);
+    if (error) throw error; // surfaced to the UI so the user isn't left thinking it worked
+  }
 }
 
 // -------------------------------------------------------------

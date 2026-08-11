@@ -126,6 +126,8 @@ export function Home({ onOpenSession }: HomeProps) {
   const handleSkip = () => setIndex((i) => i + 1);
 
   const handleRespond = async (inv: InvitationWithProfile, accept: boolean) => {
+    // Declining is permanent — you won't be shown to each other again — so confirm.
+    if (!accept && !window.confirm(`Decline ${inv.sender?.first_name ?? 'this person'}'s introduction? You won't be matched with them again.`)) return;
     setBusy(true);
     setError('');
     try {

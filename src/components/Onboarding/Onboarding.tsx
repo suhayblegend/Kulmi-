@@ -143,7 +143,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
 
   const canProceed = (): boolean => {
     switch (step) {
-      case 1: return !!(form.first_name && form.age && form.gender && form.marital_status && form.country && form.city);
+      case 1: return !!(form.first_name && parseInt(form.age, 10) >= 18 && form.gender && form.marital_status && form.country && form.city);
       case 2: return photos.length >= MIN_PHOTOS;
       case 3: return !!(form.bio.trim().length >= 20 && form.occupation && form.languages);
       case 4: return !!(form.prayer_level && form.islamic_practice);
@@ -162,7 +162,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      const { error: dbError } = await supabase.from('profiles').insert([{
+      const { error: dbError } = await supabase.from('profiles').upsert([{
         id: user.id, email: user.email,
         first_name: form.first_name, last_name: lastName || null, age: parseInt(form.age, 10), gender: form.gender,
         marital_status: form.marital_status, country: form.country, city: form.city,
@@ -179,15 +179,13 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       if (dbError) throw dbError;
 
       // Upload all photos: the highlighted one is the public main photo,
-      // the rest go to the gallery (revealed only to a match).
-      try {
-        const urls = await Promise.all(photos.map((p) => uploadPhoto(p.file)));
-        const main = urls[highlight] ?? urls[0];
-        const galleryUrls = urls.filter((_, i) => i !== highlight);
-        await updateMyProfile({ profile_picture_url: main, gallery: galleryUrls });
-      } catch (e: any) {
-        console.error('Photo upload failed:', e?.message);
-      }
+      // the rest go to the gallery (revealed only to a match). A profile
+      // without a main photo is not allowed, so a failure here blocks completion.
+      const urls = await Promise.all(photos.map((p) => uploadPhoto(p.file)));
+      const main = urls[highlight] ?? urls[0];
+      if (!main) throw new Error('Your main photo did not upload. Please check your connection and try again.');
+      const galleryUrls = urls.filter((_, i) => i !== highlight);
+      await updateMyProfile({ profile_picture_url: main, gallery: galleryUrls });
       onComplete();
     } catch (err: any) {
       setError(err.message || 'Failed to save profile');
@@ -216,7 +214,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               <>
                 <Field label="First Name"><input value={form.first_name} onChange={(e) => set('first_name', e.target.value)} className={INPUT_CLS} /></Field>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Age"><input type="number" min={18} value={form.age} onChange={(e) => set('age', e.target.value)} className={INPUT_CLS} /></Field>
+                  <Field label="Age"><input type="number" min={18} value={form.age} onChange={(e) => set('age', e.target.value)} className={INPUT_CLS} />{form.age && parseInt(form.age, 10) < 18 && <p className="text-[11px] text-red-600 mt-1">You must be 18 or older to use Kulmi.</p>}</Field>
                   <Field label="Gender"><SelectField value={form.gender} onChange={(v) => set('gender', v)} options={GENDERS} placeholder="Select" /></Field>
                 </div>
                 <Field label="Marital Status"><SelectField value={form.marital_status} onChange={(v) => set('marital_status', v)} options={MARITAL} placeholder="Select" /></Field>
