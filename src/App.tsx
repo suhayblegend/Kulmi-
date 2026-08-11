@@ -221,13 +221,13 @@ function MemberApp() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2D2926] font-sans selection:bg-[#F0EEE8] selection:text-[#1B4332] flex flex-col">
-      <header className="fixed top-0 left-0 right-0 h-24 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-[#E5E0D8] z-50 flex items-center px-6 lg:px-12">
+      <header className="fixed top-0 left-0 right-0 h-16 sm:h-24 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-[#E5E0D8] z-50 flex items-center px-4 sm:px-6 lg:px-12">
         <div className="w-full flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo />
             <button
               onClick={() => setAppState(user ? 'discover' : 'landing')}
-              className="font-serif text-2xl font-bold tracking-tight text-[#1B4332] hover:opacity-80 transition-opacity uppercase"
+              className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#1B4332] hover:opacity-80 transition-opacity uppercase"
             >
               Kulmi
             </button>
@@ -284,7 +284,7 @@ function MemberApp() {
         </div>
       </header>
 
-      <main className="pt-32 pb-16 px-4 min-h-screen flex flex-col items-center justify-center w-full max-w-6xl mx-auto">
+      <main className="pt-20 sm:pt-32 pb-24 sm:pb-16 px-3 sm:px-4 min-h-screen flex flex-col items-center justify-center w-full max-w-6xl mx-auto">
         <AnimatePresence mode="wait">
           {appState === 'landing' && (
             <motion.div key="landing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">

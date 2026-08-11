@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import {
   getChatPartner,
   getMatchGallery,
+  getMatchIntro,
   setChatStatus,
   getChatMeta,
   listMessages,
@@ -39,6 +40,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [partner, setPartner] = useState<Profile | null>(null);
   const [gallery, setGallery] = useState<string[]>([]);
+  const [partnerIntro, setPartnerIntro] = useState<string | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -63,9 +65,11 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
       setPartner(p);
       setMessages(msgs);
       if (p) {
-        // Matched → their extra photos unlock.
-        const extra = await getMatchGallery(p.id);
-        if (active) setGallery([avatarFor(p), ...extra]);
+        // Matched → their extra photos + voice intro unlock.
+        const [extra, intro] = await Promise.all([getMatchGallery(p.id), getMatchIntro(p.id)]);
+        if (!active) return;
+        setGallery([avatarFor(p), ...extra]);
+        setPartnerIntro(intro);
       }
     })();
 
@@ -405,6 +409,12 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
           </p>
 
           <div className="space-y-8">
+            {partnerIntro && (
+              <div>
+                <h3 className="text-[10px] uppercase tracking-widest font-bold text-[#8B7355] mb-2">🎤 Voice intro</h3>
+                <audio controls src={partnerIntro} className="w-full" />
+              </div>
+            )}
             {partner?.bio && (
               <div>
                 <h3 className="text-[10px] uppercase tracking-widest font-bold text-[#8B7355] mb-3">About</h3>

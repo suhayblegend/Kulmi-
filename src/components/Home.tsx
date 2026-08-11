@@ -331,6 +331,12 @@ export function Home({ onOpenSession }: HomeProps) {
                   "{current.bio}"
                 </p>
               )}
+              {current.intro_audio_url && (
+                <div className="mt-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1.5 flex items-center gap-1.5">🎤 Voice intro</p>
+                  <audio controls src={current.intro_audio_url} className="w-full" />
+                </div>
+              )}
               {current.prayer_level && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="px-3 py-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">

@@ -38,6 +38,8 @@ export interface Profile {
   verification_selfie_url?: string | null;
   wali_email?: string | null;
   gallery?: string[] | null;
+  intro_audio_url?: string | null;
+  intro_public?: boolean | null;
   show_in_discovery?: boolean | null;
   push_notifications?: boolean | null;
   email_summaries?: boolean | null;
@@ -73,7 +75,7 @@ export interface Message {
 // If that view isn't present yet (the privacy migration hasn't been run),
 // transparently fall back to the base `profiles` table so the app still works.
 const PUBLIC_PROFILE_COLS =
-  'id, first_name, age, gender, location, bio, role, profile_picture_url, country, city, occupation, education, languages, marital_status, height, heritage, marriage_intent, timeline, relocate, children, has_children, prayer_level, islamic_practice, faith_statement, personality_traits, future_goals, communication_style, photo_verified, verification_status';
+  'id, first_name, age, gender, location, bio, role, profile_picture_url, country, city, occupation, education, languages, marital_status, height, heritage, marriage_intent, timeline, relocate, children, has_children, prayer_level, islamic_practice, faith_statement, personality_traits, future_goals, communication_style, photo_verified, verification_status, intro_audio_url';
 
 let PROFILE_SRC = 'public_profiles';
 // Only fall back when the VIEW genuinely doesn't exist (missing relation),
@@ -194,6 +196,35 @@ export async function getMatchGallery(partnerId: string): Promise<string[]> {
   const { data, error } = await supabase.rpc('get_gallery', { target: partnerId });
   if (error) return [];
   return (data as string[]) ?? [];
+}
+
+// -------------------------------------------------------------
+// Voice intro
+// -------------------------------------------------------------
+export async function uploadIntro(blob: Blob): Promise<string> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const path = `${uid}/intro_${Date.now()}.webm`;
+  const { error } = await supabase.storage.from('media').upload(path, blob, { contentType: blob.type || 'audio/webm', upsert: true });
+  if (error) throw error;
+  const url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
+  await updateMyProfile({ intro_audio_url: url });
+  return url;
+}
+
+export async function setIntroPublic(isPublic: boolean): Promise<void> {
+  await updateMyProfile({ intro_public: isPublic });
+}
+
+export async function removeIntro(): Promise<void> {
+  await updateMyProfile({ intro_audio_url: null });
+}
+
+/** A matched partner's voice intro (works even if they set it to matches-only). */
+export async function getMatchIntro(partnerId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('get_intro', { target: partnerId });
+  if (error) return null;
+  return (data as string) ?? null;
 }
 
 /**

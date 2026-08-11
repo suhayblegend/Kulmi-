@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Video, Loader2 } from 'lucide-react';
-import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, submitPhotoVerification, signOut, avatarFor, type Profile as DbProfile } from '../lib/db';
+import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Mic, Square, Trash2, Loader2 } from 'lucide-react';
+import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, type Profile as DbProfile } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
 
@@ -110,6 +110,59 @@ export function Profile() {
     }
   };
 
+  // ---- Voice intro ----
+  const [introUrl, setIntroUrl] = useState<string | null>(null);
+  const [introPublic, setIntroPublicState] = useState(false);
+  const [introRecording, setIntroRecording] = useState(false);
+  const [introBusy, setIntroBusy] = useState(false);
+  const introRecRef = useRef<MediaRecorder | null>(null);
+  const introChunksRef = useRef<Blob[]>([]);
+  const introStreamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => () => { introStreamRef.current?.getTracks().forEach((t) => t.stop()); }, []);
+
+  const startIntro = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      introStreamRef.current = stream;
+      const mr = new MediaRecorder(stream);
+      introChunksRef.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size) introChunksRef.current.push(e.data); };
+      mr.start();
+      introRecRef.current = mr;
+      setIntroRecording(true);
+    } catch {
+      alert('Microphone access is needed to record your intro.');
+    }
+  };
+
+  const stopIntro = () => {
+    const mr = introRecRef.current;
+    if (!mr) { setIntroRecording(false); return; }
+    mr.onstop = async () => {
+      const blob = new Blob(introChunksRef.current, { type: 'audio/webm' });
+      introStreamRef.current?.getTracks().forEach((t) => t.stop());
+      setIntroRecording(false);
+      if (blob.size > 0) {
+        setIntroBusy(true);
+        try { setIntroUrl(await uploadIntro(blob)); }
+        catch (e: any) { alert(e.message || 'Could not save your intro.'); }
+        finally { setIntroBusy(false); }
+      }
+    };
+    mr.stop();
+  };
+
+  const deleteIntro = async () => {
+    setIntroBusy(true);
+    try { await removeIntro(); setIntroUrl(null); } finally { setIntroBusy(false); }
+  };
+
+  const changeIntroVisibility = async (v: boolean) => {
+    setIntroPublicState(v);
+    try { await setIntroPublicApi(v); } catch { setIntroPublicState(!v); }
+  };
+
   const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -147,6 +200,8 @@ export function Profile() {
         setVerificationStatus((p.verification_status as any) ?? (p.photo_verified ? 'verified' : 'unverified'));
         setRole(p.role || 'user');
         setGallery(p.gallery ?? []);
+        setIntroUrl(p.intro_audio_url ?? null);
+        setIntroPublicState(!!p.intro_public);
       })
       .finally(() => active && setLoading(false));
     return () => {
@@ -668,17 +723,38 @@ export function Profile() {
               </div>
             )}
 
-            {/* Intro Video Placeholder */}
+            {/* Voice intro */}
             {!isEditing && (
-              <div className="bg-white rounded-3xl p-6 border border-[#E5E0D8] shadow-sm flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 bg-[#F0EEE8] rounded-full flex items-center justify-center text-[#1B4332] mb-3">
-                  <Video className="w-5 h-5" />
-                </div>
-                <h3 className="text-sm font-bold text-[#2D2926] mb-1">Introduction Video</h3>
-                <p className="text-xs text-[#8B7355] mb-4">Record a short 30s intro to stand out.</p>
-                <button className="text-xs font-medium text-[#1B4332] border border-[#1B4332] px-4 py-2 rounded-xl hover:bg-[#F0EEE8] transition-colors w-full">
-                  Record Video
-                </button>
+              <div className="bg-white rounded-3xl p-6 border border-[#E5E0D8] shadow-sm">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-[#8B7355] mb-2 flex items-center gap-2">
+                  <Mic className="w-4 h-4" /> Voice Intro
+                </h3>
+                <p className="text-xs text-[#8B7355] mb-4">A short voice note lets people hear your manner and sincerity.</p>
+
+                {introUrl ? (
+                  <>
+                    <audio controls src={introUrl} className="w-full mb-4" />
+                    <div className="mb-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2">Who can hear it?</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => changeIntroVisibility(true)} className={`flex-1 px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${introPublic ? 'bg-[#1B4332] text-white border-[#1B4332]' : 'bg-white border-[#E5E0D8] text-[#2D2926] hover:bg-[#FDFBF7]'}`}>Everyone</button>
+                        <button onClick={() => changeIntroVisibility(false)} className={`flex-1 px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${!introPublic ? 'bg-[#1B4332] text-white border-[#1B4332]' : 'bg-white border-[#E5E0D8] text-[#2D2926] hover:bg-[#FDFBF7]'}`}>Only matches</button>
+                      </div>
+                      <p className="text-[10px] text-[#8B7355] mt-2">{introPublic ? 'Played to everyone who sees you in Discover.' : 'Played only after you both match.'}</p>
+                    </div>
+                    <button onClick={deleteIntro} disabled={introBusy} className="w-full flex items-center justify-center gap-2 text-xs font-medium text-red-600 border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50">
+                      <Trash2 className="w-4 h-4" /> Delete intro
+                    </button>
+                  </>
+                ) : introRecording ? (
+                  <button onClick={stopIntro} className="w-full flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-3 rounded-xl font-medium hover:bg-red-600 transition-colors">
+                    <Square className="w-4 h-4 fill-current" /> Stop &amp; save
+                  </button>
+                ) : (
+                  <button onClick={startIntro} disabled={introBusy} className="w-full flex items-center justify-center gap-2 text-sm font-medium text-[#1B4332] border border-[#1B4332] px-4 py-3 rounded-xl hover:bg-[#F0EEE8] transition-colors disabled:opacity-50">
+                    {introBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Mic className="w-4 h-4" /> Record voice intro</>}
+                  </button>
+                )}
               </div>
             )}
             
