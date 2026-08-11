@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ShieldAlert, Mic, Trash2, Users, AlertTriangle, Send } from 'lucide-react';
+import { ArrowLeft, ShieldAlert, Mic, Trash2, Users, AlertTriangle, Send, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import {
@@ -12,6 +12,7 @@ import {
   sendMessage,
   sendVoiceMessage,
   reportUser,
+  stopContact,
   getCurrentUserId,
   avatarFor,
   type Message,
@@ -30,6 +31,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [endReason, setEndReason] = useState('');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showSuccessForm, setShowSuccessForm] = useState(false);
@@ -189,6 +191,21 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     setIsRecording(false);
   };
 
+  const [stopping, setStopping] = useState(false);
+  const handleStopContact = async () => {
+    if (stopping) return;
+    setStopping(true);
+    try {
+      if (partner) await stopContact(partner.id, chatId);
+    } catch {
+      /* leave anyway — the intent was to get away from this person */
+    } finally {
+      setStopping(false);
+      setShowStopConfirm(false);
+      onEndIntroduction();
+    }
+  };
+
   const handleReport = async () => {
     if (!partner) return;
     const reason = window.prompt(`Report ${partnerName}? Briefly, what's the issue?`);
@@ -249,6 +266,41 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
                   className="flex-1 px-6 py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
                 >
                   Confirm End
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+        {showStopConfirm && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white border border-[#E5E0D8] p-8 rounded-2xl shadow-lg max-w-md w-full text-center"
+            >
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <ShieldAlert className="w-8 h-8 text-red-500" />
+              </div>
+              <h3 className="text-xl font-serif text-[#1B4332] font-medium mb-3">End &amp; stop contact?</h3>
+              <p className="text-sm text-[#5C574F] mb-6">
+                This ends the conversation and quietly prevents {partnerName} from contacting you again. You won't be shown to
+                each other, and they are not told. If someone has behaved inappropriately, please also report them so our team can review.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowStopConfirm(false)}
+                  disabled={stopping}
+                  className="flex-1 px-6 py-3 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStopContact}
+                  disabled={stopping}
+                  className="flex-1 px-6 py-3 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {stopping ? <Loader2 className="w-5 h-5 animate-spin" /> : 'End & stop contact'}
                 </button>
               </div>
             </motion.div>
@@ -480,6 +532,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
           onExit={onExit}
           setShowStatusModal={setShowStatusModal}
           setShowEndConfirm={setShowEndConfirm}
+          setShowStopConfirm={setShowStopConfirm}
         />
 
         <div className="bg-[#F0EEE8] px-6 py-2.5 flex items-start sm:items-center gap-3 border-b border-[#E5E0D8]">

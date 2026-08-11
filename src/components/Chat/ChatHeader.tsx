@@ -7,9 +7,10 @@ interface ChatHeaderProps {
   onExit: () => void;
   setShowStatusModal: (v: boolean) => void;
   setShowEndConfirm: (v: boolean) => void;
+  setShowStopConfirm: (v: boolean) => void;
 }
 
-export function ChatHeader({ partnerName, partnerAvatar, onExit, setShowStatusModal, setShowEndConfirm }: ChatHeaderProps) {
+export function ChatHeader({ partnerName, partnerAvatar, onExit, setShowStatusModal, setShowEndConfirm, setShowStopConfirm }: ChatHeaderProps) {
   return (
     <div className="h-[72px] border-b border-[#E5E0D8] bg-[#FDFBF7] flex items-center justify-between px-6 sm:px-8 shrink-0">
       <div className="flex items-center gap-4">
@@ -39,11 +40,17 @@ export function ChatHeader({ partnerName, partnerAvatar, onExit, setShowStatusMo
               Update Status
             </button>
             <div className="h-px bg-[#E5E0D8] my-1"></div>
-            <button 
-              className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-lg font-medium"
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-[#5C574F] hover:bg-[#F0EEE8] transition-colors rounded-lg font-medium"
               onClick={() => setShowEndConfirm(true)}
             >
-              End Introduction
+              End match
+            </button>
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors rounded-lg font-medium"
+              onClick={() => setShowStopConfirm(true)}
+            >
+              End &amp; stop contact
             </button>
           </div>
         </div>

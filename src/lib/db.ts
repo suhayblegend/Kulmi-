@@ -282,6 +282,12 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
     .select('user1_id, user2_id')
     .or(`user1_id.eq.${me.id},user2_id.eq.${me.id}`);
 
+  // Anyone I've ended contact with (or who ended contact with me).
+  const { data: blocks } = await supabase
+    .from('blocks')
+    .select('blocker_id, blocked_id')
+    .or(`blocker_id.eq.${me.id},blocked_id.eq.${me.id}`);
+
   const excluded = new Set<string>([me.id]);
   (invs ?? []).forEach((r: any) => {
     excluded.add(r.sender_id);
@@ -290,6 +296,10 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
   (chats ?? []).forEach((r: any) => {
     excluded.add(r.user1_id);
     excluded.add(r.user2_id);
+  });
+  (blocks ?? []).forEach((r: any) => {
+    excluded.add(r.blocker_id);
+    excluded.add(r.blocked_id);
   });
 
   const { data, error } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => {
@@ -618,12 +628,22 @@ export async function listChats(): Promise<ChatSummary[]> {
   if (error) throw error;
   if (!chats || chats.length === 0) return [];
 
-  const partnerIds = chats.map((c: any) => (c.user1_id === uid ? c.user2_id : c.user1_id));
+  // Conversations I've ended (End match / stop contact) drop out of my list.
+  const { data: endedRows } = await supabase
+    .from('chat_status')
+    .select('chat_id')
+    .eq('user_id', uid)
+    .eq('status', 'ended');
+  const endedIds = new Set(((endedRows as any[]) ?? []).map((r) => r.chat_id));
+  const visibleChats = (chats as any[]).filter((c) => !endedIds.has(c.id));
+  if (visibleChats.length === 0) return [];
+
+  const partnerIds = visibleChats.map((c: any) => (c.user1_id === uid ? c.user2_id : c.user1_id));
   const { data: partners } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.in('id', partnerIds));
   const byId = new Map(((partners as any[]) ?? []).map((p: any) => [p.id, p as Profile]));
 
   const summaries: ChatSummary[] = [];
-  for (const c of chats as any[]) {
+  for (const c of visibleChats as any[]) {
     const partnerId = c.user1_id === uid ? c.user2_id : c.user1_id;
     const partner = byId.get(partnerId);
     if (!partner) continue;
@@ -759,6 +779,22 @@ export async function reportUser(reportedId: string, reason: string): Promise<vo
     .from('reports')
     .insert([{ reporter_id: uid, reported_id: reportedId, reason }]);
   if (error) throw error;
+}
+
+/** Quietly prevent any further contact with someone (our dignified take on
+ *  "block"): they can no longer invite you, you won't be shown to each other,
+ *  and any shared conversation is ended. No notification is sent to them. */
+export async function stopContact(otherId: string, chatId?: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  if (uid === otherId) return;
+  const { error } = await supabase
+    .from('blocks')
+    .upsert({ blocker_id: uid, blocked_id: otherId }, { onConflict: 'blocker_id,blocked_id' });
+  if (error) throw error;
+  if (chatId) {
+    try { await setChatStatus(chatId, 'ended'); } catch { /* the block is what matters */ }
+  }
 }
 
 // -------------------------------------------------------------
