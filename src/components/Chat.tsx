@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import {
   getChatPartner,
+  getMatchGallery,
   listMessages,
   sendMessage,
   sendVoiceMessage,
@@ -35,6 +36,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [partner, setPartner] = useState<Profile | null>(null);
+  const [gallery, setGallery] = useState<string[]>([]);
   const [myId, setMyId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -58,6 +60,11 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
       setMyId(uid);
       setPartner(p);
       setMessages(msgs);
+      if (p) {
+        // Matched → their extra photos unlock.
+        const extra = await getMatchGallery(p.id);
+        if (active) setGallery([avatarFor(p), ...extra]);
+      }
     })();
 
     const subscription = supabase
@@ -369,9 +376,18 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-8">
-          <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-6 border border-[#E5E0D8] shadow-sm">
+          <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 border border-[#E5E0D8] shadow-sm">
             {partner && <img src={avatarFor(partner)} alt={partnerName} className="w-full h-full object-cover" />}
           </div>
+          {gallery.length > 1 && (
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {gallery.slice(1).map((url) => (
+                <a key={url} href={url} target="_blank" rel="noreferrer" className="w-14 h-14 rounded-xl overflow-hidden border border-[#E5E0D8] hover:opacity-90">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </a>
+              ))}
+            </div>
+          )}
           <h2 className="text-2xl font-serif font-medium text-center text-[#1B4332] mb-1">
             {partnerName}{partner?.age ? `, ${partner.age}` : ''}
           </h2>

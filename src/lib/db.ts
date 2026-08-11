@@ -37,6 +37,7 @@ export interface Profile {
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected' | null;
   verification_selfie_url?: string | null;
   wali_email?: string | null;
+  gallery?: string[] | null;
   show_in_discovery?: boolean | null;
   push_notifications?: boolean | null;
   email_summaries?: boolean | null;
@@ -153,6 +154,29 @@ export async function uploadAvatar(file: File): Promise<string> {
   const url = await uploadToAvatars(file, 'avatar');
   await updateMyProfile({ profile_picture_url: url });
   return url;
+}
+
+/** Add an extra photo to the gallery (revealed only to matches). Returns the new gallery. */
+export async function addGalleryPhoto(file: File): Promise<string[]> {
+  const me = await getMyProfile();
+  const url = await uploadToAvatars(file, 'photo');
+  const gallery = [...(me?.gallery ?? []), url];
+  await updateMyProfile({ gallery });
+  return gallery;
+}
+
+export async function removeGalleryPhoto(url: string): Promise<string[]> {
+  const me = await getMyProfile();
+  const gallery = (me?.gallery ?? []).filter((u) => u !== url);
+  await updateMyProfile({ gallery });
+  return gallery;
+}
+
+/** A matched partner's extra photos (empty unless you share a chat with them). */
+export async function getMatchGallery(partnerId: string): Promise<string[]> {
+  const { data, error } = await supabase.rpc('get_gallery', { target: partnerId });
+  if (error) return [];
+  return (data as string[]) ?? [];
 }
 
 /**

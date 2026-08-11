@@ -131,23 +131,36 @@ function MemberApp() {
         setAppState('reset');
         return;
       }
-      if (event === 'SIGNED_OUT' || !session?.user) {
+      if (event === 'SIGNED_OUT') {
+        // Real sign-out only.
         setUser(null);
         setMyProfile(null);
-        // A cold, logged-out visit to /auth should show the sign-in screen.
-        const wantAuth = event !== 'SIGNED_OUT' && pathToState(initialPathRef.current) === 'auth';
-        setAppState(wantAuth ? 'auth' : 'landing');
+        setAppState('landing');
         routedRef.current = false;
-        if (event === 'SIGNED_OUT') initialPathRef.current = '/'; // keep deep link on a cold logged-out start
+        initialPathRef.current = '/';
+        return;
+      }
+
+      if (!session?.user) {
+        // No session on a non-signout event (e.g. INITIAL_SESSION while logged
+        // out). Only decide the screen on first load; never yank an active user.
+        if (!routedRef.current) {
+          const wantAuth = pathToState(initialPathRef.current) === 'auth';
+          setUser(null);
+          setMyProfile(null);
+          setAppState(wantAuth ? 'auth' : 'landing');
+        }
         return;
       }
 
       setUser(session.user);
-      if (event === 'SIGNED_IN' || !routedRef.current) {
-        // A real sign-in (or the first time we learn who the user is) → route in.
+      if (!routedRef.current) {
+        // First time we learn who the user is (initial load or a fresh sign-in) → route in.
         loadProfileAndRoute();
       } else {
-        // Background token refreshes → just keep the profile fresh, don't navigate.
+        // Already inside the app: token refresh / focus / spurious SIGNED_IN →
+        // just keep the profile fresh, NEVER navigate. (Fixes the "jumps to home
+        // after a few minutes" bug.)
         getMyProfile().then(setMyProfile).catch(() => {});
       }
     });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Video, Loader2 } from 'lucide-react';
-import { getMyProfile, updateMyProfile, uploadAvatar, submitPhotoVerification, avatarFor, type Profile as DbProfile } from '../lib/db';
+import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, submitPhotoVerification, avatarFor, type Profile as DbProfile } from '../lib/db';
 import { CameraCapture } from './CameraCapture';
 
 type ProfileForm = {
@@ -81,7 +81,33 @@ export function Profile() {
   const [profile, setProfile] = useState<ProfileForm>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<ProfileForm>(EMPTY_FORM);
 
+  const [gallery, setGallery] = useState<string[]>([]);
+  const [galleryBusy, setGalleryBusy] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleGalleryPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGalleryBusy(true);
+    try {
+      setGallery(await addGalleryPhoto(file));
+    } catch (err: any) {
+      alert(err.message || 'Could not add photo.');
+    } finally {
+      setGalleryBusy(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleGalleryRemove = async (url: string) => {
+    setGalleryBusy(true);
+    try {
+      setGallery(await removeGalleryPhoto(url));
+    } finally {
+      setGalleryBusy(false);
+    }
+  };
 
   const handleAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,6 +145,7 @@ export function Profile() {
         setPhotoVerified(!!p.photo_verified);
         setVerificationStatus((p.verification_status as any) ?? (p.photo_verified ? 'verified' : 'unverified'));
         setRole(p.role || 'user');
+        setGallery(p.gallery ?? []);
       })
       .finally(() => active && setLoading(false));
     return () => {
@@ -269,6 +296,41 @@ export function Profile() {
                   )}
                 </div>
               </>
+            )}
+          </div>
+        </div>
+
+        {/* More photos — revealed only to matches */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#E5E0D8] shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-[#8B7355] mb-2 flex items-center gap-2">
+            <Camera className="w-4 h-4" /> More Photos
+          </h3>
+          <p className="text-xs text-[#8B7355] mb-5">
+            Your main photo is shown in Discover. These extra photos stay private and are revealed <span className="font-medium text-[#1B4332]">only to a match</span> — after you both pass the compatibility session.
+          </p>
+          <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleGalleryPick} />
+          <div className="flex flex-wrap gap-3">
+            {gallery.map((url) => (
+              <div key={url} className="relative w-24 h-24 rounded-2xl overflow-hidden border border-[#E5E0D8] group">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => handleGalleryRemove(url)}
+                  disabled={galleryBusy}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remove"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+            {gallery.length < 6 && (
+              <button
+                onClick={() => galleryInputRef.current?.click()}
+                disabled={galleryBusy}
+                className="w-24 h-24 rounded-2xl border-2 border-dashed border-[#8B7355] text-[#8B7355] flex flex-col items-center justify-center hover:bg-[#FDFBF7] transition-colors disabled:opacity-50"
+              >
+                {galleryBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Camera className="w-5 h-5 mb-1" /><span className="text-[10px] font-medium">Add photo</span></>}
+              </button>
             )}
           </div>
         </div>

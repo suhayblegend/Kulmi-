@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Search, MoreVertical, Filter, Heart, Loader2 } from 'lucide-react';
+import { Search, Heart, Loader2 } from 'lucide-react';
 import { listChats, avatarFor, type ChatSummary } from '../lib/db';
 
 interface ChatsProps {
@@ -45,14 +45,6 @@ export function Chats({ onSelectChat }: ChatsProps) {
       <div className="p-6 md:p-8 border-b border-[#E5E0D8] bg-[#FDFBF7]">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-serif text-[#1B4332]">Messages</h2>
-          <div className="flex items-center gap-2 text-[#8B7355]">
-            <button className="p-2 hover:text-[#1B4332] hover:bg-[#F0EEE8] rounded-full transition-colors">
-              <Filter className="w-5 h-5" />
-            </button>
-            <button className="p-2 hover:text-[#1B4332] hover:bg-[#F0EEE8] rounded-full transition-colors">
-              <MoreVertical className="w-5 h-5" />
-            </button>
-          </div>
         </div>
 
         {/* Search */}
