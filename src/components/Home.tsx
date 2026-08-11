@@ -33,6 +33,7 @@ export function Home({ onOpenSession }: HomeProps) {
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [viewingInvite, setViewingInvite] = useState<InvitationWithProfile | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
@@ -228,20 +229,22 @@ export function Home({ onOpenSession }: HomeProps) {
           <div className="divide-y divide-[#F0EEE8]">
             {invites.map((inv) => (
               <div key={inv.id} className="flex items-center gap-4 p-4">
-                <img
-                  src={avatarFor(inv.sender)}
-                  alt=""
-                  className="w-12 h-12 rounded-full object-cover border border-[#E5E0D8]"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-serif font-medium text-[#1B4332] truncate">
-                    {inv.sender.first_name}
-                    {inv.sender.age ? `, ${inv.sender.age}` : ''}
-                  </p>
-                  <p className="text-xs text-[#8B7355] truncate">
-                    {inv.sender.location || inv.sender.city || 'Somewhere'}
-                  </p>
-                </div>
+                <button onClick={() => setViewingInvite(inv)} className="flex items-center gap-4 flex-1 min-w-0 text-left group">
+                  <img
+                    src={avatarFor(inv.sender)}
+                    alt=""
+                    className="w-12 h-12 rounded-full object-cover border border-[#E5E0D8]"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-serif font-medium text-[#1B4332] truncate">
+                      {inv.sender.first_name}
+                      {inv.sender.age ? `, ${inv.sender.age}` : ''}
+                    </p>
+                    <p className="text-xs text-[#1B4332] truncate font-medium group-hover:underline">
+                      Tap to view profile →
+                    </p>
+                  </div>
+                </button>
                 <button
                   disabled={busy}
                   onClick={() => handleRespond(inv, false)}
@@ -400,6 +403,59 @@ export function Home({ onOpenSession }: HomeProps) {
           </div>
         )
       )}
+
+      {/* Inviter profile modal */}
+      <AnimatePresence>
+        {viewingInvite && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#2D2926]/50 backdrop-blur-sm" onClick={() => setViewingInvite(null)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] max-h-[90vh] overflow-y-auto"
+            >
+              <button onClick={() => setViewingInvite(null)} className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4 h-4" /></button>
+              <div className="relative h-72 bg-[#F0EEE8]">
+                <img src={avatarFor(viewingInvite.sender)} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5 text-white">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-serif drop-shadow-sm">{viewingInvite.sender.first_name}{viewingInvite.sender.age ? `, ${viewingInvite.sender.age}` : ''}</h2>
+                    {(viewingInvite.sender.verification_status === 'verified' || viewingInvite.sender.photo_verified) && (
+                      <span className="flex items-center gap-1 bg-white/90 text-[#1B4332] text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"><BadgeCheck className="w-3 h-3" /> Verified</span>
+                    )}
+                  </div>
+                  {(viewingInvite.sender.location || viewingInvite.sender.city) && (
+                    <p className="flex items-center gap-1.5 text-sm opacity-90 mt-0.5"><MapPin className="w-3.5 h-3.5" /> {viewingInvite.sender.location || [viewingInvite.sender.city, viewingInvite.sender.country].filter(Boolean).join(', ')}</p>
+                  )}
+                </div>
+              </div>
+              <div className="p-6">
+                <p className="text-sm text-[#8B7355] mb-3">💌 {viewingInvite.sender.first_name} sent you an invitation.</p>
+                <div className="flex flex-wrap gap-2">
+                  {[viewingInvite.sender.prayer_level, viewingInvite.sender.marital_status, viewingInvite.sender.occupation, viewingInvite.sender.children, viewingInvite.sender.marriage_intent]
+                    .filter(Boolean).slice(0, 5).map((chip) => (
+                      <span key={chip as string} className="px-3 py-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">{chip}</span>
+                    ))}
+                </div>
+                {viewingInvite.sender.bio && <p className="text-sm text-[#5C574F] leading-relaxed mt-4 font-serif italic">"{viewingInvite.sender.bio}"</p>}
+                {viewingInvite.sender.intro_audio_url && (
+                  <div className="mt-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1.5">🎤 Voice intro</p>
+                    <audio controls src={viewingInvite.sender.intro_audio_url} className="w-full" />
+                  </div>
+                )}
+                <p className="text-[11px] text-[#8B7355] mt-4">More photos unlock after you both match.</p>
+                <div className="flex gap-3 mt-5">
+                  <button disabled={busy} onClick={() => { const inv = viewingInvite; setViewingInvite(null); handleRespond(inv, false); }} className="flex-1 px-6 py-3 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50">Decline</button>
+                  <button disabled={busy} onClick={() => { const inv = viewingInvite; setViewingInvite(null); handleRespond(inv, true); }} className="flex-1 px-6 py-3 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Check className="w-4 h-4" /> Accept &amp; start session</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </Shell>
   );
 }
