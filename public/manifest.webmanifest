@@ -1,0 +1,12 @@
+{
+  "name": "Kulmi — Halal Somali Marriage",
+  "short_name": "Kulmi",
+  "description": "A halal Somali marriage introduction platform. Guided compatibility sessions and Wali involvement — serious about marriage, not swiping.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFBF7",
+  "theme_color": "#1B4332",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

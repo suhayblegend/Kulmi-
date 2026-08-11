@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="630" fill="#FDFBF7"/>
+  <rect x="24" y="24" width="1152" height="582" rx="28" fill="none" stroke="#E5E0D8" stroke-width="2"/>
+  <!-- logo -->
+  <g transform="translate(100,90)">
+    <rect width="88" height="88" rx="22" fill="#1B4332"/>
+    <g transform="translate(16,16)" fill="none" stroke="#F0EEE8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="20" cy="21" r="10" fill="#F0EEE8" fill-opacity="0.22"/>
+      <path d="M20 34c-10 0-17.5 6.6-17.5 16.5V54h35v-3.5C37.5 40.6 30 34 20 34z" fill="#F0EEE8" fill-opacity="0.22"/>
+      <circle cx="36" cy="21" r="10"/>
+      <path d="M36 34c10 0 17.5 6.6 17.5 16.5V54H24"/>
+    </g>
+  </g>
+  <text x="208" y="152" font-size="58" fill="#1B4332" font-weight="bold" letter-spacing="6">KULMI</text>
+  <text x="100" y="320" font-size="88" fill="#1B4332">No swiping.</text>
+  <text x="100" y="418" font-size="88" fill="#8B7355" font-style="italic">Meaningful introductions.</text>
+  <text x="102" y="500" font-size="34" fill="#5C574F" font-family="Helvetica, Arial, sans-serif">A halal Somali marriage platform — guided compatibility before profiles.</text>
+  <text x="102" y="560" font-size="22" fill="#8B7355" font-family="Helvetica, Arial, sans-serif" letter-spacing="3">SERIOUS ABOUT MARRIAGE • WALI-INVOLVED • QUALITY OVER QUANTITY</text>
+</svg>
