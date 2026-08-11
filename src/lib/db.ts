@@ -335,11 +335,9 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
     .select('user1_id, user2_id')
     .or(`user1_id.eq.${me.id},user2_id.eq.${me.id}`);
 
-  // Anyone I've ended contact with (or who ended contact with me).
-  const { data: blocks } = await supabase
-    .from('blocks')
-    .select('blocker_id, blocked_id')
-    .or(`blocker_id.eq.${me.id},blocked_id.eq.${me.id}`);
+  // Anyone I've ended contact with — OR who ended contact with me (both
+  // directions, via a SECURITY DEFINER function so it's silent to them).
+  const { data: blockedIds } = await supabase.rpc('blocked_user_ids');
 
   const excluded = new Set<string>([me.id]);
   (invs ?? []).forEach((r: any) => {
@@ -350,10 +348,7 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
     excluded.add(r.user1_id);
     excluded.add(r.user2_id);
   });
-  (blocks ?? []).forEach((r: any) => {
-    excluded.add(r.blocker_id);
-    excluded.add(r.blocked_id);
-  });
+  ((blockedIds as string[]) ?? []).forEach((id) => excluded.add(id));
 
   const { data, error } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => {
     q = q.eq('show_in_discovery', true).limit(100);
