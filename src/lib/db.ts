@@ -41,6 +41,8 @@ export interface Profile {
   gallery?: string[] | null;
   intro_audio_url?: string | null;
   intro_public?: boolean | null;
+  latitude?: number | null;
+  longitude?: number | null;
   show_in_discovery?: boolean | null;
   push_notifications?: boolean | null;
   email_summaries?: boolean | null;
@@ -249,6 +251,7 @@ export interface DiscoverFilters {
   ageMin?: number;
   ageMax?: number;
   country?: string;
+  city?: string;
   prayerLevel?: string;
   maritalStatus?: string;
   wantChildren?: string;
@@ -288,6 +291,7 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
     if (filters.ageMin) q = q.gte('age', filters.ageMin);
     if (filters.ageMax) q = q.lte('age', filters.ageMax);
     if (filters.country?.trim()) q = q.ilike('country', `%${filters.country.trim()}%`);
+    if (filters.city?.trim()) q = q.ilike('city', `%${filters.city.trim()}%`);
     if (filters.prayerLevel) q = q.eq('prayer_level', filters.prayerLevel);
     if (filters.maritalStatus) q = q.eq('marital_status', filters.maritalStatus);
     if (filters.wantChildren) q = q.eq('children', filters.wantChildren);

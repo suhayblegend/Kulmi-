@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { uploadPhoto, updateMyProfile } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X, MapPin } from 'lucide-react';
 
 const MIN_PHOTOS = 4;
 
@@ -86,7 +86,32 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [lastName, setLastName] = useState('');
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locating, setLocating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const detectLocation = () => {
+    if (!('geolocation' in navigator)) { alert('Location is not available on this device — please type it.'); return; }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setCoords({ latitude, longitude });
+        try {
+          const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+          const d = await r.json();
+          setForm((f) => ({
+            ...f,
+            country: d.countryName || f.country,
+            city: d.city || d.locality || d.principalSubdivision || f.city,
+          }));
+        } catch { /* keep coords even if reverse-geocode fails */ }
+        setLocating(false);
+      },
+      () => { setLocating(false); alert('Could not get your location. Please allow location access, or type it manually.'); },
+      { enableHighAccuracy: false, timeout: 10000 }
+    );
+  };
 
   // Prefill the name captured at signup.
   useEffect(() => {
@@ -142,6 +167,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         first_name: form.first_name, last_name: lastName || null, age: parseInt(form.age, 10), gender: form.gender,
         marital_status: form.marital_status, country: form.country, city: form.city,
         location: [form.city, form.country].filter(Boolean).join(', '),
+        latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null,
         bio: form.bio, occupation: form.occupation, education: form.education,
         languages: form.languages, height: form.height, heritage: form.heritage,
         prayer_level: form.prayer_level, islamic_practice: form.islamic_practice, faith_statement: form.faith_statement,
@@ -194,6 +220,9 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
                   <Field label="Gender"><SelectField value={form.gender} onChange={(v) => set('gender', v)} options={GENDERS} placeholder="Select" /></Field>
                 </div>
                 <Field label="Marital Status"><SelectField value={form.marital_status} onChange={(v) => set('marital_status', v)} options={MARITAL} placeholder="Select" /></Field>
+                <button type="button" onClick={detectLocation} disabled={locating} className="w-full flex items-center justify-center gap-2 text-sm font-medium text-[#1B4332] border border-[#1B4332] rounded-xl py-2.5 hover:bg-[#F0EEE8] transition-colors disabled:opacity-50">
+                  {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><MapPin className="w-4 h-4" /> {coords ? 'Location set ✓ — detect again' : 'Use my current location'}</>}
+                </button>
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Country"><input value={form.country} onChange={(e) => set('country', e.target.value)} placeholder="e.g. UK" className={INPUT_CLS} /></Field>
                   <Field label="City"><input value={form.city} onChange={(e) => set('city', e.target.value)} placeholder="e.g. London" className={INPUT_CLS} /></Field>
