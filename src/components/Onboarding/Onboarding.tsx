@@ -1,8 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { uploadAvatar } from '../../lib/db';
+import { uploadPhoto, updateMyProfile } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChevronLeft, Upload, Loader2, Check } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X } from 'lucide-react';
+
+const MIN_PHOTOS = 4;
 
 const GENDERS = ['male', 'female'];
 const MARITAL = ['Never married', 'Divorced', 'Widowed'];
@@ -74,15 +76,15 @@ const EMPTY: Form = {
 };
 
 const TOTAL_STEPS = 6;
-const TITLES = ['About you', 'Your photo', 'A bit more', 'Your faith', 'Marriage intentions', 'Your personality'];
+const TITLES = ['About you', 'Your photos', 'A bit more', 'Your faith', 'Marriage intentions', 'Your personality'];
 
 export function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<Form>(EMPTY);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<{ file: File; preview: string }[]>([]);
+  const [highlight, setHighlight] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof Form, v: any) => setForm((f) => ({ ...f, [k]: v }));
@@ -92,17 +94,22 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       return { ...f, [k]: cur.includes(item) ? cur.filter((x) => x !== item) : [...cur, item] };
     });
 
-  const handlePickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+  const handleAddPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files: File[] = e.target.files ? Array.from(e.target.files) : [];
+    if (!files.length) return;
+    setPhotos((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(0, 8));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePhoto = (i: number) => {
+    setPhotos((prev) => prev.filter((_, idx) => idx !== i));
+    setHighlight((h) => (i === h ? 0 : i < h ? h - 1 : h));
   };
 
   const canProceed = (): boolean => {
     switch (step) {
       case 1: return !!(form.first_name && form.age && form.gender && form.marital_status && form.country && form.city);
-      case 2: return !!photoFile;
+      case 2: return photos.length >= MIN_PHOTOS;
       case 3: return !!(form.bio.trim().length >= 20 && form.occupation && form.languages);
       case 4: return !!(form.prayer_level && form.islamic_practice);
       case 5: return !!(form.marriage_intent && form.timeline && form.relocate && form.children && form.has_children);
@@ -135,8 +142,15 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       }]);
       if (dbError) throw dbError;
 
-      if (photoFile) {
-        try { await uploadAvatar(photoFile); } catch (e: any) { console.error('Photo upload failed:', e?.message); }
+      // Upload all photos: the highlighted one is the public main photo,
+      // the rest go to the gallery (revealed only to a match).
+      try {
+        const urls = await Promise.all(photos.map((p) => uploadPhoto(p.file)));
+        const main = urls[highlight] ?? urls[0];
+        const galleryUrls = urls.filter((_, i) => i !== highlight);
+        await updateMyProfile({ profile_picture_url: main, gallery: galleryUrls });
+      } catch (e: any) {
+        console.error('Photo upload failed:', e?.message);
       }
       onComplete();
     } catch (err: any) {
@@ -178,14 +192,37 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
             )}
 
             {step === 2 && (
-              <div className="text-center space-y-4 py-4">
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="w-36 h-36 bg-[#F0EEE8] rounded-full mx-auto flex items-center justify-center border-2 border-dashed border-[#8B7355] hover:bg-[#E5E0D8] transition-colors overflow-hidden">
-                  {photoPreview ? <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" /> : (
-                    <div className="text-center"><Upload className="w-6 h-6 mx-auto text-[#8B7355] mb-2" /><span className="text-xs font-medium text-[#8B7355]">Upload Photo</span></div>
+              <div className="space-y-4">
+                <p className="text-sm text-[#5C574F] text-center">
+                  Add at least <span className="font-bold text-[#1B4332]">{MIN_PHOTOS} photos</span>. Tap one to set it as your{' '}
+                  <span className="font-bold text-[#1B4332]">main photo</span> (the only one shown in Discover). The rest stay
+                  private and are revealed <span className="font-bold text-[#1B4332]">only to a match</span>.
+                </p>
+                <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleAddPhotos} />
+                <div className="grid grid-cols-3 gap-3">
+                  {photos.map((p, i) => (
+                    <button key={p.preview} type="button" onClick={() => setHighlight(i)} className={`relative aspect-square rounded-2xl overflow-hidden border-2 transition-all ${i === highlight ? 'border-[#1B4332] ring-2 ring-[#1B4332]/30' : 'border-[#E5E0D8]'}`}>
+                      <img src={p.preview} alt="" className="w-full h-full object-cover" />
+                      {i === highlight && (
+                        <span className="absolute top-1 left-1 bg-[#1B4332] text-white text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                          <Star className="w-2.5 h-2.5 fill-current" /> Main
+                        </span>
+                      )}
+                      <span
+                        onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center"
+                      >
+                        <X className="w-3 h-3" />
+                      </span>
+                    </button>
+                  ))}
+                  {photos.length < 8 && (
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-2xl border-2 border-dashed border-[#8B7355] text-[#8B7355] flex flex-col items-center justify-center hover:bg-[#FDFBF7] transition-colors">
+                      <Upload className="w-5 h-5 mb-1" /><span className="text-[10px] font-medium">Add</span>
+                    </button>
                   )}
-                </button>
-                <p className="text-xs text-[#5C574F] max-w-xs mx-auto">Add a clear, recent photo of yourself. You can verify it later for a trusted badge.</p>
+                </div>
+                <p className="text-xs text-[#8B7355] text-center">{photos.length}/{MIN_PHOTOS} minimum added</p>
               </div>
             )}
 

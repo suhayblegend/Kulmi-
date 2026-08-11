@@ -149,6 +149,11 @@ async function uploadToAvatars(file: File, prefix: string): Promise<string> {
   return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
 }
 
+/** Upload a photo to storage and return its public URL (does not touch the profile). */
+export async function uploadPhoto(file: File): Promise<string> {
+  return uploadToAvatars(file, 'photo');
+}
+
 /** Upload a profile picture and save its URL on the profile. Returns the URL. */
 export async function uploadAvatar(file: File): Promise<string> {
   const url = await uploadToAvatars(file, 'avatar');
