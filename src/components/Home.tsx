@@ -5,6 +5,7 @@ import {
   discoverCandidates,
   listIncomingInvitations,
   listActiveSessions,
+  countMyOpenThreads,
   sendInvitation,
   respondToInvitation,
   avatarFor,
@@ -19,6 +20,7 @@ interface HomeProps {
   onOpenSession: (sessionId: string) => void;
 }
 
+const MAX_OPEN = 3; // one-at-a-time intentionality — no swipe-machine behaviour
 const PRAYER_OPTS = ['5 Daily Prayers', 'Usually prays', 'Sometimes prays', 'Working on it'];
 const MARITAL_OPTS = ['Never married', 'Divorced', 'Widowed'];
 const WANT_KIDS_OPTS = ['Want children', "Don't want children", 'Open / not sure'];
@@ -34,6 +36,7 @@ export function Home({ onOpenSession }: HomeProps) {
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [viewingInvite, setViewingInvite] = useState<InvitationWithProfile | null>(null);
+  const [openThreads, setOpenThreads] = useState(0);
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
@@ -44,14 +47,16 @@ export function Home({ onOpenSession }: HomeProps) {
     setLoading(true);
     setError('');
     try {
-      const [cands, incoming, active] = await Promise.all([
+      const [cands, incoming, active, open] = await Promise.all([
         discoverCandidates(f),
         listIncomingInvitations(),
         listActiveSessions(),
+        countMyOpenThreads(),
       ]);
       setCandidates(cands);
       setInvites(incoming);
       setSessions(active);
+      setOpenThreads(open);
       setIndex(0);
     } catch (err: any) {
       setError(err.message || 'Could not load matches.');
@@ -81,11 +86,16 @@ export function Home({ onOpenSession }: HomeProps) {
 
   const handleInvite = async () => {
     if (!current) return;
+    if (openThreads >= MAX_OPEN) {
+      setError(`You can have ${MAX_OPEN} introductions at a time. Finish or end one before starting another — quality over quantity.`);
+      return;
+    }
     setBusy(true);
     setError('');
     try {
       await sendInvitation(current.id);
       setSentTo(current.first_name || 'them');
+      setOpenThreads((n) => n + 1);
       setIndex((i) => i + 1);
     } catch (err: any) {
       setError(err.message || 'Could not send invitation.');
@@ -306,7 +316,19 @@ export function Home({ onOpenSession }: HomeProps) {
       )}
 
       {/* Candidate to invite */}
-      {current ? (
+      {invites.length > 0 ? (
+        <div className="w-full border border-[#E5E0D8] bg-white shadow-sm rounded-2xl">
+          <div className="pt-12 pb-14 flex flex-col items-center text-center px-8">
+            <div className="w-14 h-14 bg-[#F0EEE8] rounded-full flex items-center justify-center mb-5">
+              <Inbox className="w-7 h-7 text-[#1B4332]" />
+            </div>
+            <h2 className="text-xl font-serif text-[#1B4332] italic mb-2">Someone is waiting on you</h2>
+            <p className="text-[#8B7355] text-sm max-w-[280px] leading-relaxed">
+              Please respond to your {invites.length === 1 ? 'invitation' : 'invitations'} above before we show you new introductions. On Kulmi, we honour the people who reach out — no window-shopping.
+            </p>
+          </div>
+        </div>
+      ) : current ? (
         <AnimatePresence mode="wait">
           <motion.div
             key={current.id}

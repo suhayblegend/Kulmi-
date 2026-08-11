@@ -298,6 +298,17 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
   return (data as Profile[]).filter((p) => !excluded.has(p.id)).slice(0, 50);
 }
 
+/** How many introductions the user has open right now (pending sent invites + active sessions). */
+export async function countMyOpenThreads(): Promise<number> {
+  const uid = await getCurrentUserId();
+  if (!uid) return 0;
+  const [{ count: sent }, { count: sess }] = await Promise.all([
+    supabase.from('invitations').select('id', { count: 'exact', head: true }).eq('sender_id', uid).eq('status', 'pending'),
+    supabase.from('sessions').select('id', { count: 'exact', head: true }).eq('status', 'active').or(`user1_id.eq.${uid},user2_id.eq.${uid}`),
+  ]);
+  return (sent ?? 0) + (sess ?? 0);
+}
+
 export async function sendInvitation(receiverId: string): Promise<void> {
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
