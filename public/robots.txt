@@ -14,4 +14,4 @@ Disallow: /wali
 Disallow: /auth
 
 # Replace with your real domain after deploying
-Sitemap: https://kulmi.app/sitemap.xml
+Sitemap: https://kulmi.uk/sitemap.xml

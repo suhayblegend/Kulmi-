@@ -4,7 +4,7 @@ import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Load
 import { supabase } from '../lib/supabase';
 import { getMyProfile, updateMyProfile, setWaliEmail, signOut, deleteMyAccount, type Profile } from '../lib/db';
 
-const SUPPORT_EMAIL = 'support@kulmi.app'; // TODO: replace with your real support inbox
+const SUPPORT_EMAIL = 'support@kulmi.uk'; // TODO: replace with your real support inbox
 const APP_VERSION = '1.0';
 
 type ToggleKey = 'show_in_discovery' | 'push_notifications' | 'email_summaries' | 'read_receipts';
