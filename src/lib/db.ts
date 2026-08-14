@@ -896,11 +896,15 @@ export type BroadcastAudience = 'all' | 'verified';
 
 /** How many people a blast to this audience would reach. */
 export async function adminCountRecipients(audience: BroadcastAudience): Promise<number> {
-  let q = supabase.from('profiles').select('id', { count: 'exact', head: true })
-    .not('email', 'is', null)
-    .not('email_unsubscribed', 'is', true);
-  if (audience === 'verified') q = q.eq('verification_status', 'verified');
-  const { count } = await q;
+  const base = () => {
+    let q = supabase.from('profiles').select('id', { count: 'exact', head: true }).not('email', 'is', null);
+    if (audience === 'verified') q = q.eq('verification_status', 'verified');
+    return q;
+  };
+  // Prefer excluding opt-outs, but fall back if the email_unsubscribed column
+  // isn't there yet (i.e. the latest SQL hasn't been run) so the count still works.
+  let { count, error } = await base().not('email_unsubscribed', 'is', true);
+  if (error) ({ count } = await base());
   return count ?? 0;
 }
 
