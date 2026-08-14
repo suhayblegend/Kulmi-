@@ -18,7 +18,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FN_URL = `${SUPABASE_URL}/functions/v1/smart-service`;
 
-// Per-user unsubscribe token = HMAC(uid, service key). No DB storage needed.
 async function tokenFor(uid: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw", new TextEncoder().encode(SERVICE_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
@@ -34,7 +33,7 @@ serve(async (req) => {
   const t = url.searchParams.get("t");
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  // ---- Unsubscribe (email link click = GET, mail-client one-click = POST) ----
+  // ---- Unsubscribe (GET link click, or mail-client one-click POST) ----
   if (u && t) {
     try {
       const ok = t === (await tokenFor(u));
@@ -62,30 +61,32 @@ serve(async (req) => {
     const { subject, html: bodyHtml, audience } = await req.json();
     if (!subject || !bodyHtml) return json({ error: "Missing subject or message" }, 400);
 
-    let q = admin.from("profiles").select("id, email").not("email", "is", null).not("email_unsubscribed", "is", true);
-    if (audience === "verified") q = q.eq("verification_status", "verified");
-    const { data: rows } = await q;
+    // Fetch recipients. Works whether or not the email_unsubscribed column exists.
+    const buildQuery = (withUnsub: boolean) => {
+      let q = admin.from("profiles").select("id, email").not("email", "is", null);
+      if (audience === "verified") q = q.eq("verification_status", "verified");
+      if (withUnsub) q = q.not("email_unsubscribed", "is", true);
+      return q;
+    };
+    let { data: rows, error: qErr } = await buildQuery(true);
+    if (qErr) ({ data: rows, error: qErr } = await buildQuery(false));
+    if (qErr) return json({ error: `Could not load recipients: ${qErr.message}` }, 500);
     const people = (rows || []).filter((r: { email: string }) => r.email);
-    if (people.length === 0) return json({ sent: 0, total: 0 });
+    if (people.length === 0) return json({ sent: 0, total: 0, note: "No recipients matched this audience." });
 
     const RESEND = Deno.env.get("RESEND_API_KEY");
-    if (!RESEND) return json({ error: "Email sending isn't configured yet (missing RESEND_API_KEY)." }, 400);
+    if (!RESEND) return json({ error: "Email sending isn't configured (missing RESEND_API_KEY secret)." }, 400);
     const FROM = Deno.env.get("BROADCAST_FROM") || "Kulmi <noreply@kulmi.uk>";
 
     let sent = 0;
+    const errors: string[] = [];
     for (let i = 0; i < people.length; i += 100) {
       const batch = await Promise.all(people.slice(i, i + 100).map(async (p: { id: string; email: string }) => {
         const unsub = `${FN_URL}?u=${p.id}&t=${await tokenFor(p.id)}`;
         const footer = `<p style="font-size:12px;color:#8B7355;margin-top:20px">Don't want these emails? <a href="${unsub}" style="color:#8B7355">Unsubscribe</a>.</p>`;
         return {
-          from: FROM,
-          to: [p.email],
-          subject,
-          html: bodyHtml + footer,
-          headers: {
-            "List-Unsubscribe": `<${unsub}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
+          from: FROM, to: [p.email], subject, html: bodyHtml + footer,
+          headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
         };
       }));
       const res = await fetch("https://api.resend.com/emails/batch", {
@@ -94,8 +95,9 @@ serve(async (req) => {
         body: JSON.stringify(batch),
       });
       if (res.ok) sent += batch.length;
+      else errors.push(`${res.status}: ${(await res.text()).slice(0, 300)}`);
     }
-    return json({ sent, total: people.length });
+    return json({ sent, total: people.length, errors: errors.slice(0, 3) });
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500);
   }

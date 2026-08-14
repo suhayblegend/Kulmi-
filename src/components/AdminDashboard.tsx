@@ -55,8 +55,13 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     setBlastSending(true);
     try {
       const r = await adminBroadcast(blastSubject.trim(), blastBody, blastAudience);
-      setBlastResult(`✅ Sent to ${r.sent} member${r.sent === 1 ? '' : 's'}.`);
-      setBlastSubject(''); setBlastBody('');
+      if (r.sent > 0) {
+        setBlastResult(`✅ Sent to ${r.sent} member${r.sent === 1 ? '' : 's'}.`);
+        setBlastSubject(''); setBlastBody('');
+      } else {
+        const why = r.errors?.length ? ` — Resend said: ${r.errors[0]}` : (r.note ? ` — ${r.note}` : '');
+        setBlastResult(`⚠️ Sent to 0. Nothing went out${why}. Check the audience (try "All members") and that the sender is set up.`);
+      }
     } catch (e: any) {
       setBlastResult(`⚠️ ${e?.message || 'Could not send. Is the email sender set up?'}`);
     } finally {

@@ -926,12 +926,12 @@ function messageToHtml(subject: string, message: string): string {
 // under Supabase's default name "smart-service"; the slug can't be renamed.
 const BROADCAST_FN = 'smart-service';
 
-export async function adminBroadcast(subject: string, message: string, audience: BroadcastAudience): Promise<{ sent: number; total?: number }> {
+export async function adminBroadcast(subject: string, message: string, audience: BroadcastAudience): Promise<{ sent: number; total?: number; note?: string; errors?: string[] }> {
   const html = messageToHtml(subject, message);
   const { data, error } = await supabase.functions.invoke(BROADCAST_FN, { body: { subject, html, audience } });
   if (error) throw error;
   if ((data as any)?.error) throw new Error((data as any).error);
-  return data as { sent: number; total?: number };
+  return data as { sent: number; total?: number; note?: string; errors?: string[] };
 }
 
 // -------------------------------------------------------------
