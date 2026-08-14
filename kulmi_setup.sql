@@ -1,4 +1,4 @@
--- KULMI combined setup — regenerated v17. Run in Supabase SQL editor. Safe to re-run.
+-- KULMI combined setup — regenerated v18. Run in Supabase SQL editor. Safe to re-run.
 
 -- >>> migration.sql
 -- =============================================================
@@ -1251,6 +1251,15 @@ alter table public.profiles add column if not exists photo_hash text;
 -- their own same photo keeps their own row's value — no conflict.)
 create unique index if not exists profiles_photo_hash_uniq
   on public.profiles (photo_hash) where photo_hash is not null;
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v18.sql
+-- =============================================================
+--  KULMI migration v18 — verification rejection reason. Idempotent.
+-- =============================================================
+alter table public.profiles add column if not exists verification_note text;
 
 notify pgrst, 'reload schema';
 

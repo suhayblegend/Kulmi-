@@ -14,6 +14,7 @@ type Status = 'loading' | 'unverified' | 'pending' | 'rejected';
  */
 export function VerificationGate({ onVerified }: { onVerified: () => void }) {
   const [status, setStatus] = useState<Status>('loading');
+  const [note, setNote] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +37,7 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
         return;
       }
       setStatus((p?.verification_status as Status) ?? 'unverified');
+      setNote(p?.verification_note ?? null);
     } catch {
       // don't get stuck on the loading spinner if the profile fetch fails
       setStatus('unverified');
@@ -113,9 +115,14 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
       </p>
 
       {status === 'rejected' && !capturing && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 mb-4">
-          Your previous selfie couldn't be approved. Please try again with a clear, well-lit photo of your face.
-        </p>
+        <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 mb-4 text-left">
+          <p className="font-medium">Your verification couldn't be approved.</p>
+          {note ? (
+            <p className="mt-1"><span className="font-medium">Reason:</span> {note}</p>
+          ) : (
+            <p className="mt-1">Please try again with a clear, well-lit photo of your face.</p>
+          )}
+        </div>
       )}
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 

@@ -147,9 +147,27 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     try { await adminMarkContactHandled(id, handled); } catch { await reload(); }
   };
 
-  const handleReview = async (userId: string, approve: boolean) => {
-    await adminReviewVerification(userId, approve);
+  const handleReview = async (userId: string, approve: boolean, note?: string) => {
+    await adminReviewVerification(userId, approve, note);
     await reload();
+  };
+
+  // Reject-with-reason modal
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; name: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
+  const submitReject = async () => {
+    if (!rejectTarget) return;
+    setRejecting(true);
+    try {
+      await handleReview(rejectTarget.id, false, rejectReason);
+      setRejectTarget(null);
+      setRejectReason('');
+    } catch (e: any) {
+      alert(e?.message || 'Could not reject.');
+    } finally {
+      setRejecting(false);
+    }
   };
 
   const handleReport = async (id: string, status: 'reviewed' | 'dismissed') => {
@@ -378,7 +396,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                 <button onClick={() => handleReview(v.id, true)} className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors">
                   <CheckCircle className="w-4 h-4" /> Approve
                 </button>
-                <button onClick={() => handleReview(v.id, false)} className="flex-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors">
+                <button onClick={() => { setRejectReason(''); setRejectTarget({ id: v.id, name: v.first_name || 'Member' }); }} className="flex-1 bg-white border border-red-200 text-red-500 hover:bg-red-50 py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors">
                   <XCircle className="w-4 h-4" /> Reject
                 </button>
               </div>
@@ -514,6 +532,33 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                   <p className="text-[#2D2926]">{m.type === 'audio' ? '🎤 Voice note' : m.content}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject-with-reason modal */}
+      {rejectTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !rejecting && setRejectTarget(null)} />
+          <div className="relative bg-white w-full max-w-md rounded-2xl border border-[#E5E0D8] shadow-xl overflow-hidden">
+            <div className="p-5 border-b border-[#E5E0D8] bg-[#FDFBF7]">
+              <h3 className="font-serif text-lg text-[#1B4332]">Reject {rejectTarget.name}'s verification</h3>
+              <p className="text-xs text-[#8B7355] mt-1">The reason is shown to them so they can fix it and resubmit.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {['Photo doesn\'t match your selfie', 'Face is not clearly visible', 'Please remove sunglasses/filter', 'Use a real photo of yourself'].map((r) => (
+                  <button key={r} onClick={() => setRejectReason(r)} className="text-xs px-3 py-1.5 rounded-lg border border-[#E5E0D8] text-[#5C574F] hover:bg-[#FDFBF7]">{r}</button>
+                ))}
+              </div>
+              <textarea rows={3} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason (optional but recommended)…" className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm focus:outline-none focus:border-[#1B4332] resize-none" />
+              <div className="flex gap-3">
+                <button onClick={() => setRejectTarget(null)} disabled={rejecting} className="flex-1 py-2.5 rounded-xl border border-[#E5E0D8] text-[#5C574F] text-sm font-medium hover:bg-[#FDFBF7] disabled:opacity-50">Cancel</button>
+                <button onClick={submitReject} disabled={rejecting} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {rejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Reject & notify'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

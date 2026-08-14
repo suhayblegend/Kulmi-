@@ -37,6 +37,7 @@ export interface Profile {
   photo_verified: boolean | null;
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected' | null;
   verification_selfie_url?: string | null;
+  verification_note?: string | null;
   wali_email?: string | null;
   gallery?: string[] | null;
   photo_hash?: string | null;
@@ -155,7 +156,7 @@ export async function updateMyProfile(fields: Partial<Profile>): Promise<void> {
   if (!uid) throw new Error('Not signed in');
   // never let the client change privileged columns (the DB trigger also enforces this).
   // verification_status is kept so the user can set it to 'pending' when submitting a selfie.
-  const { id, email, role, photo_verified, ...safe } = fields;
+  const { id, email, role, photo_verified, verification_note, ...safe } = fields;
   const { error } = await supabase
     .from('profiles')
     .update({ ...safe, updated_at: new Date().toISOString() })
@@ -1135,10 +1136,14 @@ export async function adminListPendingVerifications(): Promise<Profile[]> {
   return (data ?? []) as Profile[];
 }
 
-export async function adminReviewVerification(userId: string, approve: boolean): Promise<void> {
+export async function adminReviewVerification(userId: string, approve: boolean, note?: string): Promise<void> {
   const { error } = await supabase
     .from('profiles')
-    .update({ photo_verified: approve, verification_status: approve ? 'verified' : 'rejected' })
+    .update({
+      photo_verified: approve,
+      verification_status: approve ? 'verified' : 'rejected',
+      verification_note: approve ? null : (note?.trim() || null),
+    })
     .eq('id', userId);
   if (error) throw error;
 }
