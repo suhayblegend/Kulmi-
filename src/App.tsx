@@ -22,6 +22,7 @@ import { VerificationGate } from './components/VerificationGate';
 import { ResetPassword } from './components/ResetPassword';
 import { StaffArea } from './components/StaffArea';
 import { NotificationBell } from './components/NotificationBell';
+import { Contact } from './components/Contact';
 import { supabase } from './lib/supabase';
 import { getMyProfile, type Profile as DbProfile } from './lib/db';
 
@@ -41,21 +42,35 @@ export type AppState =
   | 'terms'
   | 'privacy'
   | 'auth'
+  | 'contact'
   | 'onboarding';
 
-const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth'];
+const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact'];
 
 // URL <-> state mapping so /admin, /wali, etc. work as real links.
 const STATE_PATHS: Partial<Record<AppState, string>> = {
   landing: '/', discover: '/discover', chats: '/chats', profile: '/profile',
   progress: '/progress', settings: '/settings', wali: '/wali', admin: '/admin',
-  auth: '/auth', terms: '/terms', privacy: '/privacy',
+  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact',
+};
+
+// Extra readable URLs that all resolve to the auth screen.
+const PATH_ALIASES: Record<string, AppState> = {
+  '/auth': 'auth', '/signin': 'auth', '/sign-in': 'auth',
+  '/signup': 'auth', '/sign-up': 'auth', '/join': 'auth', '/register': 'auth',
 };
 
 function pathToState(path: string): AppState | null {
   const clean = path.replace(/\/+$/, '') || '/';
   const found = (Object.entries(STATE_PATHS) as [AppState, string][]).find(([, p]) => p === clean);
-  return found ? found[0] : null;
+  if (found) return found[0];
+  return PATH_ALIASES[clean] ?? null;
+}
+
+/** Is this arrival URL a "create account" link (so we open signup, not signin)? */
+function pathWantsSignup(path: string): boolean {
+  const clean = path.replace(/\/+$/, '') || '/';
+  return ['/signup', '/sign-up', '/join', '/register'].includes(clean);
 }
 
 // Captured at module load (before Supabase cleans the URL) so a password-reset
@@ -92,6 +107,10 @@ function MemberApp() {
   const [myProfile, setMyProfile] = useState<DbProfile | null>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>(
+    pathWantsSignup(typeof window !== 'undefined' ? window.location.pathname : '/') ? 'signup' : 'signin'
+  );
+  const goAuth = (mode: 'signin' | 'signup') => { setAuthMode(mode); setAppState('auth'); };
 
   // The URL the app was opened at, used to honour a deep link (e.g. /admin)
   // once the session has loaded.
@@ -189,11 +208,12 @@ function MemberApp() {
 
   // Keep the address bar in sync with the current screen.
   useEffect(() => {
-    const path = STATE_PATHS[appState];
+    let path = STATE_PATHS[appState];
+    if (appState === 'auth') path = authMode === 'signup' ? '/signup' : '/login';
     if (path && appState !== 'chat' && appState !== 'session' && window.location.pathname !== path) {
       window.history.pushState({}, '', path);
     }
-  }, [appState]);
+  }, [appState, authMode]);
 
   // Support the browser back/forward buttons and manual URL edits.
   useEffect(() => {
@@ -254,13 +274,13 @@ function MemberApp() {
           {PUBLIC_STATES.includes(appState) ? (
             <nav className="flex items-center gap-6">
               <button
-                onClick={() => setAppState('auth')}
+                onClick={() => goAuth('signin')}
                 className="hidden sm:block text-sm font-medium tracking-wide text-[#8B7355] hover:text-[#1B4332] uppercase transition-colors"
               >
                 Sign In
               </button>
               <button
-                onClick={() => setAppState('auth')}
+                onClick={() => goAuth('signup')}
                 className="bg-[#1B4332] text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-[#143326] transition-colors shadow-sm"
               >
                 Join Now
@@ -310,13 +330,19 @@ function MemberApp() {
         <AnimatePresence mode="wait">
           {appState === 'landing' && (
             <motion.div key="landing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
-              <Landing onStart={() => setAppState('auth')} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
+              <Landing onStart={() => goAuth('signup')} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} onContact={() => setAppState('contact')} />
             </motion.div>
           )}
 
           {appState === 'auth' && (
-            <motion.div key="auth" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
-              <Auth onSuccess={() => { /* routing handled by the auth listener (SIGNED_IN) */ }} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
+            <motion.div key={`auth-${authMode}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+              <Auth initialMode={authMode} onModeChange={setAuthMode} onSuccess={() => { /* routing handled by the auth listener (SIGNED_IN) */ }} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
+            </motion.div>
+          )}
+
+          {appState === 'contact' && (
+            <motion.div key="contact" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+              <Contact onBack={() => setAppState(user ? 'discover' : 'landing')} />
             </motion.div>
           )}
 
@@ -362,7 +388,7 @@ function MemberApp() {
 
           {appState === 'settings' && (
             <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
-              <Settings onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
+              <Settings onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} onContact={() => setAppState('contact')} />
             </motion.div>
           )}
 

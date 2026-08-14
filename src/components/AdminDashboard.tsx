@@ -3,15 +3,16 @@ import { motion } from 'motion/react';
 import {
   Users, AlertTriangle, MessageSquare, Settings, Activity, Menu, X,
   BarChart3, UserCheck, Star, CheckCircle, XCircle, LogOut, Heart, Loader2, ShieldCheck,
-  Search, Trash2, EyeOff, Eye, Key,
+  Search, Trash2, EyeOff, Eye, Key, Mail,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
   getAdminStats, adminListUsers, adminListPendingVerifications, adminReviewVerification,
   adminSetRole, adminSetDiscovery, adminDeleteUser,
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
+  adminListContactMessages, adminMarkContactHandled,
   getMyProfile, signOut, avatarFor, resolveMediaUrl,
-  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message,
+  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage,
 } from '../lib/db';
 
 interface AdminDashboardProps {
@@ -32,6 +33,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [chats, setChats] = useState<AdminPair[]>([]);
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [successes, setSuccesses] = useState<AdminPair[]>([]);
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [transcript, setTranscript] = useState<{ title: string; messages: Message[] } | null>(null);
   const [userSearch, setUserSearch] = useState('');
@@ -74,11 +76,12 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
   const reload = async () => {
     setLoading(true);
-    const [s, u, p, se, c, r, su] = await Promise.all([
+    const [s, u, p, se, c, r, su, cm] = await Promise.all([
       getAdminStats(), adminListUsers(), adminListPendingVerifications(),
       adminListSessions(), adminListChats(), adminListReports(), adminListSuccesses(),
+      adminListContactMessages(),
     ]);
-    setStats(s); setUsers(u); setPending(p); setSessions(se); setChats(c); setReports(r); setSuccesses(su);
+    setStats(s); setUsers(u); setPending(p); setSessions(se); setChats(c); setReports(r); setSuccesses(su); setMessages(cm);
     // Selfies live in the private bucket — resolve to short-lived signed URLs for review.
     const selfies: Record<string, string> = {};
     await Promise.all(p.map(async (v: any) => {
@@ -101,8 +104,14 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     { id: 'conversations', label: 'Conversations', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'reports', label: `Reports${stats?.pendingReports ? ` (${stats.pendingReports})` : ''}`, icon: <AlertTriangle className="w-5 h-5" /> },
     { id: 'successes', label: `Successes${stats?.successes ? ` (${stats.successes})` : ''}`, icon: <Star className="w-5 h-5" /> },
+    { id: 'messages', label: `Messages${messages.filter((m) => !m.handled).length ? ` (${messages.filter((m) => !m.handled).length})` : ''}`, icon: <Mail className="w-5 h-5" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
+
+  const handleContactHandled = async (id: string, handled: boolean) => {
+    setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, handled } : m)));
+    try { await adminMarkContactHandled(id, handled); } catch { await reload(); }
+  };
 
   const handleReview = async (userId: string, approve: boolean) => {
     await adminReviewVerification(userId, approve);
@@ -158,6 +167,34 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
           </tr>
         ))}
       </Table>
+    );
+
+  const renderMessages = () =>
+    messages.length === 0 ? <Empty text="No contact messages yet." /> : (
+      <div className="space-y-4">
+        {messages.map((m) => (
+          <div key={m.id} className={`bg-white rounded-2xl border shadow-sm p-5 ${m.handled ? 'border-[#E5E0D8] opacity-70' : 'border-[#1B4332]/30'}`}>
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div>
+                <p className="font-medium text-[#1B4332]">{m.name || 'Anonymous'}</p>
+                {m.email && <a href={`mailto:${m.email}`} className="text-sm text-[#8B7355] hover:text-[#1B4332] hover:underline">{m.email}</a>}
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-xs text-[#8B7355]">{fmtDate(m.created_at)}</span>
+                <button onClick={() => handleContactHandled(m.id, !m.handled)} className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${m.handled ? 'bg-[#F0EEE8] text-[#8B7355] hover:bg-[#E5E0D8]' : 'bg-[#1B4332] text-white hover:bg-[#143326]'}`}>
+                  {m.handled ? 'Handled ✓' : 'Mark handled'}
+                </button>
+              </div>
+            </div>
+            <p className="text-sm text-[#2D2926] whitespace-pre-wrap leading-relaxed">{m.message}</p>
+            {m.email && (
+              <a href={`mailto:${m.email}?subject=Re: your message to Kulmi`} className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-[#1B4332] hover:underline">
+                <Mail className="w-3.5 h-3.5" /> Reply by email
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
     );
 
   const Table = ({ head, children }: { head: string[]; children: React.ReactNode }) => (
@@ -340,6 +377,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       case 'conversations': return renderConversations();
       case 'reports': return renderReports();
       case 'successes': return renderSuccesses();
+      case 'messages': return renderMessages();
       case 'settings': return renderSettings();
       default: return <Empty text="Coming soon." />;
     }

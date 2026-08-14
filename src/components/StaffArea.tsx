@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Shield, Loader2, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile } from '../lib/db';
+import { getMyProfile, iAmWali } from '../lib/db';
 import { AdminDashboard } from './AdminDashboard';
 import { WaliDashboard } from './WaliDashboard';
 
@@ -19,7 +19,17 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
   const [submitting, setSubmitting] = useState(false);
 
   const label = kind === 'admin' ? 'Admin' : 'Wali';
-  const allowed = (role?: string | null) => role === 'admin' || (kind === 'wali' && role === 'wali');
+  // Admin: role must be admin. Wali: role 'wali' OR 'admin', OR — the important
+  // case — they're actually a guardian for someone (their email is a member's
+  // wali_email), so invited walis get in without any manual role change.
+  const isAllowed = async (role?: string | null): Promise<boolean> => {
+    if (role === 'admin') return true;
+    if (kind === 'wali') {
+      if (role === 'wali') return true;
+      return iAmWali();
+    }
+    return false;
+  };
 
   const goHome = () => { window.location.href = '/'; };
 
@@ -42,7 +52,7 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
   useEffect(() => {
     (async () => {
       const p = await getMyProfile();
-      setAuthorized(allowed(p?.role));
+      setAuthorized(await isAllowed(p?.role));
       setChecking(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,12 +65,14 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
     try {
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
       if (signInErr) throw signInErr;
-      const p = await getMyProfile();
-      if (allowed(p?.role)) {
+      const p = await getMyProfile(true);
+      if (await isAllowed(p?.role)) {
         setAuthorized(true);
       } else {
         await supabase.auth.signOut();
-        setError(`This account doesn't have ${label} access.`);
+        setError(kind === 'wali'
+          ? "This account isn't set as anyone's Wali yet. Ask the person to add your email as their Wali in Settings."
+          : `This account doesn't have ${label} access.`);
       }
     } catch (err: any) {
       setError(err.message || 'Sign in failed.');

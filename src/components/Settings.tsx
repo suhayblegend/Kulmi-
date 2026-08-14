@@ -12,6 +12,7 @@ type ToggleKey = 'show_in_discovery' | 'push_notifications' | 'email_summaries' 
 interface SettingsProps {
   onTerms?: () => void;
   onPrivacy?: () => void;
+  onContact?: () => void;
 }
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -26,7 +27,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   );
 }
 
-export function Settings({ onTerms, onPrivacy }: SettingsProps) {
+export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -187,8 +188,14 @@ export function Settings({ onTerms, onPrivacy }: SettingsProps) {
           <div className="p-6 border-b border-[#E5E0D8]">
             <div className="flex items-center gap-3 mb-2"><LifeBuoy className="w-5 h-5 text-[#1B4332]" /><h3 className="font-bold text-[#2D2926]">Support &amp; About</h3></div>
             <div className="space-y-3 mt-3">
+              {onContact && (
+                <button onClick={onContact} className="w-full flex items-center justify-between text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">
+                  <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-[#8B7355]" /> Contact Us</span>
+                  <ChevronRight className="w-4 h-4 text-[#8B7355]" />
+                </button>
+              )}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="w-full flex items-center justify-between text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">
-                <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-[#8B7355]" /> Contact Support</span>
+                <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-[#8B7355]" /> Email Support</span>
                 <ChevronRight className="w-4 h-4 text-[#8B7355]" />
               </a>
               {onPrivacy && (

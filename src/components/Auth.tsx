@@ -7,10 +7,13 @@ interface AuthProps {
   onSuccess: () => void;
   onTerms: () => void;
   onPrivacy: () => void;
+  initialMode?: 'signin' | 'signup';
+  onModeChange?: (m: 'signin' | 'signup') => void;
 }
 
-export function Auth({ onSuccess, onTerms, onPrivacy }: AuthProps) {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', onModeChange }: AuthProps) {
+  const [mode, setModeState] = useState<'signin' | 'signup'>(initialMode);
+  const setMode = (m: 'signin' | 'signup') => { setModeState(m); onModeChange?.(m); };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);

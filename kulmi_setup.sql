@@ -1,13 +1,9 @@
 -- =============================================================
--- KULMI — combined idempotent setup (all migrations concatenated)
--- Run this whole file in the Supabase SQL editor. Safe to re-run.
--- Regenerated v14 — custom compatibility questions + voice answers.
+-- KULMI — combined idempotent setup (all migrations)
+-- Run in Supabase SQL editor. Safe to re-run. Regenerated v15.
 -- =============================================================
 
-
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI — end-to-end migration
 --  Run this ONCE in the Supabase SQL editor (Dashboard → SQL).
@@ -139,9 +135,7 @@ create policy "Admins view all messages" on public.messages for select to authen
 -- =============================================================
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_sessions.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI — compatibility sessions (the guided Q&A that gates a match)
 --  Run in the Supabase SQL editor AFTER migration.sql. Idempotent.
@@ -288,9 +282,7 @@ create trigger on_session_decision
   for each row execute function public.handle_session_decision();
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_storage.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI — storage setup for profile photos
 --  Run ONCE in the Supabase SQL editor (after migration.sql).
@@ -326,9 +318,7 @@ create policy "Users delete own avatar"
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v2.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v2 — real verification review, wali linkage,
 --  user settings, reports, and voice notes.
@@ -468,9 +458,7 @@ create policy "Users delete own media" on storage.objects for delete to authenti
   using (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v3.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v3 — profile privacy hardening + extra
 --  onboarding fields. Run in the Supabase SQL editor AFTER the
@@ -522,9 +510,7 @@ grant select on public.public_profiles to authenticated;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v4.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v4 — SECURITY HARDENING (audit fixes)
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -633,9 +619,7 @@ $$;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v5.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v5 — photo gallery with gated reveal
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -669,9 +653,7 @@ grant execute on function public.get_gallery(uuid) to authenticated;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v6.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v6 — success tracking (engagements / marriages)
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -737,9 +719,7 @@ create trigger on_chat_status
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v7.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v7 — voice intro (replaces video)
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -785,9 +765,7 @@ grant execute on function public.get_intro(uuid) to authenticated;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v8.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v8 — collect last name at signup
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -799,9 +777,7 @@ alter table public.profiles add column if not exists last_name text;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v9.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v9 — auto-detected location coordinates
 --  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
@@ -814,9 +790,7 @@ alter table public.profiles add column if not exists longitude double precision;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v10.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v10 — audit fixes (delete cascade, enforce
 --  verification server-side, 18+). Run AFTER earlier migrations. Idempotent.
@@ -870,9 +844,7 @@ alter table public.profiles add constraint profiles_age_18plus check (age is nul
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v11.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v11 — "Stop contact" (dignified alternative to
 --  dating-app "block") + tighter invitation transitions. Idempotent.
@@ -928,9 +900,7 @@ create policy "Respond to invitations" on public.invitations for update to authe
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v12.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v12 — PRIVATE media bucket + notifications
 --  Run in the Supabase SQL editor. Idempotent.
@@ -1074,9 +1044,7 @@ end $$;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v13.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v13 — make "stop contact" airtight. Idempotent.
 --  Fixes two gaps: (1) a stopped person could still message the old chat;
@@ -1148,9 +1116,7 @@ end $$;
 notify pgrst, 'reload schema';
 
 
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- >>> migration_v14.sql
--- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- =============================================================
 --  KULMI migration v14 — customisable compatibility questions +
 --  voice answers. Idempotent.
@@ -1214,6 +1180,54 @@ create policy "Secure read gated"
       )
     )
   );
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v15.sql
+-- =============================================================
+--  KULMI migration v15 — wali login fix + contact messages. Idempotent.
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- Wali fix: a guardian may not have a member profile row, so resolve their
+-- email from the JWT as a fallback. This makes get_my_wards()/is_ward() work
+-- for a wali who only has an auth account.
+-- -------------------------------------------------------------
+create or replace function public.my_email()
+returns text language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select email from public.profiles where id = auth.uid()),
+    auth.jwt() ->> 'email'
+  );
+$$;
+
+-- -------------------------------------------------------------
+-- Contact form: anyone (even logged-out) can send a message; only admins read.
+-- -------------------------------------------------------------
+create table if not exists public.contact_messages (
+  id         uuid primary key default gen_random_uuid(),
+  name       text,
+  email      text,
+  message    text not null,
+  handled    boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.contact_messages enable row level security;
+
+drop policy if exists "Anyone can send a contact message" on public.contact_messages;
+create policy "Anyone can send a contact message" on public.contact_messages
+  for insert to anon, authenticated with check (char_length(message) between 1 and 5000);
+
+drop policy if exists "Admins read contact messages" on public.contact_messages;
+create policy "Admins read contact messages" on public.contact_messages
+  for select to authenticated using (public.is_admin());
+
+drop policy if exists "Admins update contact messages" on public.contact_messages;
+create policy "Admins update contact messages" on public.contact_messages
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+create index if not exists contact_messages_idx on public.contact_messages (handled, created_at desc);
 
 notify pgrst, 'reload schema';
 

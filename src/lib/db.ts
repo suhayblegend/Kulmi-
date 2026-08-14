@@ -846,6 +846,49 @@ export async function getChatMeta(chatId: string): Promise<{ confirmedStatus: st
 }
 
 // -------------------------------------------------------------
+// Wali / contact
+// -------------------------------------------------------------
+/** True if the signed-in account is a guardian (Wali) for at least one member
+ *  — i.e. their email is set as someone's wali_email. Works even with no
+ *  member profile of their own. */
+export async function iAmWali(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('get_my_wards');
+  if (error) return false;
+  return Array.isArray(data) && data.length > 0;
+}
+
+export interface ContactMessage {
+  id: string;
+  name: string | null;
+  email: string | null;
+  message: string;
+  handled: boolean;
+  created_at: string;
+}
+
+/** Send a contact-form message (works for logged-out visitors too). */
+export async function submitContactMessage(name: string, email: string, message: string): Promise<void> {
+  const { error } = await supabase
+    .from('contact_messages')
+    .insert([{ name: name.trim() || null, email: email.trim() || null, message: message.trim() }]);
+  if (error) throw error;
+}
+
+export async function adminListContactMessages(): Promise<ContactMessage[]> {
+  const { data } = await supabase
+    .from('contact_messages')
+    .select('id, name, email, message, handled, created_at')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  return (data as ContactMessage[]) ?? [];
+}
+
+export async function adminMarkContactHandled(id: string, handled: boolean): Promise<void> {
+  const { error } = await supabase.from('contact_messages').update({ handled }).eq('id', id);
+  if (error) throw error;
+}
+
+// -------------------------------------------------------------
 // Notifications (in-app; created by DB triggers on invite/match/message)
 // -------------------------------------------------------------
 export interface AppNotification {

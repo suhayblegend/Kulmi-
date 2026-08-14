@@ -6,9 +6,10 @@ interface LandingProps {
   onStart: () => void;
   onTerms: () => void;
   onPrivacy: () => void;
+  onContact?: () => void;
 }
 
-export function Landing({ onStart, onTerms, onPrivacy }: LandingProps) {
+export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps) {
   return (
     <div className="w-full flex flex-col items-center">
       {/* Hero Section */}
@@ -171,6 +172,7 @@ export function Landing({ onStart, onTerms, onPrivacy }: LandingProps) {
           <button onClick={onTerms} className="hover:text-[#1B4332] transition-colors">Terms of Service</button>
           <span>•</span>
           <button onClick={onPrivacy} className="hover:text-[#1B4332] transition-colors">Privacy Policy</button>
+          {onContact && <><span>•</span><button onClick={onContact} className="hover:text-[#1B4332] transition-colors">Contact</button></>}
         </div>
       </section>
     </div>
