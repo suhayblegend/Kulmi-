@@ -39,14 +39,11 @@ serve(async (req) => {
       const ok = t === (await tokenFor(u));
       if (ok) await admin.from("profiles").update({ email_unsubscribed: true }).eq("id", u);
       if (req.method === "POST") return json({ ok });
-      return html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
-        <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:60px auto;padding:0 24px;text-align:center;color:#2D2926">
-          <h1 style="color:#1B4332;font-family:Georgia,serif">${ok ? "You've been unsubscribed" : "Link expired"}</h1>
-          <p style="color:#5C574F">${ok ? "You won't receive further update emails from Kulmi. You'll still get essential account emails (like password resets)." : "We couldn't verify this unsubscribe link."}</p>
-          <p><a href="https://kulmi.uk" style="color:#1B4332">Return to Kulmi</a></p>
-        </div>`);
-    } catch (e) {
-      return html(`<p>Something went wrong: ${String((e as Error)?.message || e)}</p>`, 500);
+      // Redirect to a real page on the site (the function runtime forces text/plain
+      // on inline HTML, so we let nginx serve the confirmation page instead).
+      return Response.redirect(`https://kulmi.uk/unsubscribed.html?ok=${ok ? 1 : 0}`, 302);
+    } catch (_e) {
+      return Response.redirect("https://kulmi.uk/unsubscribed.html?ok=0", 302);
     }
   }
 
