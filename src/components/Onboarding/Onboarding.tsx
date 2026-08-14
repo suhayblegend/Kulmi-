@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { uploadPhoto, uploadGalleryPhoto, updateMyProfile } from '../../lib/db';
+import { uploadPhoto, uploadGalleryPhoto, updateMyProfile, sha256Hex, isAcceptablePhoto, isDuplicatePhotoError } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X, MapPin } from 'lucide-react';
 
@@ -182,12 +182,19 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       // the rest go to the PRIVATE gallery (revealed only to a match). A profile
       // without a main photo is not allowed, so a failure here blocks completion.
       const mainFile = (photos[highlight] ?? photos[0]).file;
+      if (!(await isAcceptablePhoto(mainFile))) throw new Error('Please use a clear, real photo of your face (at least 200×200).');
+      const mainHash = await sha256Hex(mainFile);
       const main = await uploadPhoto(mainFile);
       if (!main) throw new Error('Your main photo did not upload. Please check your connection and try again.');
       const galleryPaths = await Promise.all(
         photos.filter((_, i) => i !== highlight).map((p) => uploadGalleryPhoto(p.file))
       );
-      await updateMyProfile({ profile_picture_url: main, gallery: galleryPaths });
+      try {
+        await updateMyProfile({ profile_picture_url: main, gallery: galleryPaths, photo_hash: mainHash });
+      } catch (e: any) {
+        if (isDuplicatePhotoError(e)) throw new Error('This photo is already used by another Kulmi account. Please upload a genuine photo of yourself.');
+        throw e;
+      }
       onComplete();
     } catch (err: any) {
       setError(err.message || 'Failed to save profile');

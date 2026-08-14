@@ -354,6 +354,11 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
   const renderVerifications = () =>
     pending.length === 0 ? <Empty text="No pending verifications." /> : (
+      <div className="space-y-5">
+      <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-2xl p-4 text-sm text-[#5C574F]">
+        <p className="font-bold text-[#1B4332] mb-1">Approve only genuine people. Reject if:</p>
+        <p>the profile photo doesn't clearly match the live selfie · the face is hidden (sunglasses, mask, heavy filter) · it looks AI-generated, a celebrity, a stock photo, or not a real person · no clear human face. The <b>left</b> image is their profile photo; the <b>right</b> is their live selfie — they should be the same real person.</p>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {pending.map((v) => (
           <div key={v.id} className="bg-white rounded-2xl border border-[#E5E0D8] overflow-hidden shadow-sm">
@@ -380,6 +385,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             </div>
           </div>
         ))}
+      </div>
       </div>
     );
 

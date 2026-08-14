@@ -39,6 +39,7 @@ export interface Profile {
   verification_selfie_url?: string | null;
   wali_email?: string | null;
   gallery?: string[] | null;
+  photo_hash?: string | null;
   compat_questions?: string[] | null;
   intro_audio_url?: string | null;
   intro_public?: boolean | null;
@@ -217,10 +218,45 @@ export async function resolveMediaUrls(refs: string[]): Promise<string[]> {
   return out.filter((u): u is string => !!u);
 }
 
-/** Upload a profile picture and save its URL on the profile. Returns the URL. */
+// -------------------------------------------------------------
+// Photo authenticity helpers (duplicate blocking + basic quality)
+// -------------------------------------------------------------
+/** SHA-256 of a file's bytes — an exact-image fingerprint. */
+export async function sha256Hex(data: Blob): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', await data.arrayBuffer());
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Reject obviously-unusable images (too small / undecodable → likely not a real photo). */
+export async function isAcceptablePhoto(file: Blob): Promise<boolean> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const ok = bmp.width >= 200 && bmp.height >= 200;
+    (bmp as any).close?.();
+    return ok;
+  } catch {
+    return true; // if the browser can't decode it, don't hard-block here
+  }
+}
+
+export function isDuplicatePhotoError(e: any): boolean {
+  return e?.code === '23505' || /photo_hash|duplicate key/i.test(String(e?.message || ''));
+}
+
+const DUP_PHOTO_MSG = 'This photo is already used by another Kulmi account. Please upload a genuine photo of yourself.';
+
+/** Upload a profile picture and save its URL + fingerprint. Returns the URL.
+ *  Throws a friendly error if the image is already used by someone else. */
 export async function uploadAvatar(file: File): Promise<string> {
+  if (!(await isAcceptablePhoto(file))) throw new Error('Please upload a clearer, larger photo of your face.');
+  const hash = await sha256Hex(file);
   const url = await uploadToAvatars(file, 'avatar');
-  await updateMyProfile({ profile_picture_url: url });
+  try {
+    await updateMyProfile({ profile_picture_url: url, photo_hash: hash } as Partial<Profile>);
+  } catch (e) {
+    if (isDuplicatePhotoError(e)) throw new Error(DUP_PHOTO_MSG);
+    throw e;
+  }
   return url;
 }
 
