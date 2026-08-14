@@ -210,7 +210,8 @@ const isUrlLike = (ref: string) => /^(https?:|data:|blob:)/.test(ref);
 export async function resolveMediaUrl(ref?: string | null): Promise<string | null> {
   if (!ref) return null;
   if (isUrlLike(ref)) return ref;
-  const { data } = await supabase.storage.from(SECURE_BUCKET).createSignedUrl(ref, 60 * 60);
+  // 1-week signed URLs so media doesn't break in a long-open chat/session.
+  const { data } = await supabase.storage.from(SECURE_BUCKET).createSignedUrl(ref, 60 * 60 * 24 * 7);
   return data?.signedUrl ?? null;
 }
 
@@ -594,13 +595,25 @@ export async function listActiveSessions(): Promise<SessionSummary[]> {
     const partnerId = s.user1_id === uid ? s.user2_id : s.user1_id;
     const partner = byId.get(partnerId);
     if (!partner) continue;
-    const [{ count: mine }, { count: theirs }, myDec] = await Promise.all([
-      supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', uid),
-      supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', partnerId),
+    const [prog, myDec] = await Promise.all([
+      supabase.rpc('session_progress', { sess: s.id }),
       supabase.from('session_decisions').select('decision').eq('session_id', s.id).eq('user_id', uid).maybeSingle(),
     ]);
-    const myAnsweredCount = mine ?? 0;
-    const partnerAnsweredCount = theirs ?? 0;
+    let myAnsweredCount = 0;
+    let partnerAnsweredCount = 0;
+    if (!prog.error && Array.isArray(prog.data)) {
+      for (const row of prog.data as { uid: string; answered: number }[]) {
+        if (row.uid === uid) myAnsweredCount = row.answered; else partnerAnsweredCount = row.answered;
+      }
+    } else {
+      // Fallback if the progress function isn't there yet (SQL not re-run).
+      const [{ count: mine }, { count: theirs }] = await Promise.all([
+        supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', uid),
+        supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', partnerId),
+      ]);
+      myAnsweredCount = mine ?? 0;
+      partnerAnsweredCount = theirs ?? 0;
+    }
     const questions = (s.questions as string[] | null)?.length ? (s.questions as string[]) : [...COMPATIBILITY_QUESTIONS];
     out.push({
       id: s.id,
@@ -625,10 +638,19 @@ export async function getSession(sessionId: string): Promise<SessionSummary | nu
 
 export async function getSessionAnswers(sessionId: string): Promise<SessionAnswers> {
   const uid = await getCurrentUserId();
-  const { data } = await supabase
-    .from('session_answers')
-    .select('user_id, question_index, answer, answer_audio')
-    .eq('session_id', sessionId);
+  // Prefer the privacy-gated RPC (hides the partner's answers until both finish).
+  // Fall back to a direct read if the function isn't there yet (SQL not re-run).
+  let data: any[] | null = null;
+  const rpc = await supabase.rpc('get_session_answers', { sess: sessionId });
+  if (!rpc.error && Array.isArray(rpc.data)) {
+    data = rpc.data;
+  } else {
+    const direct = await supabase
+      .from('session_answers')
+      .select('user_id, question_index, answer, answer_audio')
+      .eq('session_id', sessionId);
+    data = direct.data ?? [];
+  }
   const mine: Record<number, string> = {};
   const theirs: Record<number, string> = {};
   const mineAudio: Record<number, string> = {};
@@ -927,6 +949,16 @@ export async function adminMarkContactHandled(id: string, handled: boolean): Pro
   if (error) throw error;
 }
 
+export interface DeletionRow { id: string; reason: string | null; detail: string | null; created_at: string }
+export async function adminListDeletions(): Promise<DeletionRow[]> {
+  const { data } = await supabase
+    .from('account_deletions')
+    .select('id, reason, detail, created_at')
+    .order('created_at', { ascending: false })
+    .limit(300);
+  return (data as DeletionRow[]) ?? [];
+}
+
 // -------------------------------------------------------------
 // Admin email blast (sends via the "broadcast" Edge Function + Resend)
 // -------------------------------------------------------------
@@ -1055,14 +1087,24 @@ export async function setWaliEmail(email: string): Promise<void> {
   await updateMyProfile({ wali_email: email });
 }
 
-/** Deletes the user's profile row + signs out. (Removing the auth record itself
- *  requires a server-side admin call — do that from Supabase if needed.) */
+/** Records why someone is leaving (kept for admin insight; no PII, survives the delete). */
+export async function submitDeletionFeedback(reason: string, detail: string): Promise<void> {
+  try {
+    await supabase.from('account_deletions').insert([{ reason: reason || null, detail: detail?.trim() || null }]);
+  } catch { /* feedback is best-effort — never block the actual deletion */ }
+}
+
+/** Deletes the account. Tries the Edge Function (removes the auth login + profile
+ *  via cascade); falls back to deleting just the profile row if it's unavailable. */
 export async function deleteMyAccount(): Promise<void> {
   const uid = await getCurrentUserId();
-  if (uid) {
-    const { error } = await supabase.from('profiles').delete().eq('id', uid);
-    if (error) throw error; // surfaced to the UI so the user isn't left thinking it worked
-  }
+  if (!uid) return;
+  try {
+    const { data, error } = await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'delete-account' } });
+    if (!error && (data as any)?.deleted) return;
+  } catch { /* fall back below */ }
+  const { error } = await supabase.from('profiles').delete().eq('id', uid);
+  if (error) throw error; // surfaced to the UI so the user isn't left thinking it worked
 }
 
 // -------------------------------------------------------------

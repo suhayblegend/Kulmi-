@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile, updateMyProfile, setWaliEmail, signOut, deleteMyAccount, type Profile } from '../lib/db';
+import { getMyProfile, updateMyProfile, setWaliEmail, signOut, deleteMyAccount, submitDeletionFeedback, type Profile } from '../lib/db';
+
+const DELETE_REASONS = [
+  'I found my spouse (on Kulmi!)',
+  'I found my spouse elsewhere',
+  'Taking a break for now',
+  'Not enough matches / people nearby',
+  'Privacy concerns',
+  'Had a bad experience',
+  'Other',
+];
 
 const SUPPORT_EMAIL = 'support@kulmi.uk';
 const APP_VERSION = '1.0';
@@ -95,11 +105,16 @@ export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
   };
 
   const [deleting, setDeleting] = useState(false);
-  const handleDelete = async () => {
+  const [showDelete, setShowDelete] = useState(false);
+  const [delReason, setDelReason] = useState('');
+  const [delDetail, setDelDetail] = useState('');
+  const [delConfirm, setDelConfirm] = useState('');
+
+  const doDelete = async () => {
     if (deleting) return;
-    if (!window.confirm('Delete your account and profile? This permanently removes your profile, photos and conversations. This cannot be undone.')) return;
     setDeleting(true);
     try {
+      await submitDeletionFeedback(delReason, delDetail);
       await deleteMyAccount();
       await signOut();
     } catch (e: any) {
@@ -219,7 +234,7 @@ export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
             <div className="flex items-center gap-3 mb-2 text-red-600"><LogOut className="w-5 h-5" /><h3 className="font-bold">Account</h3></div>
             <div className="space-y-3 mt-4">
               <button onClick={() => signOut()} className="w-full text-left text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">Log Out</button>
-              <button onClick={handleDelete} disabled={deleting} className="w-full text-left text-sm font-medium text-red-600 hover:text-red-700 py-2 disabled:opacity-50 flex items-center gap-2">{deleting && <Loader2 className="w-4 h-4 animate-spin" />}Delete Account</button>
+              <button onClick={() => { setDelReason(''); setDelDetail(''); setDelConfirm(''); setShowDelete(true); }} className="w-full text-left text-sm font-medium text-red-600 hover:text-red-700 py-2 flex items-center gap-2">Delete Account</button>
             </div>
           </div>
         </div>
@@ -258,6 +273,48 @@ export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
                     </button>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete account — strong warning + reason */}
+      <AnimatePresence>
+        {showDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#2D2926]/50 backdrop-blur-sm" onClick={() => !deleting && setShowDelete(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="bg-white w-full max-w-md rounded-3xl overflow-hidden relative z-10 shadow-2xl border border-red-200 max-h-[90vh] overflow-y-auto">
+              <div className="p-6 bg-red-50 border-b border-red-100 text-center">
+                <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center text-red-600 mx-auto mb-3"><AlertTriangle className="w-7 h-7" /></div>
+                <h3 className="font-serif text-xl text-red-700">Delete your account?</h3>
+              </div>
+              <div className="p-6 space-y-5">
+                <div className="text-sm text-[#5C574F] bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-4 space-y-1">
+                  <p className="font-bold text-[#2D2926]">This is permanent and cannot be undone.</p>
+                  <p>It removes your profile, photos, voice notes, matches and all conversations. Your matches will no longer be able to reach you.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Why are you leaving? <span className="text-[#8B7355] normal-case font-normal">(helps us improve)</span></label>
+                  <select value={delReason} onChange={(e) => setDelReason(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-red-300 text-sm">
+                    <option value="">Select a reason…</option>
+                    {DELETE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <textarea rows={2} value={delDetail} onChange={(e) => setDelDetail(e.target.value)} placeholder="Anything else you'd like us to know? (optional)" className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-red-300 text-sm resize-none" />
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Type <span className="text-red-600">DELETE</span> to confirm</label>
+                  <input value={delConfirm} onChange={(e) => setDelConfirm(e.target.value)} placeholder="DELETE" className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-red-300 text-sm tracking-widest" />
+                </div>
+
+                <div className="flex gap-3">
+                  <button onClick={() => setShowDelete(false)} disabled={deleting} className="flex-1 py-3 rounded-xl border border-[#E5E0D8] text-[#2D2926] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50">Keep my account</button>
+                  <button onClick={doDelete} disabled={deleting || delConfirm.trim().toUpperCase() !== 'DELETE' || !delReason} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                    {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Delete forever'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

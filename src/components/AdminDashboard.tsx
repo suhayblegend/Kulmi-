@@ -11,9 +11,9 @@ import {
   adminSetRole, adminSetDiscovery, adminDeleteUser,
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   adminListContactMessages, adminMarkContactHandled,
-  adminCountRecipients, adminBroadcast,
+  adminCountRecipients, adminBroadcast, adminListDeletions,
   getMyProfile, signOut, avatarFor, resolveMediaUrl,
-  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage, type BroadcastAudience,
+  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage, type BroadcastAudience, type DeletionRow,
 } from '../lib/db';
 
 interface AdminDashboardProps {
@@ -35,6 +35,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [reports, setReports] = useState<ReportRow[]>([]);
   const [successes, setSuccesses] = useState<AdminPair[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [deletions, setDeletions] = useState<DeletionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Email blast
@@ -115,6 +116,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       adminListContactMessages(),
     ]);
     setStats(s); setUsers(u); setPending(p); setSessions(se); setChats(c); setReports(r); setSuccesses(su); setMessages(cm);
+    adminListDeletions().then(setDeletions).catch(() => {});
     // Selfies live in the private bucket — resolve to short-lived signed URLs for review.
     const selfies: Record<string, string> = {};
     await Promise.all(p.map(async (v: any) => {
@@ -139,6 +141,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     { id: 'successes', label: `Successes${stats?.successes ? ` (${stats.successes})` : ''}`, icon: <Star className="w-5 h-5" /> },
     { id: 'messages', label: `Messages${messages.filter((m) => !m.handled).length ? ` (${messages.filter((m) => !m.handled).length})` : ''}`, icon: <Mail className="w-5 h-5" /> },
     { id: 'broadcast', label: 'Email Blast', icon: <Send className="w-5 h-5" /> },
+    { id: 'deletions', label: `Left${deletions.length ? ` (${deletions.length})` : ''}`, icon: <Trash2 className="w-5 h-5" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -248,6 +251,42 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
         ))}
       </div>
     );
+
+  const renderDeletions = () => {
+    const counts = deletions.reduce<Record<string, number>>((m, d) => { const k = d.reason || 'No reason given'; m[k] = (m[k] || 0) + 1; return m; }, {});
+    const top = (Object.entries(counts) as [string, number][]).sort((a, b) => b[1] - a[1]);
+    return (
+      <div className="space-y-5">
+        <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-6">
+          <p className="text-3xl font-serif text-[#1B4332]">{deletions.length}</p>
+          <p className="text-sm text-[#8B7355]">accounts deleted</p>
+          {top.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {top.map(([reason, n]) => (
+                <div key={reason} className="flex items-center justify-between text-sm">
+                  <span className="text-[#5C574F]">{reason}</span>
+                  <span className="font-medium text-[#1B4332]">{n}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {deletions.length === 0 ? <Empty text="No one has left yet." /> : (
+          <div className="space-y-3">
+            {deletions.map((d) => (
+              <div key={d.id} className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-[#1B4332]">{d.reason || 'No reason given'}</span>
+                  <span className="text-xs text-[#8B7355]">{fmtDate(d.created_at)}</span>
+                </div>
+                {d.detail && <p className="text-sm text-[#5C574F] mt-1 whitespace-pre-wrap">{d.detail}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderBroadcast = () => (
     <div className="max-w-2xl space-y-5">
@@ -470,6 +509,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       case 'successes': return renderSuccesses();
       case 'messages': return renderMessages();
       case 'broadcast': return renderBroadcast();
+      case 'deletions': return renderDeletions();
       case 'settings': return renderSettings();
       default: return <Empty text="Coming soon." />;
     }
