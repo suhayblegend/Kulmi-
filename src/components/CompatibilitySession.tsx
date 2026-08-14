@@ -226,6 +226,8 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
       const chatId = await chatForSession(sessionId);
       if (chatId) onMatched(chatId);
       else startPollingForMatch();
+    } catch (e: any) {
+      alert(e?.message || 'Could not save your decision. Please check your connection and try again.');
     } finally {
       setDeciding(false);
     }

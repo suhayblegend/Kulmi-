@@ -390,7 +390,8 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
   ((blockedIds as string[]) ?? []).forEach((id) => excluded.add(id));
 
   const { data, error } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => {
-    q = q.eq('show_in_discovery', true).limit(100);
+    // Only verified members with a real photo appear in Discover.
+    q = q.eq('show_in_discovery', true).eq('verification_status', 'verified').not('profile_picture_url', 'is', null).limit(100);
     if (me.gender === 'male' || me.gender === 'female') {
       q = q.eq('gender', me.gender === 'male' ? 'female' : 'male');
     }
@@ -792,7 +793,7 @@ export async function getChatPartner(chatId: string): Promise<Profile | null> {
     .from('chats')
     .select('user1_id, user2_id')
     .eq('id', chatId)
-    .single();
+    .maybeSingle(); // partner may have deleted their account → no row, don't throw
   if (!chat) return null;
   const partnerId = chat.user1_id === uid ? chat.user2_id : chat.user1_id;
   const { data } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.eq('id', partnerId).maybeSingle());

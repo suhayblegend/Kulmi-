@@ -131,6 +131,9 @@ function MemberApp() {
     // Mandatory identity verification before any profiles are shown.
     // Staff accounts (admin/wali) are exempt.
     const exempt = profile.role === 'admin' || profile.role === 'wali';
+    // A profile that was never finished (e.g. connection dropped during signup)
+    // resumes onboarding instead of getting stuck at the verify gate.
+    if (!exempt && !profile.profile_picture_url) return 'onboarding';
     if (!exempt && profile.verification_status !== 'verified') return 'verify';
     if (!target || target === 'landing' || target === 'auth') return 'discover';
     if (target === 'admin' && profile.role !== 'admin') return 'discover';

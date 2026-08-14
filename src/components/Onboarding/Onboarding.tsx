@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { uploadPhoto, uploadGalleryPhoto, updateMyProfile, sha256Hex, isAcceptablePhoto, isDuplicatePhotoError } from '../../lib/db';
+import { uploadPhoto, uploadGalleryPhoto, sha256Hex, isAcceptablePhoto, isDuplicatePhotoError } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X, MapPin } from 'lucide-react';
 
@@ -162,6 +162,18 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      // Upload photos FIRST, then create the profile row in one go with the photo
+      // included. This way a dropped connection mid-signup never leaves a stuck,
+      // photoless profile row — nothing is saved until everything is ready.
+      const mainFile = (photos[highlight] ?? photos[0]).file;
+      if (!(await isAcceptablePhoto(mainFile))) throw new Error('Please use a clear, real photo of your face (at least 200×200).');
+      const mainHash = await sha256Hex(mainFile);
+      const main = await uploadPhoto(mainFile);
+      if (!main) throw new Error('Your main photo did not upload. Please check your connection and try again.');
+      const galleryPaths = await Promise.all(
+        photos.filter((_, i) => i !== highlight).map((p) => uploadGalleryPhoto(p.file))
+      );
+
       const { error: dbError } = await supabase.from('profiles').upsert([{
         id: user.id, email: user.email,
         first_name: form.first_name, last_name: lastName || null, age: parseInt(form.age, 10), gender: form.gender,
@@ -175,25 +187,11 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         children: form.children, has_children: form.has_children,
         personality_traits: form.personality_traits, communication_style: form.communication_style,
         future_goals: form.future_goals, deal_breakers: form.deal_breakers,
+        profile_picture_url: main, gallery: galleryPaths, photo_hash: mainHash,
       }]);
-      if (dbError) throw dbError;
-
-      // The highlighted photo is the public main photo (shown in Discover);
-      // the rest go to the PRIVATE gallery (revealed only to a match). A profile
-      // without a main photo is not allowed, so a failure here blocks completion.
-      const mainFile = (photos[highlight] ?? photos[0]).file;
-      if (!(await isAcceptablePhoto(mainFile))) throw new Error('Please use a clear, real photo of your face (at least 200×200).');
-      const mainHash = await sha256Hex(mainFile);
-      const main = await uploadPhoto(mainFile);
-      if (!main) throw new Error('Your main photo did not upload. Please check your connection and try again.');
-      const galleryPaths = await Promise.all(
-        photos.filter((_, i) => i !== highlight).map((p) => uploadGalleryPhoto(p.file))
-      );
-      try {
-        await updateMyProfile({ profile_picture_url: main, gallery: galleryPaths, photo_hash: mainHash });
-      } catch (e: any) {
-        if (isDuplicatePhotoError(e)) throw new Error('This photo is already used by another Kulmi account. Please upload a genuine photo of yourself.');
-        throw e;
+      if (dbError) {
+        if (isDuplicatePhotoError(dbError)) throw new Error('This photo is already used by another Kulmi account. Please upload a genuine photo of yourself.');
+        throw dbError;
       }
       onComplete();
     } catch (err: any) {
