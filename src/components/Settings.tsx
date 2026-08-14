@@ -7,7 +7,7 @@ import { getMyProfile, updateMyProfile, setWaliEmail, signOut, deleteMyAccount, 
 const SUPPORT_EMAIL = 'support@kulmi.uk';
 const APP_VERSION = '1.0';
 
-type ToggleKey = 'show_in_discovery' | 'push_notifications' | 'email_summaries' | 'read_receipts';
+type ToggleKey = 'show_in_discovery' | 'push_notifications' | 'email_summaries' | 'email_unsubscribed' | 'read_receipts';
 
 interface SettingsProps {
   onTerms?: () => void;
@@ -148,8 +148,8 @@ export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div><p className="font-medium text-sm text-[#2D2926]">Email Summaries</p><p className="text-xs text-[#8B7355]">Also email me about new activity <span className="italic">(coming soon)</span></p></div>
-                <Toggle on={profile.email_summaries === true} onChange={(v) => setToggle('email_summaries', v)} />
+                <div><p className="font-medium text-sm text-[#2D2926]">Product &amp; tips emails</p><p className="text-xs text-[#8B7355]">News, tips and announcements from Kulmi. Account emails (like password resets) always send.</p></div>
+                <Toggle on={profile.email_unsubscribed !== true} onChange={(v) => setToggle('email_unsubscribed', !v)} />
               </div>
             </div>
           </div>

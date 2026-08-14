@@ -1,7 +1,4 @@
--- =============================================================
--- KULMI — combined idempotent setup (all migrations)
--- Run in Supabase SQL editor. Safe to re-run. Regenerated v15.
--- =============================================================
+-- KULMI combined setup — regenerated v16. Run in Supabase SQL editor. Safe to re-run.
 
 -- >>> migration.sql
 -- =============================================================
@@ -1228,6 +1225,15 @@ create policy "Admins update contact messages" on public.contact_messages
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
 create index if not exists contact_messages_idx on public.contact_messages (handled, created_at desc);
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v16.sql
+-- =============================================================
+--  KULMI migration v16 — email unsubscribe. Idempotent.
+-- =============================================================
+alter table public.profiles add column if not exists email_unsubscribed boolean not null default false;
 
 notify pgrst, 'reload schema';
 

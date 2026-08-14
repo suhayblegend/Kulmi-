@@ -47,6 +47,7 @@ export interface Profile {
   show_in_discovery?: boolean | null;
   push_notifications?: boolean | null;
   email_summaries?: boolean | null;
+  email_unsubscribed?: boolean | null;
   read_receipts?: boolean | null;
 }
 
@@ -895,7 +896,9 @@ export type BroadcastAudience = 'all' | 'verified';
 
 /** How many people a blast to this audience would reach. */
 export async function adminCountRecipients(audience: BroadcastAudience): Promise<number> {
-  let q = supabase.from('profiles').select('id', { count: 'exact', head: true }).not('email', 'is', null);
+  let q = supabase.from('profiles').select('id', { count: 'exact', head: true })
+    .not('email', 'is', null)
+    .not('email_unsubscribed', 'is', true);
   if (audience === 'verified') q = q.eq('verification_status', 'verified');
   const { count } = await q;
   return count ?? 0;
