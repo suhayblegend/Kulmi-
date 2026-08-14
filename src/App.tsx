@@ -111,6 +111,11 @@ function MemberApp() {
     pathWantsSignup(typeof window !== 'undefined' ? window.location.pathname : '/') ? 'signup' : 'signin'
   );
   const goAuth = (mode: 'signin' | 'signup') => { setAuthMode(mode); setAppState('auth'); };
+  // A staff (admin/wali) account is signed in, but staff are NOT members — the
+  // consumer app stays logged-out for them. `staffRef` keeps the auth listener
+  // from re-populating `user` on token refresh.
+  const [staffSession, setStaffSession] = useState<'admin' | 'wali' | null>(null);
+  const staffRef = useRef(false);
 
   // The URL the app was opened at, used to honour a deep link (e.g. /admin)
   // once the session has loaded.
@@ -133,12 +138,26 @@ function MemberApp() {
     return target;
   };
 
-  const loadProfileAndRoute = async () => {
+  const loadProfileAndRoute = async (sessionUser?: any) => {
     routedRef.current = true;
+    const su = sessionUser ?? (await supabase.auth.getSession()).data.session?.user ?? null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const profile = await getMyProfile();
         setMyProfile(profile);
+        const staffRole = profile?.role === 'admin' ? 'admin' : profile?.role === 'wali' ? 'wali' : null;
+        if (staffRole) {
+          // Staff sign-in should NOT log them into the consumer app. Show the
+          // public landing; a small bar offers their dashboard or sign-out.
+          staffRef.current = true;
+          setStaffSession(staffRole);
+          setUser(null);
+          setAppState('landing');
+          return;
+        }
+        staffRef.current = false;
+        setStaffSession(null);
+        setUser(su);
         setAppState(routeFor(profile));
         return;
       } catch {
@@ -156,8 +175,7 @@ function MemberApp() {
     // Restore an existing session on reload (reliable path).
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user && !routedRef.current) {
-        setUser(session.user);
-        loadProfileAndRoute();
+        loadProfileAndRoute(session.user);
       }
     });
 
@@ -173,6 +191,8 @@ function MemberApp() {
         // Real sign-out only.
         setUser(null);
         setMyProfile(null);
+        setStaffSession(null);
+        staffRef.current = false;
         setAppState('landing');
         routedRef.current = false;
         initialPathRef.current = '/';
@@ -191,14 +211,13 @@ function MemberApp() {
         return;
       }
 
-      setUser(session.user);
       if (!routedRef.current) {
         // First time we learn who the user is (initial load or a fresh sign-in) → route in.
-        loadProfileAndRoute();
-      } else {
-        // Already inside the app: token refresh / focus / spurious SIGNED_IN →
-        // just keep the profile fresh, NEVER navigate. (Fixes the "jumps to home
-        // after a few minutes" bug.)
+        loadProfileAndRoute(session.user);
+      } else if (!staffRef.current) {
+        // Already inside the member app: token refresh / focus / spurious SIGNED_IN →
+        // keep the profile fresh, NEVER navigate. (Staff stay logged-out here.)
+        setUser(session.user);
         getMyProfile().then(setMyProfile).catch(() => {});
       }
     });
@@ -327,6 +346,13 @@ function MemberApp() {
       </header>
 
       <main className="pt-20 sm:pt-32 pb-24 sm:pb-16 px-3 sm:px-4 min-h-screen flex flex-col items-center justify-center w-full max-w-6xl mx-auto">
+        {staffSession && PUBLIC_STATES.includes(appState) && (
+          <div className="w-full max-w-3xl mx-auto mb-6 bg-[#1B4332] text-white rounded-2xl px-5 py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm">
+            <span>You're signed in as <b className="capitalize">{staffSession}</b> — not shown as a member here.</span>
+            <button onClick={() => { window.location.href = staffSession === 'admin' ? '/admin' : '/wali'; }} className="underline font-medium">Go to dashboard</button>
+            <button onClick={() => supabase.auth.signOut()} className="underline">Sign out</button>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {appState === 'landing' && (
             <motion.div key="landing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
