@@ -889,6 +889,41 @@ export async function adminMarkContactHandled(id: string, handled: boolean): Pro
 }
 
 // -------------------------------------------------------------
+// Admin email blast (sends via the "broadcast" Edge Function + Resend)
+// -------------------------------------------------------------
+export type BroadcastAudience = 'all' | 'verified';
+
+/** How many people a blast to this audience would reach. */
+export async function adminCountRecipients(audience: BroadcastAudience): Promise<number> {
+  let q = supabase.from('profiles').select('id', { count: 'exact', head: true }).not('email', 'is', null);
+  if (audience === 'verified') q = q.eq('verification_status', 'verified');
+  const { count } = await q;
+  return count ?? 0;
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/** Turn the admin's plain-text message into simple, safe HTML. */
+function messageToHtml(subject: string, message: string): string {
+  const body = escapeHtml(message).split(/\n{2,}/).map((p) => `<p style="margin:0 0 16px;line-height:1.6">${p.replace(/\n/g, '<br/>')}</p>`).join('');
+  return `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#2D2926;max-width:560px;margin:0 auto;padding:24px">
+    <h2 style="color:#1B4332;font-family:Georgia,serif">${escapeHtml(subject)}</h2>
+    ${body}
+    <hr style="border:none;border-top:1px solid #E5E0D8;margin:24px 0"/>
+    <p style="font-size:12px;color:#8B7355">You're receiving this because you have a Kulmi account. — kulmi.uk</p>
+  </div>`;
+}
+
+export async function adminBroadcast(subject: string, message: string, audience: BroadcastAudience): Promise<{ sent: number; total?: number }> {
+  const html = messageToHtml(subject, message);
+  const { data, error } = await supabase.functions.invoke('broadcast', { body: { subject, html, audience } });
+  if (error) throw error;
+  if ((data as any)?.error) throw new Error((data as any).error);
+  return data as { sent: number; total?: number };
+}
+
+// -------------------------------------------------------------
 // Notifications (in-app; created by DB triggers on invite/match/message)
 // -------------------------------------------------------------
 export interface AppNotification {

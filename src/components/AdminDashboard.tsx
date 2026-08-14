@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
   Users, AlertTriangle, MessageSquare, Settings, Activity, Menu, X,
   BarChart3, UserCheck, Star, CheckCircle, XCircle, LogOut, Heart, Loader2, ShieldCheck,
-  Search, Trash2, EyeOff, Eye, Key, Mail,
+  Search, Trash2, EyeOff, Eye, Key, Mail, Send,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
@@ -11,8 +11,9 @@ import {
   adminSetRole, adminSetDiscovery, adminDeleteUser,
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   adminListContactMessages, adminMarkContactHandled,
+  adminCountRecipients, adminBroadcast,
   getMyProfile, signOut, avatarFor, resolveMediaUrl,
-  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage,
+  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage, type BroadcastAudience,
 } from '../lib/db';
 
 interface AdminDashboardProps {
@@ -35,6 +36,33 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [successes, setSuccesses] = useState<AdminPair[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Email blast
+  const [blastSubject, setBlastSubject] = useState('');
+  const [blastBody, setBlastBody] = useState('');
+  const [blastAudience, setBlastAudience] = useState<BroadcastAudience>('verified');
+  const [blastCount, setBlastCount] = useState<number | null>(null);
+  const [blastSending, setBlastSending] = useState(false);
+  const [blastResult, setBlastResult] = useState('');
+  useEffect(() => {
+    setBlastCount(null);
+    adminCountRecipients(blastAudience).then(setBlastCount).catch(() => setBlastCount(null));
+  }, [blastAudience]);
+  const handleBlast = async () => {
+    setBlastResult('');
+    if (!blastSubject.trim() || blastBody.trim().length < 5) { setBlastResult('Add a subject and a message first.'); return; }
+    if (!window.confirm(`Send this email to ${blastCount ?? 'all'} ${blastAudience === 'verified' ? 'verified ' : ''}members?`)) return;
+    setBlastSending(true);
+    try {
+      const r = await adminBroadcast(blastSubject.trim(), blastBody, blastAudience);
+      setBlastResult(`✅ Sent to ${r.sent} member${r.sent === 1 ? '' : 's'}.`);
+      setBlastSubject(''); setBlastBody('');
+    } catch (e: any) {
+      setBlastResult(`⚠️ ${e?.message || 'Could not send. Is the email sender set up?'}`);
+    } finally {
+      setBlastSending(false);
+    }
+  };
   const [transcript, setTranscript] = useState<{ title: string; messages: Message[] } | null>(null);
   const [userSearch, setUserSearch] = useState('');
 
@@ -105,6 +133,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     { id: 'reports', label: `Reports${stats?.pendingReports ? ` (${stats.pendingReports})` : ''}`, icon: <AlertTriangle className="w-5 h-5" /> },
     { id: 'successes', label: `Successes${stats?.successes ? ` (${stats.successes})` : ''}`, icon: <Star className="w-5 h-5" /> },
     { id: 'messages', label: `Messages${messages.filter((m) => !m.handled).length ? ` (${messages.filter((m) => !m.handled).length})` : ''}`, icon: <Mail className="w-5 h-5" /> },
+    { id: 'broadcast', label: 'Email Blast', icon: <Send className="w-5 h-5" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
 
@@ -196,6 +225,39 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
         ))}
       </div>
     );
+
+  const renderBroadcast = () => (
+    <div className="max-w-2xl space-y-5">
+      <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-6 space-y-5">
+        <div>
+          <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Send to</label>
+          <div className="flex flex-wrap gap-2">
+            {([['verified', 'Verified members'], ['all', 'All members']] as [BroadcastAudience, string][]).map(([val, lbl]) => (
+              <button key={val} onClick={() => setBlastAudience(val)} className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${blastAudience === val ? 'bg-[#1B4332] text-white border-[#1B4332]' : 'bg-white border-[#E5E0D8] text-[#2D2926] hover:bg-[#FDFBF7]'}`}>{lbl}</button>
+            ))}
+            <span className="px-4 py-2 rounded-xl text-sm font-medium border border-dashed border-[#E5E0D8] text-[#8B7355]" title="Available once paid plans are added">Premium (with billing)</span>
+          </div>
+          <p className="text-xs text-[#8B7355] mt-2">{blastCount === null ? 'Counting recipients…' : `${blastCount} recipient${blastCount === 1 ? '' : 's'}`}</p>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Subject</label>
+          <input value={blastSubject} onChange={(e) => setBlastSubject(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332]" placeholder="e.g. New matches waiting for you on Kulmi" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Message</label>
+          <textarea rows={8} value={blastBody} onChange={(e) => setBlastBody(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] resize-none" placeholder="Write your message. Plain text — blank lines become paragraphs." />
+        </div>
+        {blastResult && <p className={`text-sm ${blastResult.startsWith('✅') ? 'text-green-700' : 'text-red-600'}`}>{blastResult}</p>}
+        <button onClick={handleBlast} disabled={blastSending} className="w-full py-4 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+          {blastSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /> Send email blast</>}
+        </button>
+      </div>
+      <p className="text-xs text-[#8B7355] leading-relaxed">
+        Emails send from <span className="font-medium">noreply@kulmi.uk</span> via Resend. If sending isn't working, the
+        <span className="font-medium"> broadcast</span> function or Resend key may not be set up yet.
+      </p>
+    </div>
+  );
 
   const Table = ({ head, children }: { head: string[]; children: React.ReactNode }) => (
     <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm overflow-hidden">
@@ -378,6 +440,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       case 'reports': return renderReports();
       case 'successes': return renderSuccesses();
       case 'messages': return renderMessages();
+      case 'broadcast': return renderBroadcast();
       case 'settings': return renderSettings();
       default: return <Empty text="Coming soon." />;
     }
