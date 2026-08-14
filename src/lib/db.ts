@@ -220,6 +220,19 @@ export async function resolveMediaUrls(refs: string[]): Promise<string[]> {
   return out.filter((u): u is string => !!u);
 }
 
+/** Best-effort removal of just-uploaded files when the following save fails
+ *  (e.g. duplicate-photo rejection), so we don't leave orphans in storage. */
+export async function cleanupUploads(mainUrl: string | null, galleryPaths: string[]): Promise<void> {
+  try {
+    if (mainUrl && mainUrl.includes('/avatars/')) {
+      const path = decodeURIComponent(mainUrl.split('/avatars/')[1].split('?')[0]);
+      if (path) await supabase.storage.from('avatars').remove([path]);
+    }
+    const secure = galleryPaths.filter((p) => p && !isUrlLike(p));
+    if (secure.length) await supabase.storage.from(SECURE_BUCKET).remove(secure);
+  } catch { /* best effort */ }
+}
+
 // -------------------------------------------------------------
 // Photo authenticity helpers (duplicate blocking + basic quality)
 // -------------------------------------------------------------

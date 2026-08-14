@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, UserMinus, Check, X, MapPin, Send, Inbox, SlidersHorizontal, BadgeCheck } from 'lucide-react';
 import {
@@ -103,12 +103,14 @@ export function Home({ onOpenSession }: HomeProps) {
 
   const current = candidates[index];
 
+  const actionRef = useRef(false); // synchronous guard against rapid double-clicks
   const handleInvite = async () => {
-    if (!current) return;
+    if (!current || actionRef.current) return;
     if (openThreads >= MAX_OPEN) {
       setError(`You can have ${MAX_OPEN} introductions at a time. Finish or end one before starting another — quality over quantity.`);
       return;
     }
+    actionRef.current = true;
     setBusy(true);
     setError('');
     try {
@@ -120,6 +122,7 @@ export function Home({ onOpenSession }: HomeProps) {
       setError(err.message || 'Could not send invitation.');
     } finally {
       setBusy(false);
+      actionRef.current = false;
     }
   };
 
@@ -127,7 +130,9 @@ export function Home({ onOpenSession }: HomeProps) {
 
   const handleRespond = async (inv: InvitationWithProfile, accept: boolean) => {
     // Declining is permanent — you won't be shown to each other again — so confirm.
+    if (actionRef.current) return;
     if (!accept && !window.confirm(`Decline ${inv.sender?.first_name ?? 'this person'}'s introduction? You won't be matched with them again.`)) return;
+    actionRef.current = true;
     setBusy(true);
     setError('');
     try {
@@ -140,6 +145,7 @@ export function Home({ onOpenSession }: HomeProps) {
       setError(err.message || 'Could not respond.');
     } finally {
       setBusy(false);
+      actionRef.current = false;
     }
   };
 

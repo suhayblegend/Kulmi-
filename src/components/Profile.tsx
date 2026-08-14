@@ -4,6 +4,7 @@ import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2,
 import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, getMyCompatQuestions, setMyCompatQuestions, COMPATIBILITY_QUESTIONS, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
+import { MARITAL, HAS_KIDS, MARRIAGE_INTENT, TIMELINE, RELOCATE, WANT_KIDS, PRAYER, PRACTICE } from '../lib/options';
 
 type ProfileForm = {
   firstName: string;
@@ -34,8 +35,8 @@ type ProfileForm = {
 const EMPTY_FORM: ProfileForm = {
   firstName: '', age: '', country: '', city: '', occupation: '', education: '', languages: '',
   maritalStatus: '', height: '', heritage: '', hasChildren: '',
-  marriageIntent: 'Marriage Only', timeline: 'Within 1-2 years', relocate: 'Willing to relocate', children: 'Wants children',
-  prayerLevel: '5 Daily Prayers', islamicPractice: 'Practicing', faithStatement: '',
+  marriageIntent: MARRIAGE_INTENT[0], timeline: TIMELINE[0], relocate: RELOCATE[0], children: WANT_KIDS[0],
+  prayerLevel: PRAYER[0], islamicPractice: PRACTICE[0], faithStatement: '',
   aboutMe: '', personalityTraits: [], futureGoals: [], communicationStyle: [], dealBreakers: '',
 };
 
@@ -561,49 +562,38 @@ export function Profile() {
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Marital Status</label>
                     <select value={editForm.maritalStatus} onChange={e => setEditForm({...editForm, maritalStatus: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
                       <option value="">Select</option>
-                      <option>Never married</option>
-                      <option>Divorced</option>
-                      <option>Widowed</option>
+                      {MARITAL.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Have Children?</label>
                     <select value={editForm.hasChildren} onChange={e => setEditForm({...editForm, hasChildren: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
                       <option value="">Select</option>
-                      <option>No</option>
-                      <option>Yes — living with me</option>
-                      <option>Yes — not living with me</option>
+                      {HAS_KIDS.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Looking For</label>
                     <select value={editForm.marriageIntent} onChange={e => setEditForm({...editForm, marriageIntent: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
-                      <option>Marriage Only</option>
-                      <option>Marriage in 1-2 years</option>
+                      {MARRIAGE_INTENT.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Timeline</label>
                     <select value={editForm.timeline} onChange={e => setEditForm({...editForm, timeline: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
-                      <option>Within 1-2 years</option>
-                      <option>ASAP</option>
-                      <option>2-3 years</option>
+                      {TIMELINE.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Relocate</label>
                     <select value={editForm.relocate} onChange={e => setEditForm({...editForm, relocate: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
-                      <option>Willing to relocate</option>
-                      <option>Not willing</option>
-                      <option>Open to discussion</option>
+                      {RELOCATE.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Children</label>
                     <select value={editForm.children} onChange={e => setEditForm({...editForm, children: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
-                      <option>Wants children</option>
-                      <option>Doesn't want children</option>
-                      <option>Not sure</option>
+                      {WANT_KIDS.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                 </div>
@@ -740,17 +730,13 @@ export function Profile() {
                   <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Prayer Level</label>
                     <select value={editForm.prayerLevel} onChange={e => setEditForm({...editForm, prayerLevel: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
-                      <option>5 Daily Prayers</option>
-                      <option>Usually prays</option>
-                      <option>Working on it</option>
+                      {PRAYER.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Practice</label>
                     <select value={editForm.islamicPractice} onChange={e => setEditForm({...editForm, islamicPractice: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
-                      <option>Practicing</option>
-                      <option>Moderately practicing</option>
-                      <option>Liberal</option>
+                      {PRACTICE.map(o => <option key={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>

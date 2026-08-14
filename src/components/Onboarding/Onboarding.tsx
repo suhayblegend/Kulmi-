@@ -1,23 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { uploadPhoto, uploadGalleryPhoto, sha256Hex, isAcceptablePhoto, isDuplicatePhotoError } from '../../lib/db';
+import { uploadPhoto, uploadGalleryPhoto, sha256Hex, isAcceptablePhoto, isDuplicatePhotoError, cleanupUploads } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X, MapPin } from 'lucide-react';
 
-const MIN_PHOTOS = 4;
+import { GENDERS, MARITAL, PRAYER, PRACTICE, MARRIAGE_INTENT as LOOKING, TIMELINE, RELOCATE, WANT_KIDS, HAS_KIDS, TRAITS, STYLES, GOALS } from '../../lib/options';
 
-const GENDERS = ['male', 'female'];
-const MARITAL = ['Never married', 'Divorced', 'Widowed'];
-const PRAYER = ['5 Daily Prayers', 'Usually prays', 'Sometimes prays', 'Working on it'];
-const PRACTICE = ['Very practicing', 'Practicing', 'Moderately practicing', 'Still learning'];
-const LOOKING = ['Marriage as soon as possible', 'Marriage within 1–2 years', 'Getting to know for marriage'];
-const TIMELINE = ['As soon as possible', 'Within 1 year', '1–2 years', '2–3 years', 'Not sure yet'];
-const RELOCATE = ['Willing to relocate', 'Not willing to relocate', 'Open to discussion'];
-const WANT_KIDS = ['Want children', "Don't want children", 'Open / not sure'];
-const HAS_KIDS = ['No', 'Yes — living with me', 'Yes — not living with me'];
-const TRAITS = ['Calm', 'Funny', 'Patient', 'Ambitious', 'Introvert', 'Extrovert', 'Family-Oriented', 'Adventurous', 'Organized', 'Kind', 'Generous'];
-const STYLES = ['Calm', 'Direct', 'Gentle', 'Honest', 'Listener', 'Problem Solver', 'Affectionate'];
-const GOALS = ['Strong Islamic Home', 'Children', 'Career', 'Business', 'Education', 'Travel', 'Financial Stability', 'Memorise Quran'];
+const MIN_PHOTOS = 4;
 
 const INPUT_CLS = 'w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent';
 
@@ -190,6 +179,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         profile_picture_url: main, gallery: galleryPaths, photo_hash: mainHash,
       }]);
       if (dbError) {
+        // The row wasn't saved — remove the just-uploaded photos so they don't orphan.
+        await cleanupUploads(main, galleryPaths);
         if (isDuplicatePhotoError(dbError)) throw new Error('This photo is already used by another Kulmi account. Please upload a genuine photo of yourself.');
         throw dbError;
       }
