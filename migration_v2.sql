@@ -120,9 +120,9 @@ create policy "Admins update reports" on public.reports for update to authentica
 alter table public.messages add column if not exists type text not null default 'text'
   check (type in ('text','audio'));
 
-insert into storage.buckets (id, name, public)
-values ('media', 'media', true)
-on conflict (id) do nothing;
+do $$ begin
+  insert into storage.buckets (id, name, public) values ('media', 'media', true) on conflict (id) do nothing;
+exception when others then null; end $$;
 
 drop policy if exists "Media publicly readable" on storage.objects;
 create policy "Media publicly readable" on storage.objects for select

@@ -5,9 +5,11 @@
 -- =============================================================
 
 -- Public bucket for avatars (anyone can view; only the owner can write).
-insert into storage.buckets (id, name, public)
-values ('avatars', 'avatars', true)
-on conflict (id) do nothing;
+-- Non-fatal: some projects block direct bucket inserts on re-run. Create the
+-- bucket in the Dashboard if this is skipped; the rest of the setup still applies.
+do $$ begin
+  insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true) on conflict (id) do nothing;
+exception when others then null; end $$;
 
 -- Files are stored under  avatars/<user-id>/<filename>
 -- so (storage.foldername(name))[1] == the owner's uid.

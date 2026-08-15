@@ -12,9 +12,9 @@
 --      Main profile photos stay in the public "avatars" bucket by design.
 -- =============================================================
 
-insert into storage.buckets (id, name, public)
-values ('secure', 'secure', false)
-on conflict (id) do update set public = false;
+do $$ begin
+  insert into storage.buckets (id, name, public) values ('secure', 'secure', false) on conflict (id) do update set public = false;
+exception when others then null; end $$;
 
 -- owner of an object = first path segment
 --   (storage.foldername(name))[1]  -> uid

@@ -1,4 +1,4 @@
--- KULMI combined setup — regenerated v19. Run in Supabase SQL editor. Safe to re-run.
+-- KULMI combined setup — regenerated (storage inserts now non-fatal). Run in Supabase SQL editor. Safe to re-run.
 
 -- >>> migration.sql
 -- =============================================================
@@ -287,9 +287,11 @@ create trigger on_session_decision
 -- =============================================================
 
 -- Public bucket for avatars (anyone can view; only the owner can write).
-insert into storage.buckets (id, name, public)
-values ('avatars', 'avatars', true)
-on conflict (id) do nothing;
+-- Non-fatal: some projects block direct bucket inserts on re-run. Create the
+-- bucket in the Dashboard if this is skipped; the rest of the setup still applies.
+do $$ begin
+  insert into storage.buckets (id, name, public) values ('avatars', 'avatars', true) on conflict (id) do nothing;
+exception when others then null; end $$;
 
 -- Files are stored under  avatars/<user-id>/<filename>
 -- so (storage.foldername(name))[1] == the owner's uid.
@@ -438,9 +440,9 @@ create policy "Admins update reports" on public.reports for update to authentica
 alter table public.messages add column if not exists type text not null default 'text'
   check (type in ('text','audio'));
 
-insert into storage.buckets (id, name, public)
-values ('media', 'media', true)
-on conflict (id) do nothing;
+do $$ begin
+  insert into storage.buckets (id, name, public) values ('media', 'media', true) on conflict (id) do nothing;
+exception when others then null; end $$;
 
 drop policy if exists "Media publicly readable" on storage.objects;
 create policy "Media publicly readable" on storage.objects for select
@@ -912,9 +914,9 @@ notify pgrst, 'reload schema';
 --      Main profile photos stay in the public "avatars" bucket by design.
 -- =============================================================
 
-insert into storage.buckets (id, name, public)
-values ('secure', 'secure', false)
-on conflict (id) do update set public = false;
+do $$ begin
+  insert into storage.buckets (id, name, public) values ('secure', 'secure', false) on conflict (id) do update set public = false;
+exception when others then null; end $$;
 
 -- owner of an object = first path segment
 --   (storage.foldername(name))[1]  -> uid
