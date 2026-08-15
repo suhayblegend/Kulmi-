@@ -1187,6 +1187,7 @@ export async function adminListPendingVerifications(): Promise<Profile[]> {
     .from('profiles')
     .select('*')
     .eq('verification_status', 'pending')
+    .not('profile_picture_url', 'is', null) // hide legacy/incomplete rows the current app can't create
     .order('updated_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as Profile[];
