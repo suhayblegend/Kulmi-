@@ -1,7 +1,75 @@
 -- =============================================================
---  KULMI RESCUE — only the pieces that keep going missing.
---  Small, idempotent, safe to re-run. Paste ALL of it and Run.
+--  KULMI RESCUE v2 — migrations v9 through v23, in order.
+--  Idempotent, safe to re-run. Paste ALL, click in editor
+--  (nothing highlighted), then Run.
 -- =============================================================
+
+-- >>> migration_v9.sql
+-- =============================================================
+--  KULMI migration v9 — auto-detected location coordinates
+--  Run in the Supabase SQL editor AFTER the earlier migrations. Idempotent.
+--  Coordinates are PRIVATE (not in the public view) — only city/country show.
+-- =============================================================
+
+alter table public.profiles add column if not exists latitude  double precision;
+alter table public.profiles add column if not exists longitude double precision;
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v10.sql
+-- =============================================================
+--  KULMI migration v10 — audit fixes (delete cascade, enforce
+--  verification server-side, 18+). Run AFTER earlier migrations. Idempotent.
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- C1: account deletion was blocked by RESTRICT foreign keys on chats/messages.
+--     Cascade so deleting a profile removes their chats + messages.
+-- -------------------------------------------------------------
+alter table public.chats drop constraint if exists chats_user1_id_fkey;
+alter table public.chats add  constraint chats_user1_id_fkey foreign key (user1_id) references public.profiles(id) on delete cascade;
+alter table public.chats drop constraint if exists chats_user2_id_fkey;
+alter table public.chats add  constraint chats_user2_id_fkey foreign key (user2_id) references public.profiles(id) on delete cascade;
+alter table public.messages drop constraint if exists messages_sender_id_fkey;
+alter table public.messages add  constraint messages_sender_id_fkey foreign key (sender_id) references public.profiles(id) on delete cascade;
+alter table public.messages drop constraint if exists messages_chat_id_fkey;
+alter table public.messages add  constraint messages_chat_id_fkey foreign key (chat_id) references public.chats(id) on delete cascade;
+
+-- -------------------------------------------------------------
+-- C3: enforce identity verification in the DATABASE, not just the UI.
+--     Unverified members can no longer send invitations or take part in a
+--     session via direct API calls. (Admins exempt.)
+-- -------------------------------------------------------------
+create or replace function public.is_verified()
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce((select verification_status = 'verified' from public.profiles where id = auth.uid()), false);
+$$;
+
+drop policy if exists "Send invitations" on public.invitations;
+create policy "Send invitations" on public.invitations for insert to authenticated
+  with check (auth.uid() = sender_id and (public.is_verified() or public.is_admin()));
+
+drop policy if exists "Write own answers" on public.session_answers;
+create policy "Write own answers" on public.session_answers for insert to authenticated
+  with check (user_id = auth.uid() and (public.is_verified() or public.is_admin()) and exists (
+    select 1 from public.sessions s where s.id = session_id and (s.user1_id = auth.uid() or s.user2_id = auth.uid())
+  ));
+
+drop policy if exists "Write own decision" on public.session_decisions;
+create policy "Write own decision" on public.session_decisions for insert to authenticated
+  with check (user_id = auth.uid() and (public.is_verified() or public.is_admin()) and exists (
+    select 1 from public.sessions s where s.id = session_id and (s.user1_id = auth.uid() or s.user2_id = auth.uid())
+  ));
+
+-- -------------------------------------------------------------
+-- H5: 18+ only (child-safety). Enforced for new/updated rows.
+-- -------------------------------------------------------------
+alter table public.profiles drop constraint if exists profiles_age_18plus;
+alter table public.profiles add constraint profiles_age_18plus check (age is null or age >= 18) not valid;
+
+notify pgrst, 'reload schema';
+
 
 -- >>> migration_v11.sql
 -- =============================================================
@@ -343,6 +411,89 @@ create policy "Secure read gated"
 notify pgrst, 'reload schema';
 
 
+-- >>> migration_v15.sql
+-- =============================================================
+--  KULMI migration v15 — wali login fix + contact messages. Idempotent.
+-- =============================================================
+
+-- -------------------------------------------------------------
+-- Wali fix: a guardian may not have a member profile row, so resolve their
+-- email from the JWT as a fallback. This makes get_my_wards()/is_ward() work
+-- for a wali who only has an auth account.
+-- -------------------------------------------------------------
+create or replace function public.my_email()
+returns text language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select email from public.profiles where id = auth.uid()),
+    auth.jwt() ->> 'email'
+  );
+$$;
+
+-- -------------------------------------------------------------
+-- Contact form: anyone (even logged-out) can send a message; only admins read.
+-- -------------------------------------------------------------
+create table if not exists public.contact_messages (
+  id         uuid primary key default gen_random_uuid(),
+  name       text,
+  email      text,
+  message    text not null,
+  handled    boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.contact_messages enable row level security;
+
+drop policy if exists "Anyone can send a contact message" on public.contact_messages;
+create policy "Anyone can send a contact message" on public.contact_messages
+  for insert to anon, authenticated with check (char_length(message) between 1 and 5000);
+
+drop policy if exists "Admins read contact messages" on public.contact_messages;
+create policy "Admins read contact messages" on public.contact_messages
+  for select to authenticated using (public.is_admin());
+
+drop policy if exists "Admins update contact messages" on public.contact_messages;
+create policy "Admins update contact messages" on public.contact_messages
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+create index if not exists contact_messages_idx on public.contact_messages (handled, created_at desc);
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v16.sql
+-- =============================================================
+--  KULMI migration v16 — email unsubscribe. Idempotent.
+-- =============================================================
+alter table public.profiles add column if not exists email_unsubscribed boolean not null default false;
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v17.sql
+-- =============================================================
+--  KULMI migration v17 — block duplicate / reused profile photos.
+--  Each real person's main photo is unique across the platform, so a
+--  stolen/stock/celebrity image can't be used on more than one account.
+--  Idempotent.
+-- =============================================================
+alter table public.profiles add column if not exists photo_hash text;
+
+-- Two different accounts can't share the same main photo. (A user re-saving
+-- their own same photo keeps their own row's value — no conflict.)
+create unique index if not exists profiles_photo_hash_uniq
+  on public.profiles (photo_hash) where photo_hash is not null;
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v18.sql
+-- =============================================================
+--  KULMI migration v18 — verification rejection reason. Idempotent.
+-- =============================================================
+alter table public.profiles add column if not exists verification_note text;
+
+notify pgrst, 'reload schema';
+
+
 -- >>> migration_v19.sql
 -- =============================================================
 --  KULMI migration v19 — deletion feedback, blast idempotency,
@@ -433,6 +584,34 @@ language sql stable security definer set search_path = public as $$
   group by a.user_id;
 $$;
 grant execute on function public.session_progress(uuid) to authenticated;
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v20.sql
+-- =============================================================
+--  KULMI migration v20 — lifestyle & values fields. Idempotent.
+-- =============================================================
+alter table public.profiles add column if not exists smoking text;
+alter table public.profiles add column if not exists khat text;
+alter table public.profiles add column if not exists religious_dress text; -- hijab (sisters) / beard (brothers)
+alter table public.profiles add column if not exists open_to_polygyny text;
+
+-- Rebuild the public view to expose the new lifestyle fields to other members.
+drop view if exists public.public_profiles;
+create view public.public_profiles as
+  select
+    id, first_name, age, gender, location, bio, role, profile_picture_url,
+    country, city, occupation, education, languages, marital_status, height, heritage,
+    marriage_intent, timeline, relocate, children, has_children,
+    prayer_level, islamic_practice, faith_statement,
+    religious_dress, smoking, khat, open_to_polygyny,
+    personality_traits, future_goals, communication_style,
+    photo_verified, verification_status, show_in_discovery,
+    case when intro_public then intro_audio_url else null end as intro_audio_url
+  from public.profiles;
+alter view public.public_profiles set (security_invoker = off);
+grant select on public.public_profiles to authenticated;
 
 notify pgrst, 'reload schema';
 
