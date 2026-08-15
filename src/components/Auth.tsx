@@ -90,8 +90,8 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
           // Email confirmation is disabled → the user is signed in now.
           onSuccess();
         } else {
-          // Confirmation required → tell them to verify, then sign in.
-          setError('Success! Please check your email to verify your account, then sign in.');
+          // Confirmation required → tell them to verify, then sign in (green notice, not an error).
+          setNotice('Account created! Please check your email to verify your account, then sign in.');
           setMode('signin');
         }
         setIsLoading(false);

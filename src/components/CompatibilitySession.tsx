@@ -93,17 +93,22 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { s, a, qs } = await refresh();
-      if (!active) return;
-      if (s?.status === 'completed') {
-        const chatId = await chatForSession(sessionId);
-        if (chatId) return onMatched(chatId);
+      try {
+        const { s, a, qs } = await refresh();
+        if (!active) return;
+        if (s?.status === 'completed') {
+          const chatId = await chatForSession(sessionId);
+          if (chatId) return onMatched(chatId);
+        }
+        // Start on the first question not yet answered (typed or recorded).
+        const firstUnanswered = qs.findIndex((_, i) => !(a.mine[i] ?? '').trim() && !a.mineAudio[i]);
+        setQIndex(firstUnanswered === -1 ? qs.length - 1 : firstUnanswered);
+        if (s?.myDecision === 'yes' && s.status === 'active') startPollingForMatch();
+      } catch {
+        if (active) setEnded(false); // fall through to the normal screen; a retry happens via polling
+      } finally {
+        if (active) setLoading(false);
       }
-      // Start on the first question not yet answered (typed or recorded).
-      const firstUnanswered = qs.findIndex((_, i) => !(a.mine[i] ?? '').trim() && !a.mineAudio[i]);
-      setQIndex(firstUnanswered === -1 ? qs.length - 1 : firstUnanswered);
-      if (s?.myDecision === 'yes' && s.status === 'active') startPollingForMatch();
-      setLoading(false);
     })();
     return () => {
       active = false;

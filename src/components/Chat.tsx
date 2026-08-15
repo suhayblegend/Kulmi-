@@ -29,6 +29,7 @@ interface ChatProps {
 
 export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   const [message, setMessage] = useState('');
+  const [sendError, setSendError] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
@@ -75,7 +76,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
         setGallery([avatarFor(p), ...extra]);
         setPartnerIntro(intro);
       }
-    })();
+    })().catch(() => { /* network blip — realtime and re-entry recover */ });
 
     const subscription = supabase
       .channel(`chat:${chatId}`)
@@ -119,11 +120,13 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     const text = message.trim();
     if (!text) return;
     setMessage('');
+    setSendError('');
     try {
       const saved = await sendMessage(chatId, text);
       if (saved) setMessages((prev) => upsert(prev, saved));
     } catch {
       setMessage(text); // restore on failure
+      setSendError("Message didn't send — check your connection and try again.");
     }
   };
 
@@ -620,6 +623,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
         </div>
 
         <div className="p-4 sm:p-6 bg-white border-t border-[#E5E0D8] shrink-0">
+          {sendError && <p className="text-xs text-red-600 mb-2">{sendError}</p>}
           {isRecording ? (
             <div className="flex items-center gap-3 bg-[#FDFBF7] rounded-xl px-5 py-3 border border-[#E5E0D8]">
               <div className="flex-1 flex items-center gap-4">

@@ -101,6 +101,17 @@ async function readProfiles(cols: string, build: (q: any) => any): Promise<{ dat
     PROFILE_SRC = 'profiles';
     res = await build(supabase.from('profiles').select(cols));
   }
+  // Voice intros are stored as private paths — resolve them to playable signed
+  // URLs here so every caller (Discover, invitations, chats) gets a usable src.
+  if (Array.isArray(res.data)) {
+    await Promise.all(res.data.map(async (p: any) => {
+      if (p?.intro_audio_url && !/^(https?:|data:|blob:)/.test(p.intro_audio_url)) {
+        p.intro_audio_url = await resolveMediaUrl(p.intro_audio_url);
+      }
+    }));
+  } else if (res.data?.intro_audio_url && !/^(https?:|data:|blob:)/.test(res.data.intro_audio_url)) {
+    res.data.intro_audio_url = await resolveMediaUrl(res.data.intro_audio_url);
+  }
   return res;
 }
 
@@ -196,7 +207,7 @@ export async function uploadPhoto(file: File): Promise<string> {
 // -------------------------------------------------------------
 const SECURE_BUCKET = 'secure';
 
-async function uploadSecure(data: File | Blob, category: 'selfie' | 'gallery' | 'voice' | 'answer', ext: string): Promise<string> {
+async function uploadSecure(data: File | Blob, category: 'selfie' | 'gallery' | 'voice' | 'answer' | 'intro', ext: string): Promise<string> {
   const uid = await getCurrentUserId();
   if (!uid) throw new Error('Not signed in');
   const path = `${uid}/${category}/${Date.now()}.${ext}`;
@@ -330,15 +341,13 @@ export async function getMatchGallery(partnerId: string): Promise<string[]> {
 // -------------------------------------------------------------
 // Voice intro
 // -------------------------------------------------------------
+/** Record a voice intro. Stored PRIVATELY (secure bucket); access is governed by
+ *  storage rules: everyone signed-in if intro_public, otherwise matches only.
+ *  Returns a playable (signed) URL. */
 export async function uploadIntro(blob: Blob): Promise<string> {
-  const uid = await getCurrentUserId();
-  if (!uid) throw new Error('Not signed in');
-  const path = `${uid}/intro_${Date.now()}.webm`;
-  const { error } = await supabase.storage.from('media').upload(path, blob, { contentType: blob.type || 'audio/webm', upsert: true });
-  if (error) throw error;
-  const url = supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
-  await updateMyProfile({ intro_audio_url: url });
-  return url;
+  const path = await uploadSecure(blob, 'intro', 'webm');
+  await updateMyProfile({ intro_audio_url: path });
+  return (await resolveMediaUrl(path)) ?? path;
 }
 
 export async function setIntroPublic(isPublic: boolean): Promise<void> {
@@ -346,14 +355,19 @@ export async function setIntroPublic(isPublic: boolean): Promise<void> {
 }
 
 export async function removeIntro(): Promise<void> {
+  const me = await getMyProfile(true);
+  const ref = me?.intro_audio_url;
   await updateMyProfile({ intro_audio_url: null });
+  if (ref && !isUrlLike(ref)) {
+    try { await supabase.storage.from(SECURE_BUCKET).remove([ref]); } catch { /* best effort */ }
+  }
 }
 
 /** A matched partner's voice intro (works even if they set it to matches-only). */
 export async function getMatchIntro(partnerId: string): Promise<string | null> {
   const { data, error } = await supabase.rpc('get_intro', { target: partnerId });
   if (error) return null;
-  return (data as string) ?? null;
+  return resolveMediaUrl((data as string) ?? null);
 }
 
 /**
@@ -1245,7 +1259,19 @@ export async function adminSetDiscovery(userId: string, show: boolean): Promise<
   if (error) throw error;
 }
 
-export async function adminDeleteUser(userId: string): Promise<void> {
+/** Remove a member: emails them the reason, optionally bans the email from
+ *  re-registering, wipes their storage + data + login (via the Edge function). */
+export async function adminDeleteUser(userId: string, reason?: string, ban?: boolean): Promise<void> {
+  try {
+    const { data, error } = await supabase.functions.invoke(BROADCAST_FN, {
+      body: { action: 'admin-remove-user', userId, reason: reason ?? '', ban: !!ban },
+    });
+    if (!error && (data as any)?.removed) return;
+    if ((data as any)?.error) throw new Error((data as any).error);
+  } catch (e: any) {
+    if (e?.message && !/Failed to send|FunctionsFetchError/i.test(String(e.message))) throw e;
+    // Function unreachable → fall back to removing the profile row only.
+  }
   const { error } = await supabase.from('profiles').delete().eq('id', userId);
   if (error) throw error;
 }

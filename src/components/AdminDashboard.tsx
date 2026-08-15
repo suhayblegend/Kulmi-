@@ -136,10 +136,26 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
   const handleSetRole = async (userId: string, role: 'user' | 'wali' | 'admin') => { await adminSetRole(userId, role); await reload(); };
   const handleDiscovery = async (userId: string, show: boolean) => { await adminSetDiscovery(userId, show); await reload(); };
-  const handleDeleteUser = async (userId: string, name: string) => {
-    if (!window.confirm(`Delete ${name}'s profile? This cannot be undone.`)) return;
-    await adminDeleteUser(userId);
-    await reload();
+
+  // Remove-user modal (reason emailed to the member; optional permanent ban)
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
+  const [removeReason, setRemoveReason] = useState('');
+  const [removeBan, setRemoveBan] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const submitRemove = async () => {
+    if (!removeTarget) return;
+    setRemoving(true);
+    try {
+      await adminDeleteUser(removeTarget.id, removeReason, removeBan);
+      setRemoveTarget(null);
+      setRemoveReason('');
+      setRemoveBan(false);
+      await reload();
+    } catch (e: any) {
+      alert(e?.message || 'Could not remove the user.');
+    } finally {
+      setRemoving(false);
+    }
   };
 
   const reload = async () => {
@@ -378,7 +394,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                     <button onClick={() => handleDiscovery(u.id, u.show_in_discovery === false)} title={u.show_in_discovery === false ? 'Un-hide (show in discovery)' : 'Hide from discovery'} className="p-1.5 rounded-lg text-[#8B7355] hover:text-[#1B4332] hover:bg-[#F0EEE8]">
                       {u.show_in_discovery === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
-                    <button onClick={() => handleDeleteUser(u.id, u.first_name || 'this user')} title="Delete profile" className="p-1.5 rounded-lg text-red-500 hover:bg-red-50">
+                    <button onClick={() => { setRemoveReason(''); setRemoveBan(false); setRemoveTarget({ id: u.id, name: u.first_name || 'this user' }); }} title="Remove user" className="p-1.5 rounded-lg text-red-500 hover:bg-red-50">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -576,6 +592,37 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                   <p className="text-[#2D2926]">{m.type === 'audio' ? '🎤 Voice note' : m.content}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove-user modal (reason is emailed; ban blocks re-registration) */}
+      {removeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !removing && setRemoveTarget(null)} />
+          <div className="relative bg-white w-full max-w-md rounded-2xl border border-red-200 shadow-xl overflow-hidden">
+            <div className="p-5 border-b border-red-100 bg-red-50">
+              <h3 className="font-serif text-lg text-red-700">Remove {removeTarget.name} from Kulmi</h3>
+              <p className="text-xs text-[#8B7355] mt-1">Their profile, photos, conversations and login are permanently deleted. The reason is emailed to them.</p>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {['Violation of our code of conduct', 'Fake or misleading profile', 'Harassment reported by members', 'Not here for marriage'].map((r) => (
+                  <button key={r} onClick={() => setRemoveReason(r)} className="text-xs px-3 py-1.5 rounded-lg border border-[#E5E0D8] text-[#5C574F] hover:bg-[#FDFBF7]">{r}</button>
+                ))}
+              </div>
+              <textarea rows={3} value={removeReason} onChange={(e) => setRemoveReason(e.target.value)} placeholder="Reason (emailed to the member)…" className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm focus:outline-none focus:border-[#1B4332] resize-none" />
+              <label className="flex items-start gap-2 text-sm text-[#2D2926] cursor-pointer">
+                <input type="checkbox" checked={removeBan} onChange={(e) => setRemoveBan(e.target.checked)} className="mt-1 accent-red-600" />
+                <span><b>Ban permanently</b> — this email can never register on Kulmi again.</span>
+              </label>
+              <div className="flex gap-3">
+                <button onClick={() => setRemoveTarget(null)} disabled={removing} className="flex-1 py-2.5 rounded-xl border border-[#E5E0D8] text-[#5C574F] text-sm font-medium hover:bg-[#FDFBF7] disabled:opacity-50">Cancel</button>
+                <button onClick={submitRemove} disabled={removing} className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : removeBan ? 'Remove & ban' : 'Remove user'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

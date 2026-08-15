@@ -1,5 +1,6 @@
-// Kulmi — email blast + unsubscribe + self-delete. Deployed under slug "smart-service".
-// Secrets: RESEND_API_KEY (required), BROADCAST_FROM (optional).
+// Kulmi — email blast + unsubscribe + account removal + verification actions.
+// Deployed under slug "smart-service".
+// Secrets: RESEND_API_KEY (required for email), BROADCAST_FROM (optional).
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 import { serve } from "https://deno.land/std@0.203.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -24,6 +25,46 @@ async function hmacHex(value: string): Promise<string> {
 async function sha256Hex(value: string): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  const RESEND = Deno.env.get("RESEND_API_KEY");
+  if (!RESEND) return false;
+  const FROM = Deno.env.get("BROADCAST_FROM") || "Kulmi <noreply@kulmi.uk>";
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+  });
+  return res.ok;
+}
+
+// Remove every file a user owns across all buckets (best-effort).
+async function removeUserStorage(admin: ReturnType<typeof createClient>, uid: string) {
+  const folders: [string, string][] = [
+    ["avatars", uid],
+    ["media", uid],
+    ["secure", `${uid}/selfie`], ["secure", `${uid}/gallery`],
+    ["secure", `${uid}/voice`], ["secure", `${uid}/answer`], ["secure", `${uid}/intro`],
+  ];
+  for (const [bucket, folder] of folders) {
+    try {
+      const { data: files } = await admin.storage.from(bucket).list(folder, { limit: 1000 });
+      if (files?.length) {
+        await admin.storage.from(bucket).remove(files.map((f: { name: string }) => `${folder}/${f.name}`));
+      }
+    } catch { /* best effort */ }
+  }
+}
+
+// Full account removal: storage → PII in broadcast_sends → profile row → auth user.
+async function destroyAccount(admin: ReturnType<typeof createClient>, uid: string, email: string | null) {
+  await removeUserStorage(admin, uid);
+  if (email) { try { await admin.from("broadcast_sends").delete().eq("email", email); } catch { /* ok */ } }
+  await admin.from("profiles").delete().eq("id", uid);
+  const { error } = await admin.auth.admin.deleteUser(uid);
+  return error ?? null;
 }
 
 serve(async (req) => {
@@ -52,19 +93,43 @@ serve(async (req) => {
     const caller = userData.user.id;
     const body = await req.json().catch(() => ({}));
 
-    // ---- Self-delete account. Delete the auth user FIRST (cascades the profile
-    // and all their data); then clean up the profile row in case no cascade. ----
+    // ---- Self-delete: storage + data + profile + login, in a safe order ----
     if (body.action === "delete-account") {
-      const { error: delErr } = await admin.auth.admin.deleteUser(caller);
+      const delErr = await destroyAccount(admin, caller, userData.user.email ?? null);
       if (delErr) return json({ error: `Could not delete account: ${delErr.message}` }, 500);
-      await admin.from("profiles").delete().eq("id", caller);
       return json({ deleted: true });
     }
 
-    // ---- Approve/reject a verification (admin only, service-role — never blocked by RLS) ----
+    // Everything below is admin-only.
+    const { data: me } = await admin.from("profiles").select("role").eq("id", caller).single();
+    if (me?.role !== "admin") return json({ error: "Admins only" }, 403);
+
+    // ---- Admin removes (and optionally bans) a member, with an emailed reason ----
+    if (body.action === "admin-remove-user") {
+      const { data: target } = await admin.from("profiles").select("email, first_name").eq("id", body.userId).single();
+      const email = target?.email ?? null;
+      const reason = (body.reason || "").trim();
+      if (email) {
+        if (body.ban) {
+          try { await admin.from("banned_emails").upsert({ email: email.toLowerCase(), reason: reason || null }); } catch { /* table may not exist yet */ }
+        }
+        await sendEmail(email, "Your Kulmi account has been removed",
+          `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+            <h2 style="color:#1B4332;font-family:Georgia,serif">Account removed</h2>
+            <p>Assalamu alaikum${target?.first_name ? " " + esc(target.first_name) : ""},</p>
+            <p>Your Kulmi account has been removed by our moderation team.</p>
+            ${reason ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
+            <p>If you believe this was a mistake, reply to this email or contact us at support@kulmi.uk.</p>
+            <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+          </div>`);
+      }
+      const delErr = await destroyAccount(admin, body.userId, email);
+      if (delErr) return json({ error: `Could not remove user: ${delErr.message}` }, 500);
+      return json({ removed: true, emailed: !!email, banned: !!body.ban });
+    }
+
+    // ---- Approve/reject a verification (service-role — never blocked by RLS) ----
     if (body.action === "review-verification") {
-      const { data: adminRow } = await admin.from("profiles").select("role").eq("id", caller).single();
-      if (adminRow?.role !== "admin") return json({ error: "Admins only" }, 403);
       const approve = !!body.approve;
       const { error: e2 } = await admin.from("profiles").update({
         photo_verified: approve,
@@ -75,38 +140,25 @@ serve(async (req) => {
       return json({ ok: true });
     }
 
-    // ---- Notify a member their verification was rejected (admin only) ----
+    // ---- Email a member that their verification was rejected (with the reason) ----
     if (body.action === "notify-rejection") {
-      const { data: adminRow } = await admin.from("profiles").select("role").eq("id", caller).single();
-      if (adminRow?.role !== "admin") return json({ error: "Admins only" }, 403);
       const { data: target } = await admin.from("profiles").select("email, first_name").eq("id", body.userId).single();
       if (!target?.email) return json({ sent: false, note: "No email on file." });
-      const RESEND = Deno.env.get("RESEND_API_KEY");
-      if (!RESEND) return json({ sent: false, note: "Email not configured." });
-      const FROM = Deno.env.get("BROADCAST_FROM") || "Kulmi <noreply@kulmi.uk>";
-      const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const reason = (body.reason || "").trim();
-      const emailHtml = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
-        <h2 style="color:#1B4332;font-family:Georgia,serif">Verification not approved</h2>
-        <p>Assalamu alaikum${target.first_name ? " " + esc(target.first_name) : ""},</p>
-        <p>Thanks for submitting your verification. Unfortunately it wasn't approved this time.</p>
-        ${reason ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
-        <p>Please sign in and submit a new, clear <b>live selfie</b> that matches your profile photo to try again.</p>
-        <p><a href="https://kulmi.uk" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:500">Open Kulmi</a></p>
-        <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
-      </div>`;
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: FROM, to: [target.email], subject: "Your Kulmi verification", html: emailHtml }),
-      });
-      return json({ sent: res.ok });
+      const sent = await sendEmail(target.email, "Your Kulmi verification",
+        `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+          <h2 style="color:#1B4332;font-family:Georgia,serif">Verification not approved</h2>
+          <p>Assalamu alaikum${target.first_name ? " " + esc(target.first_name) : ""},</p>
+          <p>Thanks for submitting your verification. Unfortunately it wasn't approved this time.</p>
+          ${reason ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
+          <p>Please sign in and submit a new, clear <b>live selfie</b> that matches your profile photo to try again.</p>
+          <p><a href="https://kulmi.uk" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:500">Open Kulmi</a></p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+        </div>`);
+      return json({ sent });
     }
 
-    // ---- Admin email blast ----
-    const { data: me } = await admin.from("profiles").select("role").eq("id", caller).single();
-    if (me?.role !== "admin") return json({ error: "Admins only" }, 403);
-
+    // ---- Admin email blast (idempotent per campaign) ----
     const { subject, html: bodyHtml, audience } = body;
     if (!subject || !bodyHtml) return json({ error: "Missing subject or message" }, 400);
 
@@ -121,8 +173,6 @@ serve(async (req) => {
     if (qErr) return json({ error: `Could not load recipients: ${qErr.message}` }, 500);
     let people = (rows || []).filter((r: { email: string }) => r.email);
 
-    // Idempotency: skip anyone this exact campaign (subject+body) already reached,
-    // so a retry after a partial failure never double-sends.
     const campaign = (await sha256Hex(subject + "\n" + bodyHtml)).slice(0, 32);
     const { data: already } = await admin.from("broadcast_sends").select("email").eq("campaign", campaign);
     const done = new Set((already || []).map((r: { email: string }) => r.email));
