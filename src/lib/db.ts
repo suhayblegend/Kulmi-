@@ -115,6 +115,24 @@ async function readProfiles(cols: string, build: (q: any) => any): Promise<{ dat
   return res;
 }
 
+/** Profiles you have a RELATIONSHIP with (invitation/session/chat) — readable
+ *  even if they've hidden from discovery, via a definer RPC. Falls back to the
+ *  public view if the RPC isn't installed yet. */
+async function readProfilesByIds(ids: string[]): Promise<Profile[]> {
+  if (ids.length === 0) return [];
+  const rpc = await supabase.rpc('get_profile_cards', { ids });
+  if (!rpc.error && Array.isArray(rpc.data)) {
+    await Promise.all((rpc.data as any[]).map(async (p: any) => {
+      if (p?.intro_audio_url && !/^(https?:|data:|blob:)/.test(p.intro_audio_url)) {
+        p.intro_audio_url = await resolveMediaUrl(p.intro_audio_url);
+      }
+    }));
+    return rpc.data as Profile[];
+  }
+  const { data } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.in('id', ids));
+  return ((data as Profile[]) ?? []);
+}
+
 // Neutral placeholder (no human face) — a real photo is required at onboarding,
 // so this only shows for edge cases, never as someone's apparent face.
 const FALLBACK_AVATAR =
@@ -470,8 +488,8 @@ export async function listMySentInvitations(): Promise<SentInvitation[]> {
   const rows = data ?? [];
   if (rows.length === 0) return [];
   const ids = [...new Set(rows.map((r: any) => r.receiver_id))];
-  const { data: profs } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.in('id', ids));
-  const byId = new Map(((profs as any[]) ?? []).map((p: any) => [p.id, p as Profile]));
+  const profs = await readProfilesByIds(ids);
+  const byId = new Map(profs.map((p: any) => [p.id, p as Profile]));
   return rows.filter((r: any) => byId.has(r.receiver_id)).map((r: any) => ({ ...r, receiver: byId.get(r.receiver_id)! }));
 }
 
@@ -510,8 +528,8 @@ export async function listIncomingInvitations(): Promise<InvitationWithProfile[]
   if (rows.length === 0) return [];
 
   const senderIds = [...new Set(rows.map((r: any) => r.sender_id))];
-  const { data: senders } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.in('id', senderIds));
-  const byId = new Map((senders ?? []).map((p: any) => [p.id, p as Profile]));
+  const senders = await readProfilesByIds(senderIds);
+  const byId = new Map(senders.map((p: any) => [p.id, p as Profile]));
 
   return rows
     .filter((r: any) => byId.has(r.sender_id))
@@ -626,8 +644,8 @@ export async function listActiveSessions(): Promise<SessionSummary[]> {
   if (!sessions || sessions.length === 0) return [];
 
   const partnerIds = sessions.map((s: any) => (s.user1_id === uid ? s.user2_id : s.user1_id));
-  const { data: partners } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.in('id', partnerIds));
-  const byId = new Map(((partners as any[]) ?? []).map((p: any) => [p.id, p as Profile] as [string, Profile]));
+  const partners = await readProfilesByIds(partnerIds);
+  const byId = new Map(partners.map((p: any) => [p.id, p as Profile] as [string, Profile]));
 
   const out: SessionSummary[] = [];
   for (const s of sessions as any[]) {
@@ -822,8 +840,8 @@ export async function listChats(): Promise<ChatSummary[]> {
   if (visibleChats.length === 0) return [];
 
   const partnerIds = visibleChats.map((c: any) => (c.user1_id === uid ? c.user2_id : c.user1_id));
-  const { data: partners } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.in('id', partnerIds));
-  const byId = new Map(((partners as any[]) ?? []).map((p: any) => [p.id, p as Profile]));
+  const partners = await readProfilesByIds(partnerIds);
+  const byId = new Map(partners.map((p: any) => [p.id, p as Profile]));
 
   const summaries: ChatSummary[] = [];
   for (const c of visibleChats as any[]) {
@@ -857,8 +875,8 @@ export async function getChatPartner(chatId: string): Promise<Profile | null> {
     .maybeSingle(); // partner may have deleted their account → no row, don't throw
   if (!chat) return null;
   const partnerId = chat.user1_id === uid ? chat.user2_id : chat.user1_id;
-  const { data } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => q.eq('id', partnerId).maybeSingle());
-  return (data as Profile) ?? null;
+  const partners = await readProfilesByIds([partnerId]);
+  return partners[0] ?? null;
 }
 
 export async function listMessages(chatId: string): Promise<Message[]> {
@@ -1286,7 +1304,9 @@ export interface AdminPair {
 
 async function namesFor(ids: string[]): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map();
-  const { data } = await readProfiles('id, first_name', (q) => q.in('id', ids));
+  // Admin-only context: admins read the base table directly (RLS permits),
+  // so hidden/suspended members still show up in admin lists.
+  const { data } = await supabase.from('profiles').select('id, first_name').in('id', ids);
   return new Map(((data as any[]) ?? []).map((p: any) => [p.id, p.first_name || 'Member']));
 }
 
