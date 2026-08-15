@@ -251,6 +251,12 @@ function MemberApp() {
     }
   }, [appState, authMode]);
 
+  // Every page change starts at the top — otherwise navigating from the bottom
+  // of a long page (e.g. landing footer → terms) opens the new page scrolled down.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [appState]);
+
   // Support the browser back/forward buttons and manual URL edits.
   useEffect(() => {
     const onPop = () => {

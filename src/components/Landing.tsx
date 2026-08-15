@@ -137,6 +137,47 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
         </div>
       </section>
 
+      {/* Comparison — why Kulmi over the swipe apps */}
+      <section className="w-full max-w-4xl mx-auto py-24 px-6">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-serif text-[#1B4332] mb-4 italic">Why Kulmi?</h2>
+          <p className="text-[#8B7355] max-w-xl mx-auto">
+            Muslim swipe apps borrowed their design from dating apps. We started from the sunnah instead — see the difference.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto rounded-3xl border border-[#E5E0D8] shadow-sm bg-white">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead>
+              <tr className="border-b border-[#E5E0D8]">
+                <th className="text-left p-4 md:p-5 font-medium text-[#8B7355] w-1/2"></th>
+                <th className="p-4 md:p-5 text-center font-serif text-base text-[#8B7355]">Muslim swipe apps</th>
+                <th className="p-4 md:p-5 text-center bg-[#1B4332] text-white font-serif text-base rounded-t-none">Kulmi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#F0EEE8]">
+              {[
+                ['Endless swiping through faces', '✓ The core of the app', '✗ One thoughtful introduction at a time'],
+                ['Every member human-verified by live selfie', 'Optional or automated', '✓ Mandatory — nobody unverified appears'],
+                ['Values conversation before any chat', '✗ Chat opens instantly', '✓ 8 questions on deen, family & life first'],
+                ['Photos private until you match', '✗ Whole gallery public', '✓ Only one photo public — rest unlock on match'],
+                ['Wali / family involvement', '✗ Not part of the design', '✓ Built-in, with the wali\'s own consent'],
+                ['Limit on open conversations', '✗ Unlimited — quantity wins', '✓ Max 3 — quality wins'],
+                ['Built for the Somali community', '✗ Generic', '✓ Deen iyo dhaqan, by design'],
+                ['Pressure to pay to be seen', 'Boosts, gold tiers, ads', '✗ None of that'],
+              ].map(([feature, them, us]) => (
+                <tr key={feature as string}>
+                  <td className="p-4 md:p-5 text-[#2D2926] font-medium">{feature}</td>
+                  <td className="p-4 md:p-5 text-center text-[#8B7355]">{them}</td>
+                  <td className="p-4 md:p-5 text-center bg-[#E8F3ED]/60 text-[#1B4332] font-medium">{us}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-center text-[11px] text-[#8B7355] mt-4">Comparison reflects the typical design of swipe-based apps; features vary by app.</p>
+      </section>
+
       {/* CTA */}
       <section className="w-full max-w-3xl mx-auto text-center py-24 px-6">
         <h2 className="text-4xl font-serif text-[#1B4332] mb-6">Ready to find your match?</h2>
