@@ -159,16 +159,9 @@ serve(async (req) => {
         } else ok = false;
       }
     } catch { ok = false; }
-    const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
-      <body style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#FDFBF7;margin:0;padding:40px 20px">
-      <div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid #E5E0D8;border-radius:16px;padding:32px;text-align:center">
-      <h1 style="color:#1B4332;font-family:Georgia,serif;font-size:22px">${ok ? "Guardianship confirmed ✓" : "Link invalid or expired"}</h1>
-      <p style="color:#5C574F;line-height:1.6">${ok
-        ? `Jazakallahu khairan. You are now confirmed as the wali for <b>${esc(wardName)}</b> on Kulmi. Sign in at kulmi.uk/wali with this email address to view their introductions.`
-        : "Please ask your family member to re-send the confirmation email from their Kulmi settings."}</p>
-      <a href="https://kulmi.uk${ok ? "/wali" : ""}" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;margin-top:8px">Open Kulmi</a>
-      </div></body>`;
-    return new Response(html, { status: ok ? 200 : 400, headers: { ...cors, "Content-Type": "text/html; charset=utf-8" } });
+    // Redirect to a static branded page (reliable — no Content-Type quirks).
+    return Response.redirect(
+      `https://kulmi.uk/wali-confirmed.html?ok=${ok ? 1 : 0}&name=${encodeURIComponent(wardName)}`, 302);
   }
 
   // ---- Unsubscribe (GET link, or one-click POST) ----

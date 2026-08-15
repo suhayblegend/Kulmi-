@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wali confirmation — Kulmi</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#FDFBF7;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{max-width:480px;width:100%;background:#fff;border:1px solid #E5E0D8;border-radius:20px;padding:40px 32px;text-align:center;box-shadow:0 8px 40px rgba(27,67,50,.08)}
+  .logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#1B4332,#0A261A);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;color:#F0EEE8;font-size:26px}
+  h1{color:#1B4332;font-family:Georgia,serif;font-size:24px;margin:0 0 12px}
+  p{color:#5C574F;line-height:1.65;font-size:15px;margin:0 0 24px}
+  a{display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:13px 28px;border-radius:12px;font-weight:600}
+  .brand{margin-top:22px;font-size:12px;color:#8B7355}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo" id="logo">✓</div>
+    <h1 id="title">Guardianship confirmed</h1>
+    <p id="msg">Loading…</p>
+    <a id="cta" href="https://kulmi.uk/wali">Open Kulmi</a>
+    <p class="brand">Kulmi — kulmi.uk</p>
+  </div>
+<script>
+  const q = new URLSearchParams(location.search);
+  const ok = q.get('ok') === '1';
+  const name = (q.get('name') || 'your family member').replace(/[<>]/g,'');
+  if (ok) {
+    document.getElementById('logo').textContent = '✓';
+    document.getElementById('title').textContent = 'Guardianship confirmed';
+    document.getElementById('msg').innerHTML =
+      'Jazakallahu khairan. You are now confirmed as the wali for <b>' + name +
+      '</b> on Kulmi. Sign in with this email address to oversee their introductions.';
+    document.getElementById('cta').textContent = 'Go to the Wali dashboard';
+    document.getElementById('cta').href = 'https://kulmi.uk/wali';
+  } else {
+    document.getElementById('logo').textContent = '!';
+    document.getElementById('logo').style.background = '#B45309';
+    document.getElementById('title').textContent = 'Link invalid or expired';
+    document.getElementById('msg').textContent =
+      'This confirmation link is not valid. Please ask your family member to re-send it from their Kulmi settings.';
+    document.getElementById('cta').textContent = 'Open Kulmi';
+    document.getElementById('cta').href = 'https://kulmi.uk';
+  }
+</script>
+</body>
+</html>
