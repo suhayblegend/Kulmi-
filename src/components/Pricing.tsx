@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Check, Sparkles, ArrowLeft } from 'lucide-react';
-import { FOUNDING_ACTIVE, FOUNDING_DEADLINE, PRICE_MONTHLY, PRICE_QUARTERLY } from '../lib/billing';
+import { FOUNDING_ACTIVE, FOUNDING_DEADLINE, PRICE_QUARTERLY, DONATE_URL } from '../lib/billing';
 
 /** Live countdown to the founding deadline. */
 export function useCountdown(target: Date) {
@@ -118,6 +118,26 @@ export function Pricing({ onJoin, onBack }: { onJoin: () => void; onBack: () => 
       <p className="text-center text-xs text-[#8B7355] mt-8">
         Cancel anytime. Payments are handled securely by Stripe — Kulmi never sees your card details.
       </p>
+
+      {/* Support Kulmi */}
+      <div className="mt-10 bg-white border border-[#E5E0D8] rounded-3xl p-7 md:p-8 text-center">
+        <p className="text-3xl mb-3">☕</p>
+        <h2 className="font-serif text-2xl text-[#1B4332] italic mb-2">Support Kulmi</h2>
+        <p className="text-sm text-[#5C574F] max-w-md mx-auto leading-relaxed mb-5">
+          Kulmi is independently built for our community — servers, human verification and
+          moderation all cost money, and we refuse to fund them with ads or by selling data.
+          If Kulmi has helped you (or you simply believe in the mission), you can gift any
+          amount. Jazakallahu khairan.
+        </p>
+        {DONATE_URL ? (
+          <a href={DONATE_URL} target="_blank" rel="noreferrer"
+            className="inline-block bg-[#1B4332] text-white px-8 py-3 rounded-xl font-medium hover:bg-[#143326] transition-colors">
+            ☕ Buy us a coffee
+          </a>
+        ) : (
+          <p className="text-xs text-[#8B7355]">Donation link coming soon, insha'Allah.</p>
+        )}
+      </div>
     </motion.div>
   );
 }

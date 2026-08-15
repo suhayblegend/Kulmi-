@@ -224,6 +224,8 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           <button onClick={() => { window.history.pushState({}, '', '/blog'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Journal</button>
           <span>•</span>
           <button onClick={() => { window.history.pushState({}, '', '/pricing'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Pricing</button>
+          <span>•</span>
+          <button onClick={() => { window.history.pushState({}, '', '/pricing'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Support us ☕</button>
         </div>
       </section>
     </div>
