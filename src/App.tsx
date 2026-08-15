@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Landing } from './components/Landing';
 import { Home } from './components/Home';
+import { Activity } from './components/Activity';
 import { CompatibilitySession } from './components/CompatibilitySession';
 import { Chats } from './components/Chats';
 import { Chat } from './components/Chat';
@@ -31,6 +32,7 @@ export type AppState =
   | 'verify'
   | 'reset'
   | 'discover'
+  | 'activity'
   | 'session'
   | 'chats'
   | 'chat'
@@ -49,7 +51,7 @@ const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'conta
 
 // URL <-> state mapping so /admin, /wali, etc. work as real links.
 const STATE_PATHS: Partial<Record<AppState, string>> = {
-  landing: '/', discover: '/discover', chats: '/chats', profile: '/profile',
+  landing: '/', discover: '/discover', activity: '/activity', chats: '/chats', profile: '/profile',
   progress: '/progress', settings: '/settings', wali: '/wali', admin: '/admin',
   auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact',
 };
@@ -107,6 +109,7 @@ function MemberApp() {
   const [myProfile, setMyProfile] = useState<DbProfile | null>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [activityCount, setActivityCount] = useState(0);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>(
     pathWantsSignup(typeof window !== 'undefined' ? window.location.pathname : '/') ? 'signup' : 'signin'
   );
@@ -336,6 +339,15 @@ function MemberApp() {
                 Discover
               </button>
               <button
+                onClick={() => setAppState('activity')}
+                className={`relative pb-0.5 transition-colors ${appState === 'activity' ? 'border-b border-[#8B7355] text-[#1B4332]' : 'opacity-50 hover:opacity-100 hover:text-[#1B4332]'}`}
+              >
+                Activity
+                {activityCount > 0 && (
+                  <span className="absolute -top-2 -right-3 min-w-[16px] h-4 px-1 rounded-full bg-[#1B4332] text-white text-[9px] font-bold flex items-center justify-center">{activityCount}</span>
+                )}
+              </button>
+              <button
                 onClick={() => setAppState('chats')}
                 className={`pb-0.5 transition-colors ${appState === 'chats' || appState === 'chat' ? 'border-b border-[#8B7355] text-[#1B4332]' : 'opacity-50 hover:opacity-100 hover:text-[#1B4332]'}`}
               >
@@ -394,7 +406,13 @@ function MemberApp() {
 
           {appState === 'discover' && (
             <motion.div key="discover" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
-              <Home onOpenSession={openSession} />
+              <Home onOpenSession={openSession} onOpenActivity={() => setAppState('activity')} onActivityCount={setActivityCount} />
+            </motion.div>
+          )}
+
+          {appState === 'activity' && (
+            <motion.div key="activity" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+              <Activity onOpenSession={openSession} onBack={() => setAppState('discover')} onChanged={() => setActivityCount((n) => Math.max(0, n - 1))} />
             </motion.div>
           )}
 
@@ -460,6 +478,15 @@ function MemberApp() {
             className={`flex flex-col items-center gap-1 ${appState === 'discover' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
           >
             <span className="text-[10px] uppercase font-bold tracking-wider">Discover</span>
+          </button>
+          <button
+            onClick={() => setAppState('activity')}
+            className={`relative flex flex-col items-center gap-1 ${appState === 'activity' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
+          >
+            <span className="text-[10px] uppercase font-bold tracking-wider">Activity</span>
+            {activityCount > 0 && (
+              <span className="absolute -top-1.5 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[#1B4332] text-white text-[9px] font-bold flex items-center justify-center">{activityCount}</span>
+            )}
           </button>
           <button
             onClick={() => setAppState('chats')}
