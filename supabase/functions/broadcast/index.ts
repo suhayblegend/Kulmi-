@@ -74,6 +74,36 @@ serve(async (req) => {
   const t = url.searchParams.get("t");
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+  // ---- Wali confirms guardianship (GET link from the invite email) ----
+  const w = url.searchParams.get("w");
+  const e64 = url.searchParams.get("e");
+  if (w && e64 && t) {
+    let ok = false;
+    let wardName = "";
+    try {
+      const email = atob(e64.replace(/-/g, "+").replace(/_/g, "/"));
+      ok = t === (await hmacHex(`wali|${w}|${email.toLowerCase()}`));
+      if (ok) {
+        const { data: row } = await admin
+          .from("profiles").select("first_name, wali_email").eq("id", w).single();
+        if (row && (row.wali_email || "").toLowerCase() === email.toLowerCase()) {
+          await admin.from("profiles").update({ wali_confirmed: true }).eq("id", w);
+          wardName = row.first_name || "your ward";
+        } else ok = false;
+      }
+    } catch { ok = false; }
+    const html = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+      <body style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#FDFBF7;margin:0;padding:40px 20px">
+      <div style="max-width:480px;margin:0 auto;background:#fff;border:1px solid #E5E0D8;border-radius:16px;padding:32px;text-align:center">
+      <h1 style="color:#1B4332;font-family:Georgia,serif;font-size:22px">${ok ? "Guardianship confirmed ✓" : "Link invalid or expired"}</h1>
+      <p style="color:#5C574F;line-height:1.6">${ok
+        ? `Jazakallahu khairan. You are now confirmed as the wali for <b>${esc(wardName)}</b> on Kulmi. Sign in at kulmi.uk/wali with this email address to view their introductions.`
+        : "Please ask your family member to re-send the confirmation email from their Kulmi settings."}</p>
+      <a href="https://kulmi.uk${ok ? "/wali" : ""}" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;margin-top:8px">Open Kulmi</a>
+      </div></body>`;
+    return new Response(html, { status: ok ? 200 : 400, headers: { ...cors, "Content-Type": "text/html; charset=utf-8" } });
+  }
+
   // ---- Unsubscribe (GET link, or one-click POST) ----
   if (u && t) {
     try {
@@ -98,6 +128,29 @@ serve(async (req) => {
       const delErr = await destroyAccount(admin, caller, userData.user.email ?? null);
       if (delErr) return json({ error: `Could not delete account: ${delErr.message}` }, 500);
       return json({ deleted: true });
+    }
+
+    // ---- Member asks us to email their wali a confirmation link ----
+    if (body.action === "wali-invite") {
+      const { data: meRow } = await admin
+        .from("profiles").select("first_name, wali_email").eq("id", caller).single();
+      const waliEmail = (meRow?.wali_email || "").trim().toLowerCase();
+      if (!waliEmail) return json({ error: "No wali email saved on your profile." }, 400);
+      const token = await hmacHex(`wali|${caller}|${waliEmail}`);
+      const e64 = btoa(waliEmail).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      const link = `${FN_URL}?w=${caller}&e=${e64}&t=${token}`;
+      const name = meRow?.first_name || "A family member";
+      const sent = await sendEmail(waliEmail, `${name} chose you as their wali on Kulmi`,
+        `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+          <h2 style="color:#1B4332;font-family:Georgia,serif">Assalamu alaikum</h2>
+          <p><b>${esc(name)}</b> has named you as their wali (guardian) on <b>Kulmi</b>, a serious Somali marriage platform.</p>
+          <p>As their wali you'll be able to oversee their introductions — seeing who they're speaking with, with full transparency.</p>
+          <p>If you accept this responsibility, please confirm:</p>
+          <p><a href="${link}" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Confirm — I am their wali</a></p>
+          <p style="font-size:13px;color:#8B7355">If you don't recognise this person, you can safely ignore this email — nothing will be shared with you.</p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+        </div>`);
+      return json({ sent });
     }
 
     // Everything below is admin-only.
@@ -153,6 +206,23 @@ serve(async (req) => {
           ${reason ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
           <p>Please sign in and submit a new, clear <b>live selfie</b> that matches your profile photo to try again.</p>
           <p><a href="https://kulmi.uk" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:500">Open Kulmi</a></p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+        </div>`);
+      return json({ sent });
+    }
+
+    // ---- Formal warning email (step before removal) ----
+    if (body.action === "warn-user") {
+      const { data: target } = await admin.from("profiles").select("email, first_name").eq("id", body.userId).single();
+      if (!target?.email) return json({ sent: false, note: "No email on file." });
+      const reason = (body.reason || "").trim();
+      const sent = await sendEmail(target.email, "A warning about your Kulmi account",
+        `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+          <h2 style="color:#B45309;font-family:Georgia,serif">Official warning</h2>
+          <p>Assalamu alaikum${target.first_name ? " " + esc(target.first_name) : ""},</p>
+          <p>Our moderation team has issued a warning on your Kulmi account.</p>
+          ${reason ? `<p style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
+          <p>Kulmi is a serious marriage platform built on Islamic values and respect. If this behaviour continues, your account will be <b>permanently removed and banned</b>.</p>
           <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
         </div>`);
       return json({ sent });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile, updateMyProfile, setWaliEmail, signOut, deleteMyAccount, submitDeletionFeedback, type Profile } from '../lib/db';
+import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, type Profile } from '../lib/db';
 
 const DELETE_REASONS = [
   'I found my spouse (on Kulmi!)',
@@ -23,6 +23,7 @@ interface SettingsProps {
   onTerms?: () => void;
   onPrivacy?: () => void;
   onContact?: () => void;
+  onSafety?: () => void;
 }
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -37,7 +38,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   );
 }
 
-export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
+export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -95,12 +96,27 @@ export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
     setIsInviting(true);
     try {
       await setWaliEmail(waliEmail.trim());
-      setProfile((p) => (p ? { ...p, wali_email: waliEmail.trim() } : p));
+      setProfile((p) => (p ? { ...p, wali_email: waliEmail.trim(), wali_confirmed: false } : p));
+      // Email the wali their confirmation link — access opens only when they click it.
+      try { await sendWaliInvite(); } catch { /* member can resend from Settings */ }
       setInviteStep(2);
     } catch (e: any) {
       alert(e.message || 'Could not save.');
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const [resending, setResending] = useState(false);
+  const resendWali = async () => {
+    setResending(true);
+    try {
+      const sent = await sendWaliInvite();
+      alert(sent ? 'Confirmation email sent to your wali.' : 'Could not send right now — please try again shortly.');
+    } catch (e: any) {
+      alert(e.message || 'Could not send.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -143,9 +159,26 @@ export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
               Add a trusted family member or Wali by email. They can view your sessions and conversations (read-only) to support you.
             </p>
             {profile.wali_email ? (
-              <div className="flex items-center justify-between bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-[#2D2926]"><CheckCircle2 className="w-4 h-4 text-green-600" /> {profile.wali_email}</div>
-                <button onClick={() => { setInviteStep(1); setShowWaliModal(true); }} className="text-xs font-medium text-[#1B4332] hover:underline">Change</button>
+              <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-[#2D2926]">
+                    {profile.wali_confirmed
+                      ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      : <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />}
+                    {profile.wali_email}
+                  </div>
+                  <button onClick={() => { setInviteStep(1); setShowWaliModal(true); }} className="text-xs font-medium text-[#1B4332] hover:underline">Change</button>
+                </div>
+                {profile.wali_confirmed ? (
+                  <p className="text-xs text-green-700">Confirmed — your wali can view your introductions.</p>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-amber-700">Awaiting their confirmation — they have no access until they accept the emailed link.</p>
+                    <button onClick={resendWali} disabled={resending} className="text-xs font-medium text-[#1B4332] underline disabled:opacity-50 shrink-0">
+                      {resending ? 'Sending…' : 'Resend email'}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <button onClick={() => { setInviteStep(1); setShowWaliModal(true); }} className="text-sm font-medium text-[#1B4332] border border-[#1B4332] px-4 py-2 rounded-xl hover:bg-[#F0EEE8] transition-colors">
@@ -203,6 +236,12 @@ export function Settings({ onTerms, onPrivacy, onContact }: SettingsProps) {
           <div className="p-6 border-b border-[#E5E0D8]">
             <div className="flex items-center gap-3 mb-2"><LifeBuoy className="w-5 h-5 text-[#1B4332]" /><h3 className="font-bold text-[#2D2926]">Support &amp; About</h3></div>
             <div className="space-y-3 mt-3">
+              {onSafety && (
+                <button onClick={onSafety} className="w-full flex items-center justify-between text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">
+                  <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-[#8B7355]" /> Trust &amp; Safety</span>
+                  <ChevronRight className="w-4 h-4 text-[#8B7355]" />
+                </button>
+              )}
               {onContact && (
                 <button onClick={onContact} className="w-full flex items-center justify-between text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">
                   <span className="flex items-center gap-2"><Mail className="w-4 h-4 text-[#8B7355]" /> Contact Us</span>

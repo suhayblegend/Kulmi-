@@ -155,6 +155,8 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           <span>•</span>
           <button onClick={onPrivacy} className="hover:text-[#1B4332] transition-colors">Privacy Policy</button>
           {onContact && <><span>•</span><button onClick={onContact} className="hover:text-[#1B4332] transition-colors">Contact</button></>}
+          <span>•</span>
+          <button onClick={() => { window.history.pushState({}, '', '/safety'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Trust &amp; Safety</button>
         </div>
       </section>
     </div>

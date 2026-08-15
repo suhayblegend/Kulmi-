@@ -43,6 +43,7 @@ export interface Profile {
   verification_selfie_url?: string | null;
   verification_note?: string | null;
   wali_email?: string | null;
+  wali_confirmed?: boolean | null;
   gallery?: string[] | null;
   photo_hash?: string | null;
   compat_questions?: string[] | null;
@@ -1241,6 +1242,22 @@ export async function signOut(): Promise<void> {
 
 export async function setWaliEmail(email: string): Promise<void> {
   await updateMyProfile({ wali_email: email });
+}
+
+/** Email the saved wali a confirmation link — access opens only once they click it. */
+export async function sendWaliInvite(): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'wali-invite' } });
+  if (error) throw new Error('Could not send the confirmation email. Please try again.');
+  return !!(data as any)?.sent;
+}
+
+/** Admin: send a formal warning email (the step before removal). */
+export async function adminWarnUser(userId: string, reason: string): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke(BROADCAST_FN, {
+    body: { action: 'warn-user', userId, reason },
+  });
+  if (error) throw new Error('Could not send the warning email.');
+  return !!(data as any)?.sent;
 }
 
 /** Records why someone is leaving (kept for admin insight; no PII, survives the delete). */

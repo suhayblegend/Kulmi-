@@ -24,6 +24,7 @@ import { ResetPassword } from './components/ResetPassword';
 import { StaffArea } from './components/StaffArea';
 import { NotificationBell } from './components/NotificationBell';
 import { Contact } from './components/Contact';
+import { Safety } from './components/Safety';
 import { supabase } from './lib/supabase';
 import { getMyProfile, type Profile as DbProfile } from './lib/db';
 
@@ -45,15 +46,16 @@ export type AppState =
   | 'privacy'
   | 'auth'
   | 'contact'
+  | 'safety'
   | 'onboarding';
 
-const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact'];
+const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety'];
 
 // URL <-> state mapping so /admin, /wali, etc. work as real links.
 const STATE_PATHS: Partial<Record<AppState, string>> = {
   landing: '/', discover: '/discover', activity: '/activity', chats: '/chats', profile: '/profile',
   progress: '/progress', settings: '/settings', wali: '/wali', admin: '/admin',
-  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact',
+  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety',
 };
 
 // Extra readable URLs that all resolve to the auth screen.
@@ -406,6 +408,12 @@ function MemberApp() {
             </motion.div>
           )}
 
+          {appState === 'safety' && (
+            <motion.div key="safety" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+              <Safety onBack={() => setAppState(user ? 'settings' : 'landing')} onContact={() => setAppState('contact')} />
+            </motion.div>
+          )}
+
           {appState === 'discover' && (
             <motion.div key="discover" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
               <Home onOpenSession={openSession} onOpenActivity={() => setAppState('activity')} onActivityCount={setActivityCount} />
@@ -454,7 +462,7 @@ function MemberApp() {
 
           {appState === 'settings' && (
             <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
-              <Settings onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} onContact={() => setAppState('contact')} />
+              <Settings onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} onContact={() => setAppState('contact')} onSafety={() => setAppState('safety')} />
             </motion.div>
           )}
 

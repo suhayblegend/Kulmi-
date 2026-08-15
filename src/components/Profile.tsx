@@ -314,10 +314,63 @@ export function Profile() {
     );
   }
 
+  // ---- Profile completeness (a strong profile earns better introductions) ----
+  const completeness = (() => {
+    if (!profile) return { pct: 0, missing: [] as string[] };
+    const p: any = profile;
+    const has = (v: any) => (Array.isArray(v) ? v.length > 0 : !!(v ?? '').toString().trim());
+    const checks: [boolean, string][] = [
+      [has(p.profile_picture_url), 'profile photo'],
+      [(p.bio ?? '').trim().length >= 20, 'a thoughtful bio'],
+      [has(p.occupation), 'occupation'],
+      [has(p.education), 'education'],
+      [has(p.languages), 'languages'],
+      [has(p.height), 'height'],
+      [has(p.prayer_level), 'prayer level'],
+      [has(p.islamic_practice), 'islamic practice'],
+      [has(p.faith_statement), 'faith statement'],
+      [has(p.religious_dress), p.gender === 'male' ? 'beard answer' : 'hijab answer'],
+      [has(p.smoking), 'smoking answer'],
+      [has(p.marriage_intent), 'marriage intention'],
+      [has(p.timeline), 'timeline'],
+      [has(p.children), 'children plans'],
+      [has(p.personality_traits), 'personality traits'],
+      [has(p.future_goals), 'future goals'],
+      [gallery.length >= 1, 'an extra photo'],
+      [has(p.intro_audio_url), 'a voice intro'],
+    ];
+    const done = checks.filter(([ok]) => ok).length;
+    return {
+      pct: Math.round((done / checks.length) * 100),
+      missing: checks.filter(([ok]) => !ok).map(([, label]) => label).slice(0, 3),
+    };
+  })();
+
   return (
     <div className="w-full max-w-4xl mx-auto py-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-        
+
+        {/* Profile completeness meter */}
+        {completeness.pct < 100 && (
+          <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-bold text-[#1B4332]">Profile strength: {completeness.pct}%</p>
+              <p className="text-[11px] text-[#8B7355]">Complete profiles get more serious interest</p>
+            </div>
+            <div className="h-2 rounded-full bg-[#F0EEE8] overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${completeness.pct >= 80 ? 'bg-[#1B4332]' : completeness.pct >= 50 ? 'bg-amber-500' : 'bg-red-400'}`}
+                style={{ width: `${Math.max(completeness.pct, 4)}%` }}
+              />
+            </div>
+            {completeness.missing.length > 0 && (
+              <p className="text-xs text-[#8B7355] mt-2">
+                Next: add {completeness.missing.join(', ')}.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Header section with photo and edit toggle */}
         <div className="bg-white rounded-3xl p-6 md:p-10 border border-[#E5E0D8] shadow-sm relative flex flex-col md:flex-row items-center md:items-start gap-8">
           <button 

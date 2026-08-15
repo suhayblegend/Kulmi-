@@ -8,7 +8,7 @@ import {
 import { supabase } from '../lib/supabase';
 import {
   getAdminStats, adminListUsers, adminListPendingVerifications, adminReviewVerification,
-  adminSetRole, adminSetDiscovery, adminDeleteUser,
+  adminSetRole, adminSetDiscovery, adminDeleteUser, adminWarnUser,
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   adminListContactMessages, adminMarkContactHandled,
   adminCountRecipients, adminBroadcast, adminListDeletions,
@@ -238,6 +238,18 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     await reload();
   };
 
+  // Formal warning email — the moderation step before removal.
+  const handleWarn = async (userId: string, name: string) => {
+    const reason = window.prompt(`Send ${name} an official warning email.\n\nReason (they will read this):`);
+    if (reason === null) return; // cancelled
+    try {
+      const sent = await adminWarnUser(userId, reason.trim());
+      alert(sent ? `Warning email sent to ${name}.` : 'Could not send (no email on file or email service unavailable).');
+    } catch (e: any) {
+      alert(e?.message || 'Could not send the warning.');
+    }
+  };
+
   const openTranscript = async (pair: AdminPair) => {
     const messages = await readTranscript(pair.id);
     setTranscript({ title: `${pair.userA} & ${pair.userB}`, messages });
@@ -403,6 +415,9 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                   <div className="flex items-center gap-2">
                     <button onClick={() => handleDiscovery(u.id, u.show_in_discovery === false)} title={u.show_in_discovery === false ? 'Un-hide (show in discovery)' : 'Hide from discovery'} className="p-1.5 rounded-lg text-[#8B7355] hover:text-[#1B4332] hover:bg-[#F0EEE8]">
                       {u.show_in_discovery === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                    <button onClick={() => handleWarn(u.id, u.first_name || 'this user')} title="Send a formal warning email" className="p-1.5 rounded-lg text-amber-500 hover:bg-amber-50">
+                      <AlertTriangle className="w-4 h-4" />
                     </button>
                     <button onClick={() => { setRemoveReason(''); setRemoveBan(false); setRemoveTarget({ id: u.id, name: u.first_name || 'this user' }); }} title="Remove user" className="p-1.5 rounded-lg text-red-500 hover:bg-red-50">
                       <Trash2 className="w-4 h-4" />
