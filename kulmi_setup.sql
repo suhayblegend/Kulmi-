@@ -1,4 +1,4 @@
--- KULMI combined setup — v23 (cascade view drops + get_my_wards rebuild). Run in Supabase SQL editor. Safe to re-run.
+-- KULMI combined setup — v23b (ALL view drops cascade). Run in Supabase SQL editor. Safe to re-run.
 
 -- >>> migration.sql
 -- =============================================================
@@ -732,7 +732,7 @@ alter table public.profiles add column if not exists intro_audio_url text;
 alter table public.profiles add column if not exists intro_public    boolean not null default false;
 
 -- Rebuild the public view: expose the intro in Discover ONLY if it's public.
-drop view if exists public.public_profiles;
+drop view if exists public.public_profiles cascade; -- cascade: get_my_wards() may depend on the view; rebuilt in v22
 create view public.public_profiles as
   select
     id, first_name, age, gender, location, bio, role, profile_picture_url,
