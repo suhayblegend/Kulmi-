@@ -374,7 +374,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                   <div className="space-y-6">
                     <div className="text-center">
                       <div className="w-16 h-16 rounded-2xl bg-[#F0EEE8] flex items-center justify-center text-[#1B4332] mx-auto border border-[#E5E0D8] mb-4"><Users className="w-8 h-8" /></div>
-                      <p className="text-sm text-[#5C574F] leading-relaxed mb-6">Enter your Wali's email. When they sign up (or sign in) with this email and a Wali account, they'll be able to view your matches and conversations.</p>
+                      <p className="text-sm text-[#5C574F] leading-relaxed mb-6">Enter your Wali's email. We'll send them a confirmation link — they can view your matches and conversations only after they personally accept.</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-2">Email Address</label>
@@ -392,7 +392,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                     <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-600 mx-auto"><CheckCircle2 className="w-10 h-10" /></div>
                     <div>
                       <h4 className="text-2xl font-serif text-[#1B4332] mb-2 italic">Wali Added</h4>
-                      <p className="text-sm text-[#5C574F] leading-relaxed"><span className="font-medium text-[#2D2926]">{waliEmail}</span> can now oversee your matches once they sign in with a Wali account.</p>
+                      <p className="text-sm text-[#5C574F] leading-relaxed">We've emailed <span className="font-medium text-[#2D2926]">{waliEmail}</span> a confirmation link. They'll be able to oversee your matches as soon as they accept it.</p>
                     </div>
                     <button onClick={() => { setShowWaliModal(false); setInviteStep(1); }} className="w-full py-4 rounded-xl bg-[#1B4332] text-white font-medium shadow-sm hover:bg-[#143326] transition-colors">Done</button>
                   </div>

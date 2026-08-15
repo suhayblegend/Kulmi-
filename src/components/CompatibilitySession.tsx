@@ -219,7 +219,9 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
       const chatId = await chatForSession(sessionId);
       if (chatId) { stopPoll(); onMatched(chatId); return; }
       const s = await getSession(sessionId);
-      if (!s) { stopPoll(); setEnded(true); }
+      // Partner said no (status becomes 'ended') or session vanished — stop
+      // the spinner and show the gentle "not the right fit" screen.
+      if (!s || s.status === 'ended') { stopPoll(); setEnded(true); }
     }, 5000);
   };
 

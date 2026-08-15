@@ -1295,6 +1295,15 @@ export async function adminDeletePost(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Admin: quietly set a member back to unverified (no rejection email). */
+export async function adminUnverify(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ photo_verified: false, verification_status: 'unverified', verification_note: null })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
 /** Admin: send a formal warning email (the step before removal). */
 export async function adminWarnUser(userId: string, reason: string): Promise<boolean> {
   const { data, error } = await supabase.functions.invoke(BROADCAST_FN, {
@@ -1319,9 +1328,10 @@ export async function deleteMyAccount(): Promise<void> {
   try {
     const { data, error } = await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'delete-account' } });
     if (!error && (data as any)?.deleted) return;
-  } catch { /* fall back below */ }
-  const { error } = await supabase.from('profiles').delete().eq('id', uid);
-  if (error) throw error; // surfaced to the UI so the user isn't left thinking it worked
+  } catch { /* handled below */ }
+  // No half-deletion: the profile-only fallback left the login and photos
+  // behind while telling the user everything was removed. Be honest instead.
+  throw new Error('We could not fully delete your account right now. Please try again in a few minutes, or email support@kulmi.uk and we will remove it for you.');
 }
 
 // -------------------------------------------------------------

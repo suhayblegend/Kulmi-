@@ -19,6 +19,7 @@ const loadDismissed = (): Set<string> => {
 };
 
 interface ActivityProps {
+  onCount?: (n: number) => void;
   onOpenSession: (sessionId: string) => void;
   onBack: () => void;
   onChanged?: () => void;
@@ -46,9 +47,10 @@ const SectionCard = ({
   </div>
 );
 
-export function Activity({ onOpenSession, onBack, onChanged }: ActivityProps) {
+export function Activity({ onOpenSession, onBack, onChanged, onCount }: ActivityProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [invites, setInvites] = useState<InvitationWithProfile[]>([]);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -77,6 +79,7 @@ export function Activity({ onOpenSession, onBack, onChanged }: ActivityProps) {
       setInvites(incoming);
       setSessions(active);
       setSent(mySent);
+      onCount?.(incoming.length + active.filter((x) => x.status !== 'completed').length);
     } catch (err: any) {
       setError(err.message || 'Could not load your activity.');
     } finally {
@@ -102,7 +105,7 @@ export function Activity({ onOpenSession, onBack, onChanged }: ActivityProps) {
         // Accepted but the session id wasn't returned in time — reload so the
         // new compatibility session shows up, and tell the user where it is.
         await load();
-        setError('Accepted! Your compatibility session is ready below — tap it to begin.');
+        setNotice('Accepted! Your compatibility session is ready below — tap it to begin.');
       } else {
         load();
       }
@@ -130,6 +133,9 @@ export function Activity({ onOpenSession, onBack, onChanged }: ActivityProps) {
         </div>
       </div>
 
+      {notice && (
+        <div className="p-3 bg-[#E8F3ED] text-[#1B4332] text-sm rounded-xl border border-[#1B4332]/10 text-center">{notice}</div>
+      )}
       {error && (
         <div className="p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 text-center">{error}</div>
       )}

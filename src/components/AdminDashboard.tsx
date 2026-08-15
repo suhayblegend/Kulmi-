@@ -8,7 +8,7 @@ import {
 import { supabase } from '../lib/supabase';
 import {
   getAdminStats, adminListUsers, adminListPendingVerifications, adminReviewVerification,
-  adminSetRole, adminSetDiscovery, adminDeleteUser, adminWarnUser,
+  adminSetRole, adminSetDiscovery, adminDeleteUser, adminWarnUser, adminUnverify,
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   adminListContactMessages, adminMarkContactHandled,
   adminCountRecipients, adminBroadcast, adminListDeletions,
@@ -487,7 +487,16 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                 <td className="p-4 text-[#5C574F]">{u.location || u.city || '—'}</td>
                 <td className="p-4">
                   <button
-                    onClick={() => handleReview(u.id, u.verification_status !== 'verified')}
+                    onClick={async () => {
+                      if (u.verification_status === 'verified') {
+                        // Un-verify quietly — NOT a rejection, no email.
+                        if (!window.confirm(`Set ${u.first_name || 'this member'} back to unverified? They'll need to pass verification again. No email is sent.`)) return;
+                        try { await adminUnverify(u.id); } catch (e: any) { alert(e?.message || 'Could not update.'); }
+                        await reload();
+                      } else {
+                        await handleReview(u.id, true);
+                      }
+                    }}
                     title={u.verification_status === 'verified' ? 'Click to un-verify' : 'Click to verify'}
                     className={`px-2 py-1 rounded-md text-xs font-medium ${u.verification_status === 'verified' ? 'bg-green-100 text-green-800' : u.verification_status === 'pending' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-700'}`}>
                     {u.verification_status || 'unverified'}

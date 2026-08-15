@@ -325,7 +325,7 @@ function MemberApp() {
               Kulmi
             </button>
           </div>
-          {PUBLIC_STATES.includes(appState) ? (
+          {PUBLIC_STATES.includes(appState) && !user ? (
             <nav className="flex items-center gap-6">
               <button
                 onClick={() => goAuth('signin')}
@@ -436,7 +436,7 @@ function MemberApp() {
 
           {appState === 'activity' && (
             <motion.div key="activity" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
-              <Activity onOpenSession={openSession} onBack={() => setAppState('discover')} onChanged={() => setActivityCount((n) => Math.max(0, n - 1))} />
+              <Activity onOpenSession={openSession} onBack={() => setAppState('discover')} onCount={setActivityCount} />
             </motion.div>
           )}
 
