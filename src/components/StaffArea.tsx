@@ -33,6 +33,28 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
 
   const goHome = () => { window.location.href = '/'; };
 
+  // Walis have no password — they sign in with a one-click magic link emailed
+  // to the same address the family member added as their wali.
+  const [magicSent, setMagicSent] = useState(false);
+  const handleMagicLink = async () => {
+    setError(''); setNotice('');
+    if (!email) { setError('Enter your email above first.'); return; }
+    setSubmitting(true);
+    try {
+      const { error: e } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/wali` },
+      });
+      if (e) throw e;
+      setMagicSent(true);
+      setNotice('Check your email — we sent you a secure sign-in link. Open it on this device to enter your Wali dashboard.');
+    } catch (err: any) {
+      setError(err.message || 'Could not send the sign-in link.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const [notice, setNotice] = useState('');
   const handleForgot = async () => {
     setError(''); setNotice('');
@@ -49,12 +71,24 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
     }
   };
 
+  const recheck = async () => {
+    const p = await getMyProfile(true);
+    setAuthorized(await isAllowed(p?.role));
+  };
+
   useEffect(() => {
     (async () => {
-      const p = await getMyProfile();
-      setAuthorized(await isAllowed(p?.role));
+      await recheck();
       setChecking(false);
     })();
+    // Re-check when a session appears — e.g. the wali just clicked their emailed
+    // magic link and lands back on /wali with a fresh session.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
+        recheck().catch(() => {});
+      }
+    });
+    return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -105,7 +139,7 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
             <p className="text-[#8B7355] text-sm mt-2">Restricted area — {label.toLowerCase()} accounts only.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={kind === 'wali' ? (e) => { e.preventDefault(); handleMagicLink(); } : handleSubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Email</label>
               <input
@@ -114,17 +148,25 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
                 placeholder="admin@yourdomain.com"
               />
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider">Password</label>
-                <button type="button" onClick={handleForgot} className="text-xs font-medium text-[#8B7355] hover:text-[#1B4332] hover:underline">Forgot password?</button>
+            {kind === 'admin' && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider">Password</label>
+                  <button type="button" onClick={handleForgot} className="text-xs font-medium text-[#8B7355] hover:text-[#1B4332] hover:underline">Forgot password?</button>
+                </div>
+                <input
+                  type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent"
+                  placeholder="Enter your password"
+                />
               </div>
-              <input
-                type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent"
-                placeholder="Enter your password"
-              />
-            </div>
+            )}
+
+            {kind === 'wali' && (
+              <p className="text-xs text-[#8B7355] leading-relaxed">
+                No password needed. Enter the email your family member listed as your Wali, and we'll email you a secure one-click sign-in link.
+              </p>
+            )}
 
             {notice && (
               <div className="p-3 bg-[#E8F3ED] text-[#1B4332] text-sm rounded-xl border border-[#1B4332]/10">{notice}</div>
@@ -133,12 +175,21 @@ export function StaffArea({ kind }: { kind: 'admin' | 'wali' }) {
               <div className="p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">{error}</div>
             )}
 
-            <button
-              type="submit" disabled={submitting}
-              className="w-full bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium tracking-wide transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Sign In <ChevronRight className="w-4 h-4" /></>}
-            </button>
+            {kind === 'admin' ? (
+              <button
+                type="submit" disabled={submitting}
+                className="w-full bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium tracking-wide transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Sign In <ChevronRight className="w-4 h-4" /></>}
+              </button>
+            ) : (
+              <button
+                type="button" onClick={handleMagicLink} disabled={submitting || magicSent}
+                className="w-full bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium tracking-wide transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : magicSent ? 'Link sent ✓' : <>Email me a sign-in link <ChevronRight className="w-4 h-4" /></>}
+              </button>
+            )}
           </form>
         </div>
 
