@@ -230,6 +230,7 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
               <li><FooterLink to="/pricing">Pricing</FooterLink></li>
               <li><FooterLink to="/safety">Trust &amp; Safety</FooterLink></li>
               <li><FooterLink to="/blog">The Journal</FooterLink></li>
+              <li><FooterLink to="/faq">FAQ</FooterLink></li>
             </ul>
           </div>
           <div>
