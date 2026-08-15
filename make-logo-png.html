@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Kulmi logo → PNG</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Arial;background:#FDFBF7;color:#1B4332;text-align:center;padding:40px}
+  canvas{border:1px solid #E5E0D8;border-radius:16px;margin:20px auto;display:block;width:256px;height:256px}
+  button{background:#1B4332;color:#fff;border:0;padding:14px 28px;border-radius:12px;font-size:16px;cursor:pointer}
+  a{display:inline-block;margin-top:14px;color:#1B4332}
+</style></head>
+<body>
+  <h2>Kulmi logo</h2>
+  <p>Your logo is drawn below. Click the button to download it as a PNG for Stripe.</p>
+  <canvas id="c" width="512" height="512"></canvas>
+  <div>
+    <button id="dl">⬇ Download kulmi-logo.png</button>
+  </div>
+  <p style="color:#8B7355;font-size:13px">Then upload that file as the product image in Stripe.</p>
+
+<script>
+const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#1B4332"/><stop offset="1" stop-color="#0A261A"/>
+  </linearGradient></defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g transform="translate(256,256) scale(9.2) translate(-12,-12)"
+     fill="none" stroke="#F0EEE8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="9" cy="8" r="3.5" fill="#F0EEE8" fill-opacity="0.2"/>
+    <path d="M9 14c-3 0-5.5 2-5.5 5v1h11v-1c0-3-2.5-5-5.5-5z" fill="#F0EEE8" fill-opacity="0.2"/>
+    <circle cx="15" cy="8" r="3.5"/>
+    <path d="M15 14c3 0 5.5 2 5.5 5v1h-11v-1c0-3 2.5-5 5.5-5"/>
+  </g>
+</svg>`;
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const img = new Image();
+img.onload = () => ctx.drawImage(img, 0, 0, 512, 512);
+img.src = 'data:image/svg+xml;base64,' + btoa(svg);
+document.getElementById('dl').onclick = () => {
+  const a = document.createElement('a');
+  a.download = 'kulmi-logo.png';
+  a.href = c.toDataURL('image/png');
+  a.click();
+};
+</script>
+</body>
+</html>

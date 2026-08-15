@@ -10,8 +10,8 @@
 //    Copy its signing secret (whsec_...) into Supabase secrets as
 //    STRIPE_WEBHOOK_SECRET, then redeploy smart-service.
 // ─────────────────────────────────────────────────────────────────
-export const STRIPE_LINK_MONTHLY = '';   // e.g. 'https://buy.stripe.com/xxxx'
-export const STRIPE_LINK_QUARTERLY = ''; // e.g. 'https://buy.stripe.com/yyyy'
+export const STRIPE_LINK_MONTHLY = 'https://buy.stripe.com/bJe00lbeWcKm1UQaIPco000';
+export const STRIPE_LINK_QUARTERLY = 'https://buy.stripe.com/4gMeVf6YGcKmczu9ELco001';
 
 // "Support Kulmi" donations — create this page at buymeacoffee.com (claim the
 // "kulmi" handle), or swap in a Stripe Payment Link with "customers choose
