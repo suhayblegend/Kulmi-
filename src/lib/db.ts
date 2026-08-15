@@ -775,10 +775,17 @@ export async function getSessionAnswers(sessionId: string): Promise<SessionAnswe
   if (!rpc.error && Array.isArray(rpc.data)) {
     data = rpc.data;
   } else {
-    const direct = await supabase
+    let direct = await supabase
       .from('session_answers')
       .select('user_id, question_index, answer, answer_audio')
       .eq('session_id', sessionId);
+    if (direct.error) {
+      // DB predates the answer_audio column — read text answers only.
+      direct = await supabase
+        .from('session_answers')
+        .select('user_id, question_index, answer')
+        .eq('session_id', sessionId) as any;
+    }
     data = direct.data ?? [];
   }
   const mine: Record<number, string> = {};
@@ -807,7 +814,23 @@ export async function submitSessionAnswer(sessionId: string, questionIndex: numb
       { session_id: sessionId, user_id: uid, question_index: questionIndex, answer, answer_audio: audioPath ?? null },
       { onConflict: 'session_id,user_id,question_index' }
     );
-  if (error) throw error;
+  if (error) {
+    // DB predates the answer_audio column (migration not applied) — never lose
+    // a typed answer over it; voice-only answers need the column to exist.
+    const missingCol = /answer_audio/i.test(error.message || '');
+    if (missingCol && answer.trim()) {
+      const retry = await supabase
+        .from('session_answers')
+        .upsert(
+          { session_id: sessionId, user_id: uid, question_index: questionIndex, answer },
+          { onConflict: 'session_id,user_id,question_index' }
+        );
+      if (!retry.error) return;
+      throw retry.error;
+    }
+    if (missingCol) throw new Error('Voice answers are temporarily unavailable — please type your answer instead.');
+    throw error;
+  }
 }
 
 export async function submitSessionDecision(sessionId: string, decision: 'yes' | 'no'): Promise<void> {
