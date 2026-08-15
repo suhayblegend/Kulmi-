@@ -34,7 +34,7 @@ create view public.public_profiles as
     photo_verified, verification_status, show_in_discovery,
     case when intro_public then intro_audio_url else null end as intro_audio_url
   from public.profiles
-  where show_in_discovery = true and verification_status = 'verified';
+  where coalesce(show_in_discovery, true) = true and verification_status = 'verified';
 alter view public.public_profiles set (security_invoker = off);
 grant select on public.public_profiles to authenticated;
 

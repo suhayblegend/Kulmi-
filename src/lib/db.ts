@@ -133,6 +133,14 @@ async function readProfilesByIds(ids: string[]): Promise<Profile[]> {
   return ((data as Profile[]) ?? []);
 }
 
+/** A safe stand-in when a partner's public profile can't be read (e.g. they've
+ *  hidden from discovery and the get_profile_cards RPC isn't installed yet). It
+ *  keeps a relationship you're already in — a session or chat — from ever
+ *  vanishing or looking "ended" just because the display fetch came back empty. */
+function minimalPartner(id: string): Profile {
+  return { id, first_name: 'Member' } as unknown as Profile;
+}
+
 // Neutral placeholder (no human face) — a real photo is required at onboarding,
 // so this only shows for edge cases, never as someone's apparent face.
 const FALLBACK_AVATAR =
@@ -650,47 +658,68 @@ export async function listActiveSessions(): Promise<SessionSummary[]> {
   const out: SessionSummary[] = [];
   for (const s of sessions as any[]) {
     const partnerId = s.user1_id === uid ? s.user2_id : s.user1_id;
-    const partner = byId.get(partnerId);
-    if (!partner) continue;
-    const [prog, myDec] = await Promise.all([
-      supabase.rpc('session_progress', { sess: s.id }),
-      supabase.from('session_decisions').select('decision').eq('session_id', s.id).eq('user_id', uid).maybeSingle(),
-    ]);
-    let myAnsweredCount = 0;
-    let partnerAnsweredCount = 0;
-    if (!prog.error && Array.isArray(prog.data)) {
-      for (const row of prog.data as { uid: string; answered: number }[]) {
-        if (row.uid === uid) myAnsweredCount = row.answered; else partnerAnsweredCount = row.answered;
-      }
-    } else {
-      // Fallback if the progress function isn't there yet (SQL not re-run).
-      const [{ count: mine }, { count: theirs }] = await Promise.all([
-        supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', uid),
-        supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', partnerId),
-      ]);
-      myAnsweredCount = mine ?? 0;
-      partnerAnsweredCount = theirs ?? 0;
-    }
-    const questions = (s.questions as string[] | null)?.length ? (s.questions as string[]) : [...COMPATIBILITY_QUESTIONS];
-    out.push({
-      id: s.id,
-      partner,
-      status: s.status,
-      questions,
-      myAnsweredCount,
-      partnerAnsweredCount,
-      bothFinished:
-        myAnsweredCount >= questions.length &&
-        partnerAnsweredCount >= questions.length,
-      myDecision: (myDec.data?.decision as 'yes' | 'no') ?? null,
-    });
+    // Never DROP a session just because the partner's display profile couldn't
+    // be read — that made a live session look like it had "ended". Fall back to
+    // a minimal stand-in; real details appear once get_profile_cards is present.
+    const partner = byId.get(partnerId) ?? minimalPartner(partnerId);
+    out.push(await buildSessionSummary(s, uid, partnerId, partner));
   }
   return out;
 }
 
+/** Compute a SessionSummary (progress + decision) for one session row. */
+async function buildSessionSummary(
+  s: any, uid: string, partnerId: string, partner: Profile
+): Promise<SessionSummary> {
+  const [prog, myDec] = await Promise.all([
+    supabase.rpc('session_progress', { sess: s.id }),
+    supabase.from('session_decisions').select('decision').eq('session_id', s.id).eq('user_id', uid).maybeSingle(),
+  ]);
+  let myAnsweredCount = 0;
+  let partnerAnsweredCount = 0;
+  if (!prog.error && Array.isArray(prog.data)) {
+    for (const row of prog.data as { uid: string; answered: number }[]) {
+      if (row.uid === uid) myAnsweredCount = row.answered; else partnerAnsweredCount = row.answered;
+    }
+  } else {
+    // Fallback if the progress function isn't there yet (SQL not re-run).
+    const [{ count: mine }, { count: theirs }] = await Promise.all([
+      supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', uid),
+      supabase.from('session_answers').select('id', { count: 'exact', head: true }).eq('session_id', s.id).eq('user_id', partnerId),
+    ]);
+    myAnsweredCount = mine ?? 0;
+    partnerAnsweredCount = theirs ?? 0;
+  }
+  const questions = (s.questions as string[] | null)?.length ? (s.questions as string[]) : [...COMPATIBILITY_QUESTIONS];
+  return {
+    id: s.id,
+    partner,
+    status: s.status,
+    questions,
+    myAnsweredCount,
+    partnerAnsweredCount,
+    bothFinished: myAnsweredCount >= questions.length && partnerAnsweredCount >= questions.length,
+    myDecision: (myDec.data?.decision as 'yes' | 'no') ?? null,
+  };
+}
+
 export async function getSession(sessionId: string): Promise<SessionSummary | null> {
-  const all = await listActiveSessions();
-  return all.find((s) => s.id === sessionId) ?? null;
+  // Fetch the session row DIRECTLY (RLS lets a member read their own session),
+  // so a session you belong to is never mistaken for "ended" just because it
+  // fell out of a filtered list or the partner's profile couldn't be read.
+  const uid = await getCurrentUserId();
+  if (!uid) return null;
+  const { data: s } = await supabase
+    .from('sessions')
+    .select('id, user1_id, user2_id, status, questions')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (!s) return null;
+  if (s.user1_id !== uid && s.user2_id !== uid) return null; // not a participant
+  const partnerId = s.user1_id === uid ? s.user2_id : s.user1_id;
+  const found = await readProfilesByIds([partnerId]);
+  const partner = found[0] ?? minimalPartner(partnerId);
+  return buildSessionSummary(s, uid, partnerId, partner);
 }
 
 export async function getSessionAnswers(sessionId: string): Promise<SessionAnswers> {
@@ -846,8 +875,9 @@ export async function listChats(): Promise<ChatSummary[]> {
   const summaries: ChatSummary[] = [];
   for (const c of visibleChats as any[]) {
     const partnerId = c.user1_id === uid ? c.user2_id : c.user1_id;
-    const partner = byId.get(partnerId);
-    if (!partner) continue;
+    // Keep the conversation visible even if the partner's display profile can't
+    // be read (hidden from discovery + RPC not installed) — use a stand-in.
+    const partner = byId.get(partnerId) ?? minimalPartner(partnerId);
     const { data: last } = await supabase
       .from('messages')
       .select('content, created_at')
@@ -876,7 +906,9 @@ export async function getChatPartner(chatId: string): Promise<Profile | null> {
   if (!chat) return null;
   const partnerId = chat.user1_id === uid ? chat.user2_id : chat.user1_id;
   const partners = await readProfilesByIds([partnerId]);
-  return partners[0] ?? null;
+  // Chat row exists → the partner exists; if their display profile is unreadable
+  // (hidden + RPC missing) fall back to a stand-in so the chat still opens.
+  return partners[0] ?? minimalPartner(partnerId);
 }
 
 export async function listMessages(chatId: string): Promise<Message[]> {
