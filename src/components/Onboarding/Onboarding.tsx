@@ -8,6 +8,16 @@ import { GENDERS, MARITAL, PRAYER, PRACTICE, MARRIAGE_INTENT as LOOKING, TIMELIN
 
 const MIN_PHOTOS = 4;
 
+// Reject obvious junk: too short, no letters, or the same char repeated ("dd", "aaaa").
+const looksReal = (s: string, min = 2): boolean => {
+  const v = (s || '').trim();
+  return v.length >= min && /[a-zA-Z؀-ۿ]/.test(v) && !/^(.)\1+$/.test(v);
+};
+const validHeightCm = (s: string): boolean => {
+  const n = parseInt((s || '').replace(/[^0-9]/g, ''), 10);
+  return n >= 120 && n <= 250;
+};
+
 const INPUT_CLS = 'w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent';
 
 // NOTE: these helpers are defined at MODULE scope (not inside the component) so
@@ -134,7 +144,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
     switch (step) {
       case 1: return !!(form.first_name && parseInt(form.age, 10) >= 18 && form.gender && form.marital_status && form.country && form.city);
       case 2: return photos.length >= MIN_PHOTOS;
-      case 3: return !!(form.bio.trim().length >= 20 && form.occupation && form.languages);
+      case 3: return form.bio.trim().length >= 20 && looksReal(form.occupation) && looksReal(form.education) && looksReal(form.languages) && validHeightCm(form.height);
       case 4: return !!(form.prayer_level && form.islamic_practice);
       case 5: return !!(form.marriage_intent && form.timeline && form.relocate && form.children && form.has_children);
       case 6: return form.personality_traits.length >= 1 && form.future_goals.length >= 1;
@@ -265,12 +275,12 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               <>
                 <Field label="About You"><textarea rows={4} value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="Tell us about yourself and what you're looking for… (min 20 characters)" className={`${INPUT_CLS} resize-none`} /></Field>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Occupation"><input value={form.occupation} onChange={(e) => set('occupation', e.target.value)} className={INPUT_CLS} /></Field>
-                  <Field label="Education"><input value={form.education} onChange={(e) => set('education', e.target.value)} className={INPUT_CLS} /></Field>
+                  <Field label="Occupation"><input value={form.occupation} onChange={(e) => set('occupation', e.target.value)} placeholder="e.g. Teacher" className={INPUT_CLS} />{form.occupation && !looksReal(form.occupation) && <p className="text-[11px] text-red-600 mt-1">Please enter a real occupation.</p>}</Field>
+                  <Field label="Education"><input value={form.education} onChange={(e) => set('education', e.target.value)} placeholder="e.g. Bachelor's degree" className={INPUT_CLS} />{form.education && !looksReal(form.education) && <p className="text-[11px] text-red-600 mt-1">Please enter a real answer.</p>}</Field>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Languages"><input value={form.languages} onChange={(e) => set('languages', e.target.value)} placeholder="Somali, English" className={INPUT_CLS} /></Field>
-                  <Field label="Height"><input value={form.height} onChange={(e) => set('height', e.target.value)} placeholder={`5'7" / 170cm`} className={INPUT_CLS} /></Field>
+                  <Field label="Languages"><input value={form.languages} onChange={(e) => set('languages', e.target.value)} placeholder="Somali, English" className={INPUT_CLS} />{form.languages && !looksReal(form.languages) && <p className="text-[11px] text-red-600 mt-1">Please list real languages.</p>}</Field>
+                  <Field label="Height (cm)"><input type="number" min={120} max={250} value={form.height} onChange={(e) => set('height', e.target.value)} placeholder="e.g. 170" className={INPUT_CLS} />{form.height && !validHeightCm(form.height) && <p className="text-[11px] text-red-600 mt-1">Enter your height in cm (120–250).</p>}</Field>
                 </div>
                 <Field label="Heritage / Background (optional)"><input value={form.heritage} onChange={(e) => set('heritage', e.target.value)} placeholder="e.g. Somali — Mogadishu" className={INPUT_CLS} /></Field>
               </>

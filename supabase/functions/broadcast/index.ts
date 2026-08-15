@@ -61,6 +61,20 @@ serve(async (req) => {
       return json({ deleted: true });
     }
 
+    // ---- Approve/reject a verification (admin only, service-role — never blocked by RLS) ----
+    if (body.action === "review-verification") {
+      const { data: adminRow } = await admin.from("profiles").select("role").eq("id", caller).single();
+      if (adminRow?.role !== "admin") return json({ error: "Admins only" }, 403);
+      const approve = !!body.approve;
+      const { error: e2 } = await admin.from("profiles").update({
+        photo_verified: approve,
+        verification_status: approve ? "verified" : "rejected",
+        verification_note: approve ? null : ((body.note || "").trim() || null),
+      }).eq("id", body.userId);
+      if (e2) return json({ error: e2.message }, 500);
+      return json({ ok: true });
+    }
+
     // ---- Notify a member their verification was rejected (admin only) ----
     if (body.action === "notify-rejection") {
       const { data: adminRow } = await admin.from("profiles").select("role").eq("id", caller).single();

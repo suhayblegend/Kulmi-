@@ -1193,15 +1193,26 @@ export async function adminListPendingVerifications(): Promise<Profile[]> {
 }
 
 export async function adminReviewVerification(userId: string, approve: boolean, note?: string): Promise<void> {
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      photo_verified: approve,
-      verification_status: approve ? 'verified' : 'rejected',
-      verification_note: approve ? null : (note?.trim() || null),
-    })
-    .eq('id', userId);
-  if (error) throw error;
+  // Prefer the service-role function so the status change can never be silently
+  // blocked by RLS; fall back to a direct update if the function is unavailable.
+  let done = false;
+  try {
+    const { data, error } = await supabase.functions.invoke(BROADCAST_FN, {
+      body: { action: 'review-verification', userId, approve, note: note ?? '' },
+    });
+    if (!error && (data as any)?.ok) done = true;
+  } catch { /* fall back below */ }
+  if (!done) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        photo_verified: approve,
+        verification_status: approve ? 'verified' : 'rejected',
+        verification_note: approve ? null : (note?.trim() || null),
+      })
+      .eq('id', userId);
+    if (error) throw error;
+  }
   // On rejection, email the member the reason (best-effort — never blocks the review).
   if (!approve) {
     try {

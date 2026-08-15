@@ -80,7 +80,7 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
     return <Shell><div className="py-10 flex justify-center text-[#8B7355]"><Loader2 className="w-8 h-8 animate-spin" /></div></Shell>;
   }
 
-  if (status === 'pending') {
+  if (status === 'pending' && !capturing) {
     return (
       <Shell>
         <div className="w-16 h-16 rounded-2xl bg-[#F0EEE8] flex items-center justify-center text-[#1B4332] mx-auto mb-6 border border-[#E5E0D8]">
@@ -97,6 +97,12 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
           className="w-full bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {checking ? <Loader2 className="w-5 h-5 animate-spin" /> : <><RefreshCw className="w-4 h-4" /> Check my status</>}
+        </button>
+        <button
+          onClick={() => setCapturing(true)}
+          className="w-full mt-3 text-sm font-medium text-[#8B7355] hover:text-[#1B4332] transition-colors"
+        >
+          Re-take my selfie
         </button>
       </Shell>
     );
