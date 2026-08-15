@@ -201,8 +201,14 @@ function MemberApp() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user && !routedRef.current) {
         await loadProfileAndRoute(session.user);
+        setInitializing(false);
+      } else if (!HAS_STORED_SESSION) {
+        setInitializing(false);
       }
-      setInitializing(false);
+      // else: a stored session exists but the access token has expired and is
+      // being refreshed — getSession() reports null during that window. Keep
+      // the splash; the auth listener routes us in when the refresh lands
+      // (the 20s cap is the backstop).
     });
     // Safety net: never get stuck on the splash. With a stored session we KNOW
     // the user is logged in, so wait generously (cold backend starts can take
@@ -219,7 +225,7 @@ function MemberApp() {
         return;
       }
       if (event === 'SIGNED_OUT') {
-        // Real sign-out only.
+        // Real sign-out only (including a failed token refresh).
         setUser(null);
         setMyProfile(null);
         setStaffSession(null);
@@ -227,12 +233,17 @@ function MemberApp() {
         setAppState('landing');
         routedRef.current = false;
         initialPathRef.current = '/';
+        setInitializing(false); // in case we were still holding the splash
         return;
       }
 
       if (!session?.user) {
         // No session on a non-signout event (e.g. INITIAL_SESSION while logged
         // out). Only decide the screen on first load; never yank an active user.
+        // With a STORED session this is just the expired-token refresh window —
+        // keep the splash and wait for SIGNED_IN/TOKEN_REFRESHED (or SIGNED_OUT
+        // if the refresh truly fails) instead of flashing the homepage.
+        if (!routedRef.current && HAS_STORED_SESSION && event === 'INITIAL_SESSION') return;
         if (!routedRef.current) {
           const wantAuth = pathToState(initialPathRef.current) === 'auth';
           setUser(null);
