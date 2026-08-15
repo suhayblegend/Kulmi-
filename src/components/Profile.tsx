@@ -4,10 +4,11 @@ import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2,
 import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, getMyCompatQuestions, setMyCompatQuestions, COMPATIBILITY_QUESTIONS, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
-import { MARITAL, HAS_KIDS, MARRIAGE_INTENT, TIMELINE, RELOCATE, WANT_KIDS, PRAYER, PRACTICE, TRAITS, GOALS, STYLES } from '../lib/options';
+import { MARITAL, HAS_KIDS, MARRIAGE_INTENT, TIMELINE, RELOCATE, WANT_KIDS, PRAYER, PRACTICE, TRAITS, GOALS, STYLES, SMOKING, KHAT, HIJAB, BEARD, POLYGYNY } from '../lib/options';
 
 type ProfileForm = {
   firstName: string;
+  gender: string;
   age: string;
   country: string;
   city: string;
@@ -25,6 +26,10 @@ type ProfileForm = {
   prayerLevel: string;
   islamicPractice: string;
   faithStatement: string;
+  religiousDress: string;
+  smoking: string;
+  khat: string;
+  openToPolygyny: string;
   aboutMe: string;
   personalityTraits: string[];
   futureGoals: string[];
@@ -33,16 +38,18 @@ type ProfileForm = {
 };
 
 const EMPTY_FORM: ProfileForm = {
-  firstName: '', age: '', country: '', city: '', occupation: '', education: '', languages: '',
+  firstName: '', gender: '', age: '', country: '', city: '', occupation: '', education: '', languages: '',
   maritalStatus: '', height: '', heritage: '', hasChildren: '',
   marriageIntent: MARRIAGE_INTENT[0], timeline: TIMELINE[0], relocate: RELOCATE[0], children: WANT_KIDS[0],
   prayerLevel: PRAYER[0], islamicPractice: PRACTICE[0], faithStatement: '',
+  religiousDress: '', smoking: '', khat: '', openToPolygyny: '',
   aboutMe: '', personalityTraits: [], futureGoals: [], communicationStyle: [], dealBreakers: '',
 };
 
 function fromDb(p: DbProfile): ProfileForm {
   return {
     firstName: p.first_name ?? '',
+    gender: p.gender ?? '',
     age: p.age != null ? String(p.age) : '',
     country: p.country ?? '',
     city: p.city ?? '',
@@ -60,6 +67,10 @@ function fromDb(p: DbProfile): ProfileForm {
     prayerLevel: p.prayer_level ?? EMPTY_FORM.prayerLevel,
     islamicPractice: p.islamic_practice ?? EMPTY_FORM.islamicPractice,
     faithStatement: p.faith_statement ?? '',
+    religiousDress: p.religious_dress ?? '',
+    smoking: p.smoking ?? '',
+    khat: p.khat ?? '',
+    openToPolygyny: p.open_to_polygyny ?? '',
     aboutMe: p.bio ?? '',
     personalityTraits: p.personality_traits ?? [],
     futureGoals: p.future_goals ?? [],
@@ -271,6 +282,10 @@ export function Profile() {
         prayer_level: editForm.prayerLevel,
         islamic_practice: editForm.islamicPractice,
         faith_statement: editForm.faithStatement,
+        religious_dress: editForm.religiousDress,
+        smoking: editForm.smoking,
+        khat: editForm.khat,
+        open_to_polygyny: editForm.openToPolygyny,
         bio: editForm.aboutMe,
         personality_traits: editForm.personalityTraits,
         future_goals: editForm.futureGoals,
@@ -740,6 +755,36 @@ export function Profile() {
                     </select>
                   </div>
                   <div>
+                    <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">{editForm.gender === 'male' ? 'Beard' : 'Hijab'}</label>
+                    <select value={editForm.religiousDress} onChange={e => setEditForm({...editForm, religiousDress: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
+                      <option value="">Select</option>
+                      {(editForm.gender === 'male' ? BEARD : HIJAB).map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Smoking</label>
+                      <select value={editForm.smoking} onChange={e => setEditForm({...editForm, smoking: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
+                        <option value="">Select</option>
+                        {SMOKING.map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Khat / Qaad</label>
+                      <select value={editForm.khat} onChange={e => setEditForm({...editForm, khat: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
+                        <option value="">Select</option>
+                        {KHAT.map(o => <option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Open to polygyny?</label>
+                    <select value={editForm.openToPolygyny} onChange={e => setEditForm({...editForm, openToPolygyny: e.target.value})} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] appearance-none">
+                      <option value="">Prefer not to say</option>
+                      {POLYGYNY.map(o => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Short Statement</label>
                     <textarea value={editForm.faithStatement} onChange={e => setEditForm({...editForm, faithStatement: e.target.value})} rows={3} className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332] resize-none" />
                   </div>
@@ -750,13 +795,39 @@ export function Profile() {
                     <span className="text-[#5C574F]">Prayer</span>
                     <span className="font-medium text-[#1B4332]">{profile.prayerLevel}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm pb-1">
+                  <div className="flex justify-between items-center text-sm border-b border-[#F0EEE8] pb-3">
                     <span className="text-[#5C574F]">Practice</span>
                     <span className="font-medium text-[#1B4332]">{profile.islamicPractice}</span>
                   </div>
-                  <div className="bg-[#F0EEE8] p-4 rounded-xl mt-4">
-                    <p className="text-sm text-[#2D2926] italic">"{profile.faithStatement}"</p>
-                  </div>
+                  {profile.religiousDress && (
+                    <div className="flex justify-between items-center text-sm border-b border-[#F0EEE8] pb-3">
+                      <span className="text-[#5C574F]">{profile.gender === 'male' ? 'Beard' : 'Hijab'}</span>
+                      <span className="font-medium text-[#1B4332]">{profile.religiousDress}</span>
+                    </div>
+                  )}
+                  {profile.smoking && (
+                    <div className="flex justify-between items-center text-sm border-b border-[#F0EEE8] pb-3">
+                      <span className="text-[#5C574F]">Smoking</span>
+                      <span className="font-medium text-[#1B4332]">{profile.smoking}</span>
+                    </div>
+                  )}
+                  {profile.khat && (
+                    <div className="flex justify-between items-center text-sm border-b border-[#F0EEE8] pb-3">
+                      <span className="text-[#5C574F]">Khat / Qaad</span>
+                      <span className="font-medium text-[#1B4332]">{profile.khat}</span>
+                    </div>
+                  )}
+                  {profile.openToPolygyny && (
+                    <div className="flex justify-between items-center text-sm pb-1">
+                      <span className="text-[#5C574F]">Polygyny</span>
+                      <span className="font-medium text-[#1B4332]">{profile.openToPolygyny}</span>
+                    </div>
+                  )}
+                  {profile.faithStatement && (
+                    <div className="bg-[#F0EEE8] p-4 rounded-xl mt-4">
+                      <p className="text-sm text-[#2D2926] italic">"{profile.faithStatement}"</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
