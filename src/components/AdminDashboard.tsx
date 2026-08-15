@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
   Users, AlertTriangle, MessageSquare, Settings, Activity, Menu, X,
   BarChart3, UserCheck, Star, CheckCircle, XCircle, LogOut, Heart, Loader2, ShieldCheck,
-  Search, Trash2, EyeOff, Eye, Key, Mail, Send,
+  Search, Trash2, EyeOff, Eye, Key, Mail, Send, FileText,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
@@ -12,8 +12,9 @@ import {
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   adminListContactMessages, adminMarkContactHandled,
   adminCountRecipients, adminBroadcast, adminListDeletions,
+  adminListPosts, adminSavePost, adminDeletePost,
   getMyProfile, signOut, avatarFor, resolveMediaUrl,
-  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage, type BroadcastAudience, type DeletionRow,
+  type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage, type BroadcastAudience, type DeletionRow, type BlogPost,
 } from '../lib/db';
 
 interface AdminDashboardProps {
@@ -197,6 +198,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     { id: 'successes', label: `Successes${stats?.successes ? ` (${stats.successes})` : ''}`, icon: <Star className="w-5 h-5" /> },
     { id: 'messages', label: `Messages${messages.filter((m) => !m.handled).length ? ` (${messages.filter((m) => !m.handled).length})` : ''}`, icon: <Mail className="w-5 h-5" /> },
     { id: 'broadcast', label: 'Email Blast', icon: <Send className="w-5 h-5" /> },
+    { id: 'blog', label: 'Blog', icon: <FileText className="w-5 h-5" /> },
     { id: 'deletions', label: `Left${deletions.length ? ` (${deletions.length})` : ''}`, icon: <Trash2 className="w-5 h-5" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
   ];
@@ -204,6 +206,30 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const handleContactHandled = async (id: string, handled: boolean) => {
     setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, handled } : m)));
     try { await adminMarkContactHandled(id, handled); } catch { await reload(); }
+  };
+
+  // ---- Blog authoring ----
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [postDraft, setPostDraft] = useState<{ id?: string; title: string; excerpt: string; content: string; published: boolean } | null>(null);
+  const [savingPost, setSavingPost] = useState(false);
+  const loadPosts = () => adminListPosts().then(setPosts).catch(() => setPosts([]));
+  useEffect(() => { loadPosts(); }, []);
+  const savePost = async () => {
+    if (!postDraft || !postDraft.title.trim() || !postDraft.content.trim()) { alert('A title and the article text are required.'); return; }
+    setSavingPost(true);
+    try {
+      await adminSavePost(postDraft);
+      setPostDraft(null);
+      await loadPosts();
+    } catch (e: any) {
+      alert(e?.message || 'Could not save. Have you run the latest kulmi_setup.sql (posts table)?');
+    } finally {
+      setSavingPost(false);
+    }
+  };
+  const deletePost = async (id: string, title: string) => {
+    if (!window.confirm(`Delete "${title}" permanently?`)) return;
+    try { await adminDeletePost(id); await loadPosts(); } catch (e: any) { alert(e?.message || 'Could not delete.'); }
   };
 
   const handleReview = async (userId: string, approve: boolean, note?: string) => {
@@ -344,6 +370,69 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       </div>
     );
   };
+
+  const renderBlog = () => (
+    <div className="max-w-2xl space-y-5">
+      {postDraft ? (
+        <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-6 space-y-4">
+          <h3 className="font-serif text-lg text-[#1B4332]">{postDraft.id ? 'Edit article' : 'New article'}</h3>
+          <input
+            value={postDraft.title}
+            onChange={(e) => setPostDraft((d) => d && { ...d, title: e.target.value })}
+            placeholder="Title — e.g. 5 questions to ask before the nikah"
+            className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm font-medium focus:outline-none focus:border-[#1B4332]"
+          />
+          <input
+            value={postDraft.excerpt}
+            onChange={(e) => setPostDraft((d) => d && { ...d, excerpt: e.target.value })}
+            placeholder="One-line summary shown on the article list (optional)"
+            className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm focus:outline-none focus:border-[#1B4332]"
+          />
+          <textarea
+            rows={14}
+            value={postDraft.content}
+            onChange={(e) => setPostDraft((d) => d && { ...d, content: e.target.value })}
+            placeholder={'Write the article here…\n\nLeave a blank line between paragraphs — it will render exactly as you type it.'}
+            className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm leading-relaxed focus:outline-none focus:border-[#1B4332] resize-y"
+          />
+          <label className="flex items-center gap-2 text-sm text-[#2D2926]">
+            <input type="checkbox" checked={postDraft.published} onChange={(e) => setPostDraft((d) => d && { ...d, published: e.target.checked })} className="w-4 h-4 accent-[#1B4332]" />
+            Published (visible on kulmi.uk/blog)
+          </label>
+          <div className="flex gap-3">
+            <button onClick={() => setPostDraft(null)} disabled={savingPost} className="flex-1 py-2.5 rounded-xl border border-[#E5E0D8] text-[#5C574F] text-sm font-medium hover:bg-[#FDFBF7] disabled:opacity-50">Cancel</button>
+            <button onClick={savePost} disabled={savingPost} className="flex-1 py-2.5 rounded-xl bg-[#1B4332] text-white text-sm font-medium hover:bg-[#143326] disabled:opacity-50 flex items-center justify-center gap-2">
+              {savingPost ? <Loader2 className="w-4 h-4 animate-spin" /> : (postDraft.id ? 'Save changes' : 'Publish article')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setPostDraft({ title: '', excerpt: '', content: '', published: true })} className="bg-[#1B4332] text-white px-5 py-3 rounded-xl text-sm font-medium hover:bg-[#143326]">
+          + Write new article
+        </button>
+      )}
+
+      {posts.length === 0 && !postDraft ? (
+        <Empty text="No articles yet — write the first one about marriage, deen or family." />
+      ) : (
+        <div className="space-y-3">
+          {posts.map((p) => (
+            <div key={p.id} className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-5 flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[#1B4332] truncate">{p.title}</p>
+                <p className="text-xs text-[#8B7355] mt-0.5">
+                  {new Date(p.created_at).toLocaleDateString()} ·{' '}
+                  <span className={p.published ? 'text-green-700 font-medium' : 'text-amber-600 font-medium'}>{p.published ? 'Published' : 'Draft'}</span>
+                </p>
+              </div>
+              <button onClick={() => setPostDraft({ id: p.id, title: p.title, excerpt: p.excerpt ?? '', content: p.content, published: p.published })} className="text-xs font-medium text-[#1B4332] border border-[#E5E0D8] px-3 py-1.5 rounded-lg hover:bg-[#FDFBF7]">Edit</button>
+              <button onClick={() => deletePost(p.id, p.title)} className="text-xs font-medium text-red-500 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   const renderBroadcast = () => (
     <div className="max-w-2xl space-y-5">
@@ -569,6 +658,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       case 'successes': return renderSuccesses();
       case 'messages': return renderMessages();
       case 'broadcast': return renderBroadcast();
+      case 'blog': return renderBlog();
       case 'deletions': return renderDeletions();
       case 'settings': return renderSettings();
       default: return <Empty text="Coming soon." />;

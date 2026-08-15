@@ -178,6 +178,36 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
         <p className="text-center text-[11px] text-[#8B7355] mt-4">Comparison reflects the typical design of swipe-based apps; features vary by app.</p>
       </section>
 
+      {/* FAQ */}
+      <section className="w-full bg-white border-y border-[#E5E0D8] py-24">
+        <div className="max-w-2xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-serif text-[#1B4332] mb-4 italic">Questions, answered</h2>
+            <p className="text-[#8B7355]">Everything families ask us before joining.</p>
+          </div>
+          <div className="space-y-3">
+            {[
+              ['Is Kulmi free?', 'Yes — joining, matching, compatibility sessions and chatting are free. We will always keep the core journey to marriage accessible.'],
+              ['How does verification work?', 'Every member submits a live selfie which a human reviewer compares against their profile photo and stated gender. AI images, stock photos, hidden faces and duplicate photos are rejected. Nobody appears in Discover until they pass.'],
+              ['What is the wali feature — is it required?', "It's optional but encouraged. You can appoint a guardian (father, brother, uncle, imam) who can view your introductions read-only. They receive an email and get access only after they personally confirm — honouring both deen and dhaqan."],
+              ['Who can see my photos?', 'Only your main photo is visible in Discover, and only to verified members of the opposite gender. Your other photos and voice recordings stay locked until you both match.'],
+              ['How do introductions actually work?', "No swiping. We show you one suitable person at a time. If you invite them and they accept, you both answer the same 8 serious questions about deen, family and life goals — then decide. Only a mutual yes opens a chat. You can hold at most 3 open introductions, so everyone is intentional."],
+              ['What happens if someone behaves badly?', 'Report them from their profile or the chat — a human reviews every report. We warn by email, and remove and permanently ban repeat or serious offenders. Ending contact with someone is always silent: they simply never see you again.'],
+              ['Can I use Kulmi outside the UK?', 'Yes — Kulmi is for the Somali community worldwide. Use the country and city filters to search where you intend to build your life.'],
+              ['Can I delete my account completely?', 'Yes, in one step from Settings. Your profile, photos, voice recordings, matches and login are permanently removed — we do not keep your data.'],
+            ].map(([q, a]) => (
+              <details key={q as string} className="group bg-[#FDFBF7] border border-[#E5E0D8] rounded-2xl overflow-hidden">
+                <summary className="flex items-center justify-between gap-4 cursor-pointer list-none px-5 py-4 font-medium text-[#1B4332] text-sm md:text-base">
+                  {q}
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-[#F0EEE8] text-[#1B4332] flex items-center justify-center text-sm transition-transform group-open:rotate-45">+</span>
+                </summary>
+                <p className="px-5 pb-5 text-sm text-[#5C574F] leading-relaxed">{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="w-full max-w-3xl mx-auto text-center py-24 px-6">
         <h2 className="text-4xl font-serif text-[#1B4332] mb-6">Ready to find your match?</h2>
@@ -198,6 +228,8 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           {onContact && <><span>•</span><button onClick={onContact} className="hover:text-[#1B4332] transition-colors">Contact</button></>}
           <span>•</span>
           <button onClick={() => { window.history.pushState({}, '', '/safety'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Trust &amp; Safety</button>
+          <span>•</span>
+          <button onClick={() => { window.history.pushState({}, '', '/blog'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Journal</button>
         </div>
       </section>
     </div>

@@ -1251,6 +1251,50 @@ export async function sendWaliInvite(): Promise<boolean> {
   return !!(data as any)?.sent;
 }
 
+// -------------------------------------------------------------
+// Blog (admin-authored articles on marriage, deen & family)
+// -------------------------------------------------------------
+export interface BlogPost {
+  id: string;
+  title: string;
+  excerpt: string | null;
+  content: string;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listPublishedPosts(): Promise<BlogPost[]> {
+  const { data } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('published', true)
+    .order('created_at', { ascending: false });
+  return ((data as BlogPost[]) ?? []);
+}
+
+export async function adminListPosts(): Promise<BlogPost[]> {
+  const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data as BlogPost[]) ?? []);
+}
+
+export async function adminSavePost(post: { id?: string; title: string; excerpt?: string; content: string; published: boolean }): Promise<void> {
+  const row: any = { title: post.title.trim(), excerpt: post.excerpt?.trim() || null, content: post.content, published: post.published };
+  if (post.id) {
+    const { error } = await supabase.from('posts').update(row).eq('id', post.id);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('posts').insert([row]);
+    if (error) throw error;
+  }
+}
+
+export async function adminDeletePost(id: string): Promise<void> {
+  const { error } = await supabase.from('posts').delete().eq('id', id);
+  if (error) throw error;
+}
+
 /** Admin: send a formal warning email (the step before removal). */
 export async function adminWarnUser(userId: string, reason: string): Promise<boolean> {
   const { data, error } = await supabase.functions.invoke(BROADCAST_FN, {
