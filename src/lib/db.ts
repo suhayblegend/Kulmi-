@@ -1313,6 +1313,14 @@ export async function sendWelcomeEmail(firstName?: string): Promise<void> {
   catch { /* welcome email is best-effort */ }
 }
 
+/** Claim the founding offer (free Kulmi+ until 30 Sept) — for members who
+ *  signed up before the offer existed. Server-verified & idempotent. */
+export async function claimFounding(): Promise<void> {
+  const { data, error } = await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'claim-founding' } });
+  if (error || !(data as any)?.claimed) throw new Error((data as any)?.error || 'Could not claim the offer. Please try again.');
+  clearProfileCache();
+}
+
 /** Open the Stripe customer portal to manage/cancel a subscription. */
 export async function openBillingPortal(): Promise<string> {
   const { data, error } = await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'billing-portal' } });

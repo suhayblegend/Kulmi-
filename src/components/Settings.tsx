@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, premiumDaysLeft, openBillingPortal, type Profile } from '../lib/db';
-import { STRIPE_LINK_MONTHLY, STRIPE_LINK_QUARTERLY, PRICE_MONTHLY, PRICE_QUARTERLY, BILLING_READY, DONATE_URL, checkoutUrl } from '../lib/billing';
+import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, premiumDaysLeft, openBillingPortal, claimFounding, type Profile } from '../lib/db';
+import { STRIPE_LINK_MONTHLY, STRIPE_LINK_QUARTERLY, PRICE_MONTHLY, PRICE_QUARTERLY, BILLING_READY, DONATE_URL, FOUNDING_ACTIVE, checkoutUrl } from '../lib/billing';
 
 const DELETE_REASONS = [
   'I found my spouse (on Kulmi!)',
@@ -108,6 +108,21 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
     }
   };
 
+  const [claiming, setClaiming] = useState(false);
+  const claimFoundingOffer = async () => {
+    setClaiming(true);
+    try {
+      await claimFounding();
+      const fresh = await getMyProfile(true);
+      setProfile(fresh);
+      alert('MashaAllah — your Founding Membership is active until 30 September! 🌟');
+    } catch (e: any) {
+      alert(e?.message || 'Could not claim the offer.');
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   const [portalBusy, setPortalBusy] = useState(false);
   const manageSubscription = async () => {
     setPortalBusy(true);
@@ -184,6 +199,11 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                     {' '}You have who-viewed-you, 5 open introductions & priority verification.
                   </p>
                 </>
+              ) : FOUNDING_ACTIVE ? (
+                <>
+                  <h3 className="font-serif text-xl mb-1">🌟 Claim your Founding Membership</h3>
+                  <p className="text-sm text-white/75">Get <b>Kulmi+ free until 30 September</b> — who viewed you, 5 introductions & priority verification. No card needed.</p>
+                </>
               ) : (
                 <>
                   <h3 className="font-serif text-xl mb-1">Upgrade to Kulmi+</h3>
@@ -192,7 +212,15 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
               )}
             </div>
           </div>
-          {(!isPremium(profile) || (profile.founding_member && profile.plan !== 'premium')) && (
+
+          {/* Claim the founding trial (non-premium members, during the window) */}
+          {!isPremium(profile) && FOUNDING_ACTIVE && (
+            <button onClick={claimFoundingOffer} disabled={claiming}
+              className="w-full mt-5 bg-white text-[#1B4332] py-3 rounded-xl font-bold hover:bg-[#F0EEE8] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              {claiming ? <Loader2 className="w-4 h-4 animate-spin" /> : '🌟 Claim free membership until 30 Sept'}
+            </button>
+          )}
+          {((!isPremium(profile) && !FOUNDING_ACTIVE) || (profile.founding_member && profile.plan !== 'premium')) && (
             <div className="flex flex-col sm:flex-row gap-3 mt-5">
               {BILLING_READY ? (
                 <>

@@ -214,6 +214,21 @@ serve(async (req) => {
       return json({ sent });
     }
 
+    // ---- Claim the August founding offer (free Kulmi+ until 30 Sept) ----
+    if (body.action === "claim-founding") {
+      if (Date.now() >= Date.parse("2026-09-01T00:00:00Z")) {
+        return json({ error: "The founding offer has ended." }, 400);
+      }
+      const { data: p } = await admin.from("profiles").select("plan, premium_until").eq("id", caller).single();
+      const alreadyPremium = p && (p.plan === "premium" || (p.premium_until && new Date(p.premium_until) > new Date()));
+      if (alreadyPremium) return json({ error: "You already have Kulmi+ active." }, 400);
+      await admin.from("profiles").update({
+        founding_member: true,
+        premium_until: "2026-09-30T23:59:59Z",
+      }).eq("id", caller);
+      return json({ claimed: true });
+    }
+
     // ---- Open the Stripe customer portal (manage / cancel subscription) ----
     if (body.action === "billing-portal") {
       const SK = Deno.env.get("STRIPE_SECRET_KEY");

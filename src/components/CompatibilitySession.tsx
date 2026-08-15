@@ -131,11 +131,17 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
   }, [bothFinished]);
 
   useEffect(() => {
-    if (!iFinished || bothFinished) return;
-    const t = setInterval(() => { refresh().catch(() => {}); }, 5000);
+    if (!iFinished) return;
+    // Keep polling while waiting for the partner to finish, AND for a moment
+    // after both finish until the now-revealed partner answers have loaded —
+    // otherwise their answers stayed blank until a manual refresh.
+    const revealedButEmpty = bothFinished && Object.keys(theirs).length === 0;
+    if (bothFinished && !revealedButEmpty) return;
+    refresh().catch(() => {}); // immediate, don't wait the interval
+    const t = setInterval(() => { refresh().catch(() => {}); }, 4000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [iFinished, bothFinished]);
+  }, [iFinished, bothFinished, theirs]);
 
   // Recording timer.
   useEffect(() => {
