@@ -1307,6 +1307,19 @@ export function isPremium(p?: Profile | null): boolean {
   return anyP.plan === 'premium' || (!!anyP.premium_until && new Date(anyP.premium_until) > new Date());
 }
 
+/** Send the new-member welcome email (best-effort, once after onboarding). */
+export async function sendWelcomeEmail(firstName?: string): Promise<void> {
+  try { await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'welcome-email', firstName: firstName ?? '' } }); }
+  catch { /* welcome email is best-effort */ }
+}
+
+/** Open the Stripe customer portal to manage/cancel a subscription. */
+export async function openBillingPortal(): Promise<string> {
+  const { data, error } = await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'billing-portal' } });
+  if (error || !(data as any)?.url) throw new Error((data as any)?.error || 'Could not open the billing portal.');
+  return (data as any).url as string;
+}
+
 /** Whole days left on the premium period (0 if none / already lapsed). */
 export function premiumDaysLeft(p?: Profile | null): number {
   const until = (p as any)?.premium_until;

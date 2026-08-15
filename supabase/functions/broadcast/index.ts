@@ -109,7 +109,28 @@ serve(async (req) => {
       if (event.type === "checkout.session.completed") {
         // First payment: client_reference_id carries the Kulmi user id.
         const uid = obj.client_reference_id;
-        if (uid) await grantPremium(admin, uid, daysFor(obj.amount_total ?? 0), obj.customer ?? null);
+        if (uid) {
+          await grantPremium(admin, uid, daysFor(obj.amount_total ?? 0), obj.customer ?? null);
+          // Welcome-to-Kulmi+ email (first payment only, not renewals).
+          const { data: p } = await admin.from("profiles").select("email, first_name").eq("id", uid).single();
+          const to = p?.email || obj.customer_details?.email;
+          if (to) {
+            await sendEmail(to, "Welcome to Kulmi+ 🌟",
+              `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+                <h2 style="color:#1B4332;font-family:Georgia,serif">Welcome to Kulmi+ 🌟</h2>
+                <p>Assalamu alaikum${p?.first_name ? " " + esc(p.first_name) : ""},</p>
+                <p>Jazakallahu khairan for supporting Kulmi and becoming a Kulmi+ member. Your membership is now active. You can:</p>
+                <ul style="line-height:1.9;color:#5C574F">
+                  <li>See who viewed your profile</li>
+                  <li>Keep up to 5 introductions open at once</li>
+                  <li>Get your verification reviewed first</li>
+                </ul>
+                <p>May Allah make Kulmi a means of a blessed marriage for you, insha'Allah.</p>
+                <p><a href="https://kulmi.uk/discover" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Open Kulmi</a></p>
+                <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage or cancel your membership anytime in Kulmi → Settings. Kulmi — kulmi.uk</p>
+              </div>`);
+          }
+        }
       } else if (event.type === "invoice.paid") {
         // Subscription renewal: map the Stripe customer back to the member.
         const { data: prof } = await admin.from("profiles").select("id").eq("stripe_customer_id", obj.customer).maybeSingle();
@@ -168,6 +189,46 @@ serve(async (req) => {
     if (uErr || !userData.user) return json({ error: "Not signed in" }, 401);
     const caller = userData.user.id;
     const body = await req.json().catch(() => ({}));
+
+    // ---- Welcome email for a brand-new member (called once after onboarding) ----
+    if (body.action === "welcome-email") {
+      const to = userData.user.email;
+      if (!to) return json({ sent: false });
+      const name = (body.firstName || "").toString().trim();
+      const sent = await sendEmail(to, "Welcome to Kulmi 💚",
+        `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+          <h2 style="color:#1B4332;font-family:Georgia,serif">Welcome to Kulmi 💚</h2>
+          <p>Assalamu alaikum${name ? " " + esc(name) : ""},</p>
+          <p>Welcome to <b>Kulmi</b> — a serious, halal path to marriage, built for our community. We're honoured you've joined.</p>
+          <p>A few things that make Kulmi different:</p>
+          <ul style="line-height:1.9;color:#5C574F">
+            <li>Every member is verified by a live selfie — real people only</li>
+            <li>You meet one thoughtful introduction at a time, no swiping</li>
+            <li>Your photos stay private until you both match</li>
+            <li>Your wali can be involved, with full transparency</li>
+          </ul>
+          <p>May Allah bless your search and grant you a righteous spouse, insha'Allah.</p>
+          <p><a href="https://kulmi.uk/discover" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Start on Kulmi</a></p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+        </div>`);
+      return json({ sent });
+    }
+
+    // ---- Open the Stripe customer portal (manage / cancel subscription) ----
+    if (body.action === "billing-portal") {
+      const SK = Deno.env.get("STRIPE_SECRET_KEY");
+      if (!SK) return json({ error: "Billing portal not configured yet." }, 400);
+      const { data: p } = await admin.from("profiles").select("stripe_customer_id").eq("id", caller).single();
+      if (!p?.stripe_customer_id) return json({ error: "No subscription found on your account yet." }, 400);
+      const res = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SK}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ customer: p.stripe_customer_id, return_url: "https://kulmi.uk/settings" }),
+      });
+      const data = await res.json();
+      if (!res.ok) return json({ error: data?.error?.message || "Could not open billing portal." }, 500);
+      return json({ url: data.url });
+    }
 
     // ---- Self-delete: storage + data + profile + login, in a safe order ----
     if (body.action === "delete-account") {

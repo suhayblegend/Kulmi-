@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, premiumDaysLeft, type Profile } from '../lib/db';
+import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, premiumDaysLeft, openBillingPortal, type Profile } from '../lib/db';
 import { STRIPE_LINK_MONTHLY, STRIPE_LINK_QUARTERLY, PRICE_MONTHLY, PRICE_QUARTERLY, BILLING_READY, DONATE_URL, checkoutUrl } from '../lib/billing';
 
 const DELETE_REASONS = [
@@ -108,6 +108,18 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
     }
   };
 
+  const [portalBusy, setPortalBusy] = useState(false);
+  const manageSubscription = async () => {
+    setPortalBusy(true);
+    try {
+      const url = await openBillingPortal();
+      window.location.href = url;
+    } catch (e: any) {
+      alert(e?.message || 'Could not open the billing portal.');
+      setPortalBusy(false);
+    }
+  };
+
   const [resending, setResending] = useState(false);
   const resendWali = async () => {
     setResending(true);
@@ -202,6 +214,11 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
           )}
           {isPremium(profile) && profile.founding_member && profile.plan !== 'premium' && premiumDaysLeft(profile) <= 10 && (
             <p className="text-xs text-white/70 mt-3">Your founding gift ends soon — keep Kulmi+ by choosing a plan above. No pressure, the core app stays free either way.</p>
+          )}
+          {profile.plan === 'premium' && (
+            <button onClick={manageSubscription} disabled={portalBusy} className="mt-4 text-sm font-medium text-white/90 underline underline-offset-2 hover:text-white disabled:opacity-50">
+              {portalBusy ? 'Opening…' : 'Manage or cancel subscription'}
+            </button>
           )}
         </div>
 

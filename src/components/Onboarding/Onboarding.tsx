@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { uploadPhoto, uploadGalleryPhoto, sha256Hex, isAcceptablePhoto, isDuplicatePhotoError, cleanupUploads } from '../../lib/db';
+import { uploadPhoto, uploadGalleryPhoto, sha256Hex, isAcceptablePhoto, isDuplicatePhotoError, cleanupUploads, sendWelcomeEmail } from '../../lib/db';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X, MapPin } from 'lucide-react';
 
@@ -197,6 +197,8 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         if (isDuplicatePhotoError(dbError)) throw new Error('This photo is already used by another Kulmi account. Please upload a genuine photo of yourself.');
         throw dbError;
       }
+      // Warm welcome email — best-effort, never blocks finishing onboarding.
+      sendWelcomeEmail(form.first_name);
       onComplete();
     } catch (err: any) {
       setError(err.message || 'Failed to save profile');
