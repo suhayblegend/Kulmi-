@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Shield, HeartHandshake, Sparkles, Star, UserPlus } from 'lucide-react';
+import { Shield, HeartHandshake, Sparkles, UserPlus } from 'lucide-react';
 
 interface LandingProps {
   onStart: () => void;
@@ -99,7 +99,7 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           {[
             { step: '01', title: 'Complete Profile', desc: 'Detail your values, faith level, and marriage goals.' },
             { step: '02', title: 'Photo Verification', desc: 'Take a selfie to verify your identity and keep the community safe.' },
-            { step: '03', title: 'Guided Session', desc: 'Meet one match in an AI-hosted compatibility session.' },
+            { step: '03', title: 'Guided Session', desc: 'Meet one match in a guided compatibility session — answer the same questions and reveal them together.' },
             { step: '04', title: 'Mutual Choice', desc: 'Profiles and photos unlock only if you both say yes.' }
           ].map((item) => (
             <div key={item.step} className="relative">
@@ -111,47 +111,29 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Why Kulmi (honest value props — real success stories added here as couples confirm) */}
       <section className="w-full bg-[#F0EEE8] py-24 border-y border-[#E5E0D8]">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-serif text-[#1B4332] mb-4 italic">Success Stories</h2>
-            <p className="text-[#8B7355]">Join couples who found their match through intentional introduction.</p>
+            <h2 className="text-3xl md:text-4xl font-serif text-[#1B4332] mb-4 italic">Not another dating app</h2>
+            <p className="text-[#8B7355] max-w-xl mx-auto">Built for one purpose — a serious, halal path to marriage.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-8 rounded-2xl border border-[#E5E0D8] shadow-sm">
-              <div className="flex gap-1 mb-6 text-[#8B7355]">
-                {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { t: 'Character before photos', d: 'You answer meaningful questions together and see each other\'s answers before any photos — so it starts with values, not looks.' },
+              { t: 'Every member verified', d: 'A live selfie check keeps out fakes and catfish. Real people, serious about marriage.' },
+              { t: 'Your privacy protected', d: 'Only your main photo is public; the rest stays private until you both match. No endless browsing of your pictures.' },
+              { t: 'Family involved (Wali)', d: 'Invite a guardian to oversee your conversations — honouring both Deen and Dhaqan.' },
+            ].map((x) => (
+              <div key={x.t} className="bg-white p-6 rounded-2xl border border-[#E5E0D8] shadow-sm">
+                <h3 className="font-serif text-lg text-[#1B4332] italic mb-2">{x.t}</h3>
+                <p className="text-sm text-[#5C574F] leading-relaxed">{x.d}</p>
               </div>
-              <p className="text-[#2D2926] font-serif text-lg italic mb-6 leading-relaxed">
-                "I was exhausted by traditional apps. The compatibility session on Kulmi forced us to focus on what actually matters—our deen and future goals—before getting distracted by pictures. We are getting married next month Alhamdulillah."
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#E5E0D8] flex items-center justify-center font-serif text-[#1B4332]">S</div>
-                <div>
-                  <p className="text-sm font-bold text-[#1B4332]">Salma & Ahmed</p>
-                  <p className="text-[10px] uppercase tracking-widest text-[#8B7355]">London, UK</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-2xl border border-[#E5E0D8] shadow-sm">
-              <div className="flex gap-1 mb-6 text-[#8B7355]">
-                {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
-              </div>
-              <p className="text-[#2D2926] font-serif text-lg italic mb-6 leading-relaxed">
-                "The privacy aspect was exactly what I needed. Knowing my photos aren't just out there for anyone to see made me feel secure. When we finally unlocked our profiles, we already knew we aligned on the big things."
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#E5E0D8] flex items-center justify-center font-serif text-[#1B4332]">F</div>
-                <div>
-                  <p className="text-sm font-bold text-[#1B4332]">Fatima & Omar</p>
-                  <p className="text-[10px] uppercase tracking-widest text-[#8B7355]">Toronto, CA</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
+
+          <p className="text-center text-xs text-[#8B7355] mt-10 italic">Real success stories will be featured here, with permission, as our community grows insha'Allah.</p>
         </div>
       </section>
 
