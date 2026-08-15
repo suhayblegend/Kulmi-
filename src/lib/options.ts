@@ -15,3 +15,10 @@ export const HAS_KIDS = ['No', 'Yes — living with me', 'Yes — not living wit
 export const TRAITS = ['Calm', 'Funny', 'Patient', 'Ambitious', 'Introvert', 'Extrovert', 'Family-Oriented', 'Adventurous', 'Organized', 'Kind', 'Generous'];
 export const STYLES = ['Calm', 'Direct', 'Gentle', 'Honest', 'Listener', 'Problem Solver', 'Affectionate'];
 export const GOALS = ['Strong Islamic Home', 'Children', 'Career', 'Business', 'Education', 'Travel', 'Financial Stability', 'Memorise Quran'];
+
+// Lifestyle & values
+export const SMOKING = ['Non-smoker', 'Occasionally', 'Smoker'];
+export const KHAT = ['Never', 'Occasionally', 'Regularly'];
+export const HIJAB = ['Yes, I wear hijab', 'Yes, I wear niqab', 'Not yet, working on it'];
+export const BEARD = ['Yes', 'Trimmed', 'No'];
+export const POLYGYNY = ['Open to it', 'Not open to it', 'Prefer not to say'];

@@ -4,7 +4,7 @@ import { uploadPhoto, uploadGalleryPhoto, sha256Hex, isAcceptablePhoto, isDuplic
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, ChevronLeft, Upload, Loader2, Check, Star, X, MapPin } from 'lucide-react';
 
-import { GENDERS, MARITAL, PRAYER, PRACTICE, MARRIAGE_INTENT as LOOKING, TIMELINE, RELOCATE, WANT_KIDS, HAS_KIDS, TRAITS, STYLES, GOALS } from '../../lib/options';
+import { GENDERS, MARITAL, PRAYER, PRACTICE, MARRIAGE_INTENT as LOOKING, TIMELINE, RELOCATE, WANT_KIDS, HAS_KIDS, TRAITS, STYLES, GOALS, SMOKING, KHAT, HIJAB, BEARD, POLYGYNY } from '../../lib/options';
 
 const MIN_PHOTOS = 4;
 
@@ -62,6 +62,7 @@ type Form = {
   first_name: string; age: string; gender: string; marital_status: string; country: string; city: string;
   bio: string; occupation: string; education: string; languages: string; height: string; heritage: string;
   prayer_level: string; islamic_practice: string; faith_statement: string;
+  religious_dress: string; smoking: string; khat: string; open_to_polygyny: string;
   marriage_intent: string; timeline: string; relocate: string; children: string; has_children: string;
   personality_traits: string[]; communication_style: string[]; future_goals: string[]; deal_breakers: string;
 };
@@ -70,6 +71,7 @@ const EMPTY: Form = {
   first_name: '', age: '', gender: '', marital_status: '', country: '', city: '',
   bio: '', occupation: '', education: '', languages: '', height: '', heritage: '',
   prayer_level: '', islamic_practice: '', faith_statement: '',
+  religious_dress: '', smoking: '', khat: '', open_to_polygyny: '',
   marriage_intent: '', timeline: '', relocate: '', children: '', has_children: '',
   personality_traits: [], communication_style: [], future_goals: [], deal_breakers: '',
 };
@@ -145,7 +147,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       case 1: return !!(form.first_name && parseInt(form.age, 10) >= 18 && form.gender && form.marital_status && form.country && form.city);
       case 2: return photos.length >= MIN_PHOTOS;
       case 3: return form.bio.trim().length >= 20 && looksReal(form.occupation) && looksReal(form.education) && looksReal(form.languages) && validHeightCm(form.height);
-      case 4: return !!(form.prayer_level && form.islamic_practice);
+      case 4: return !!(form.prayer_level && form.islamic_practice && form.religious_dress && form.smoking && form.khat);
       case 5: return !!(form.marriage_intent && form.timeline && form.relocate && form.children && form.has_children);
       case 6: return form.personality_traits.length >= 1 && form.future_goals.length >= 1;
       default: return true;
@@ -182,6 +184,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         bio: form.bio, occupation: form.occupation, education: form.education,
         languages: form.languages, height: form.height, heritage: form.heritage,
         prayer_level: form.prayer_level, islamic_practice: form.islamic_practice, faith_statement: form.faith_statement,
+        religious_dress: form.religious_dress, smoking: form.smoking, khat: form.khat, open_to_polygyny: form.open_to_polygyny,
         marriage_intent: form.marriage_intent, timeline: form.timeline, relocate: form.relocate,
         children: form.children, has_children: form.has_children,
         personality_traits: form.personality_traits, communication_style: form.communication_style,
@@ -290,6 +293,14 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
               <>
                 <Field label="Prayer"><SelectField value={form.prayer_level} onChange={(v) => set('prayer_level', v)} options={PRAYER} placeholder="Select" /></Field>
                 <Field label="Level of Practice"><SelectField value={form.islamic_practice} onChange={(v) => set('islamic_practice', v)} options={PRACTICE} placeholder="Select" /></Field>
+                <Field label={form.gender === 'male' ? 'Do you keep a beard?' : 'Do you observe hijab?'}>
+                  <SelectField value={form.religious_dress} onChange={(v) => set('religious_dress', v)} options={form.gender === 'male' ? BEARD : HIJAB} placeholder="Select" />
+                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Smoking"><SelectField value={form.smoking} onChange={(v) => set('smoking', v)} options={SMOKING} placeholder="Select" /></Field>
+                  <Field label="Khat / Qaad"><SelectField value={form.khat} onChange={(v) => set('khat', v)} options={KHAT} placeholder="Select" /></Field>
+                </div>
+                <Field label="Open to polygyny? (optional)"><SelectField value={form.open_to_polygyny} onChange={(v) => set('open_to_polygyny', v)} options={POLYGYNY} placeholder="Select" /></Field>
                 <Field label="A short statement about your faith (optional)"><textarea rows={3} value={form.faith_statement} onChange={(e) => set('faith_statement', e.target.value)} placeholder="What role does your deen play in your life?" className={`${INPUT_CLS} resize-none`} /></Field>
               </>
             )}
