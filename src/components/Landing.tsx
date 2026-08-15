@@ -1,7 +1,26 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Shield, HeartHandshake, Sparkles, UserPlus } from 'lucide-react';
-import { FOUNDING_ACTIVE } from '../lib/billing';
+import { FOUNDING_ACTIVE, FOUNDING_DEADLINE } from '../lib/billing';
+import { useCountdown } from './Pricing';
+
+// Compact founding-offer strip: urgency (live timer) + one link to the details.
+function FoundingBanner() {
+  const { d, h, m, s, over } = useCountdown(FOUNDING_DEADLINE);
+  if (over) return null;
+  const goPricing = () => { window.history.pushState({}, '', '/pricing'); window.dispatchEvent(new PopStateEvent('popstate')); };
+  return (
+    <button onClick={goPricing} className="w-full bg-[#1B4332] text-white px-4 py-2.5 text-sm hover:bg-[#143326] transition-colors">
+      <span className="inline-flex items-center gap-2.5 flex-wrap justify-center">
+        <span>🌟 <b>Founding offer</b> ends in</span>
+        <span className="font-mono tabular-nums bg-white/10 border border-white/20 rounded-lg px-2.5 py-0.5">
+          {d}d {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+        </span>
+        <span className="underline underline-offset-2 font-medium">See what you get →</span>
+      </span>
+    </button>
+  );
+}
 
 interface LandingProps {
   onStart: () => void;
@@ -13,12 +32,8 @@ interface LandingProps {
 export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps) {
   return (
     <div className="w-full flex flex-col items-center">
-      {/* Founding Member offer */}
-      {FOUNDING_ACTIVE && (
-        <button onClick={onStart} className="w-full bg-[#1B4332] text-white text-center px-4 py-3 text-sm hover:bg-[#143326] transition-colors">
-          🌟 <b>Founding Member offer:</b> join in August and get <b>Kulmi+ free until 30 September</b> — who viewed you, 5 introductions &amp; priority verification.
-        </button>
-      )}
+      {/* Founding Member offer — compact, with live countdown */}
+      {FOUNDING_ACTIVE && <FoundingBanner />}
       {/* Hero Section */}
       <section className="w-full max-w-5xl mx-auto flex flex-col items-center text-center py-20 px-6">
         <motion.div 
@@ -207,6 +222,8 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           <button onClick={() => { window.history.pushState({}, '', '/safety'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Trust &amp; Safety</button>
           <span>•</span>
           <button onClick={() => { window.history.pushState({}, '', '/blog'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Journal</button>
+          <span>•</span>
+          <button onClick={() => { window.history.pushState({}, '', '/pricing'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="hover:text-[#1B4332] transition-colors">Pricing</button>
         </div>
       </section>
     </div>

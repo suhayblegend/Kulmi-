@@ -26,6 +26,7 @@ import { NotificationBell } from './components/NotificationBell';
 import { Contact } from './components/Contact';
 import { Safety } from './components/Safety';
 import { Blog } from './components/Blog';
+import { Pricing } from './components/Pricing';
 import { supabase } from './lib/supabase';
 import { getMyProfile, type Profile as DbProfile } from './lib/db';
 
@@ -49,15 +50,16 @@ export type AppState =
   | 'contact'
   | 'safety'
   | 'blog'
+  | 'pricing'
   | 'onboarding';
 
-const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'blog'];
+const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'blog', 'pricing'];
 
 // URL <-> state mapping so /admin, /wali, etc. work as real links.
 const STATE_PATHS: Partial<Record<AppState, string>> = {
   landing: '/', discover: '/discover', activity: '/activity', chats: '/chats', profile: '/profile',
   progress: '/progress', settings: '/settings', wali: '/wali', admin: '/admin',
-  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety', blog: '/blog',
+  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety', blog: '/blog', pricing: '/pricing',
 };
 
 // Extra readable URLs that all resolve to the auth screen.
@@ -449,6 +451,12 @@ function MemberApp() {
           {appState === 'blog' && (
             <motion.div key="blog" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
               <Blog onBack={() => setAppState(user ? 'discover' : 'landing')} />
+            </motion.div>
+          )}
+
+          {appState === 'pricing' && (
+            <motion.div key="pricing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+              <Pricing onJoin={() => (user ? setAppState('settings') : goAuth('signup'))} onBack={() => setAppState(user ? 'discover' : 'landing')} />
             </motion.div>
           )}
 
