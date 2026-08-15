@@ -444,7 +444,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       <div className="space-y-5">
       <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-2xl p-4 text-sm text-[#5C574F]">
         <p className="font-bold text-[#1B4332] mb-1">Approve only genuine people. Reject if:</p>
-        <p>the profile photo doesn't clearly match the live selfie · the face is hidden (sunglasses, mask, heavy filter) · it looks AI-generated, a celebrity, a stock photo, or not a real person · no clear human face. The <b>left</b> image is their profile photo; the <b>right</b> is their live selfie — they should be the same real person.</p>
+        <p>the profile photo doesn't clearly match the live selfie · the face is hidden (sunglasses, mask, heavy filter) · it looks AI-generated, a celebrity, a stock photo, or not a real person · no clear human face · <b>the person in the photos doesn't match their stated gender</b>. The <b>left</b> image is their profile photo; the <b>right</b> is their live selfie — they should be the same real person.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {pending.map((v) => (
@@ -460,7 +460,22 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
               </div>
             </div>
             <div className="p-5">
-              <h4 className="font-medium text-[#1B4332] mb-4">{v.first_name || 'Member'}{v.age ? `, ${v.age}` : ''}</h4>
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <h4 className="font-medium text-[#1B4332]">{v.first_name || 'Member'}{v.age ? `, ${v.age}` : ''}</h4>
+                {/* Stated gender — check the photos match it; reject if they don't. */}
+                {(() => {
+                  const g = (v.gender ?? '').trim().toLowerCase();
+                  return g === 'male' || g === 'female' ? (
+                    <span className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${g === 'female' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {g === 'female' ? '♀ Female' : '♂ Male'}
+                    </span>
+                  ) : (
+                    <span className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide bg-red-100 text-red-700">
+                      ⚠ No gender
+                    </span>
+                  );
+                })()}
+              </div>
               <div className="flex gap-3">
                 <button onClick={() => handleReview(v.id, true)} className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors">
                   <CheckCircle className="w-4 h-4" /> Approve
@@ -649,7 +664,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             </div>
             <div className="p-5 space-y-4">
               <div className="flex flex-wrap gap-2">
-                {['Photo doesn\'t match your selfie', 'Face is not clearly visible', 'Please remove sunglasses/filter', 'Use a real photo of yourself'].map((r) => (
+                {['Photo doesn\'t match your selfie', 'Face is not clearly visible', 'Please remove sunglasses/filter', 'Use a real photo of yourself', 'Your photos don\'t match the gender on your profile'].map((r) => (
                   <button key={r} onClick={() => setRejectReason(r)} className="text-xs px-3 py-1.5 rounded-lg border border-[#E5E0D8] text-[#5C574F] hover:bg-[#FDFBF7]">{r}</button>
                 ))}
               </div>
