@@ -83,6 +83,16 @@ function pathWantsSignup(path: string): boolean {
 // link reliably shows the reset screen instead of racing into the app.
 const IS_RECOVERY = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash);
 
+// Synchronous check: does this browser hold a stored Supabase session? If yes,
+// the user is (almost certainly) logged in — keep the splash up until routing
+// finishes instead of flashing the logged-out homepage while the (sometimes
+// slow / cold-starting) backend restores the session.
+const HAS_STORED_SESSION = (() => {
+  try {
+    return Object.keys(window.localStorage).some((k) => k.startsWith('sb-') && k.includes('auth-token'));
+  } catch { return false; }
+})();
+
 export default function App() {
   if (IS_RECOVERY) {
     // After resetting, send admins/walis to their dashboard, members to the app.
@@ -194,8 +204,11 @@ function MemberApp() {
       }
       setInitializing(false);
     });
-    // Safety net: never get stuck on the splash.
-    const splashTimer = setTimeout(() => setInitializing(false), 5000);
+    // Safety net: never get stuck on the splash. With a stored session we KNOW
+    // the user is logged in, so wait generously (cold backend starts can take
+    // >5s) — flashing the logged-out homepage at a member is far worse than a
+    // longer spinner. Without one, give up quickly.
+    const splashTimer = setTimeout(() => setInitializing(false), HAS_STORED_SESSION ? 20000 : 4000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
