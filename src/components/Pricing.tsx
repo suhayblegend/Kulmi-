@@ -125,18 +125,13 @@ export function Pricing({ onJoin, onBack }: { onJoin: () => void; onBack: () => 
         <h2 className="font-serif text-2xl text-[#1B4332] italic mb-2">Support Kulmi</h2>
         <p className="text-sm text-[#5C574F] max-w-md mx-auto leading-relaxed mb-5">
           Kulmi is independently built for our community — servers, human verification and
-          moderation all cost money, and we refuse to fund them with ads or by selling data.
-          If Kulmi has helped you (or you simply believe in the mission), you can gift any
-          amount. Jazakallahu khairan.
+          moderation all cost money. If Kulmi has helped you (or you simply believe in the
+          mission), you can gift any amount. Jazakallahu khairan.
         </p>
-        {DONATE_URL ? (
-          <a href={DONATE_URL} target="_blank" rel="noreferrer"
-            className="inline-block bg-[#1B4332] text-white px-8 py-3 rounded-xl font-medium hover:bg-[#143326] transition-colors">
-            ☕ Buy us a coffee
-          </a>
-        ) : (
-          <p className="text-xs text-[#8B7355]">Donation link coming soon, insha'Allah.</p>
-        )}
+        <a href={DONATE_URL} target="_blank" rel="noreferrer"
+          className="inline-block bg-[#FFDD00] text-[#2D2926] px-8 py-3 rounded-xl font-bold hover:brightness-95 transition-all shadow-sm">
+          ☕ Buy us a coffee
+        </a>
       </div>
     </motion.div>
   );

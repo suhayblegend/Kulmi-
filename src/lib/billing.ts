@@ -13,10 +13,10 @@
 export const STRIPE_LINK_MONTHLY = '';   // e.g. 'https://buy.stripe.com/xxxx'
 export const STRIPE_LINK_QUARTERLY = ''; // e.g. 'https://buy.stripe.com/yyyy'
 
-// Optional "Support Kulmi" donations — either a Stripe Payment Link with
-// "Customers choose what to pay", OR a Buy Me a Coffee page URL
-// (e.g. 'https://buymeacoffee.com/kulmi'). Leave empty to hide the button.
-export const DONATE_URL = '';
+// "Support Kulmi" donations — create this page at buymeacoffee.com (claim the
+// "kulmi" handle), or swap in a Stripe Payment Link with "customers choose
+// what to pay".
+export const DONATE_URL = 'https://buymeacoffee.com/kulmi';
 
 export const PRICE_MONTHLY = '£9.99/month';
 export const PRICE_QUARTERLY = '£19.99 every 3 months (save 33%)';
