@@ -51,6 +51,15 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-refresh while pending so an admin approval/rejection updates this screen
+  // by itself (no need to tap "Check my status").
+  useEffect(() => {
+    if (status !== 'pending' || capturing) return;
+    const t = setInterval(() => { load(); }, 6000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, capturing]);
+
   const handleCapture = async (file: File) => {
     setCapturing(false);
     setSubmitting(true);
