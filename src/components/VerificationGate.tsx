@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, Loader2, Camera, Clock, RefreshCw, Smartphone } from 'lucide-react';
+import { ShieldCheck, Loader2, Camera, Clock, RefreshCw, Smartphone, CheckCircle2, ArrowRight } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getMyProfile, submitPhotoVerification, signOut } from '../lib/db';
 import { CameraCapture } from './CameraCapture';
@@ -14,6 +14,7 @@ type Status = 'loading' | 'unverified' | 'pending' | 'rejected';
  */
 export function VerificationGate({ onVerified }: { onVerified: () => void }) {
   const [status, setStatus] = useState<Status>('loading');
+  const [celebrate, setCelebrate] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -33,7 +34,7 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
     try {
       const p = await getMyProfile(true); // always fresh — verification status changes server-side
       if (p?.verification_status === 'verified' || p?.photo_verified) {
-        onVerified();
+        setCelebrate(true); // show the congrats screen before entering the app
         return;
       }
       setStatus((p?.verification_status as Status) ?? 'unverified');
@@ -54,11 +55,11 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
   // Auto-refresh while pending so an admin approval/rejection updates this screen
   // by itself (no need to tap "Check my status").
   useEffect(() => {
-    if (status !== 'pending' || capturing) return;
+    if (status !== 'pending' || capturing || celebrate) return;
     const t = setInterval(() => { load(); }, 6000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, capturing]);
+  }, [status, capturing, celebrate]);
 
   const handleCapture = async (file: File) => {
     setCapturing(false);
@@ -84,6 +85,27 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
       </button>
     </div>
   );
+
+  if (celebrate) {
+    return (
+      <Shell>
+        <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-600 mx-auto mb-6">
+          <CheckCircle2 className="w-11 h-11" />
+        </div>
+        <h2 className="text-3xl font-serif text-[#1B4332] italic mb-3">MashaAllah — you're verified! 🎉</h2>
+        <p className="text-sm text-[#5C574F] leading-relaxed mb-8">
+          Your identity has been confirmed. You're now part of a trusted community of people serious about marriage.
+          May Allah make your search easy and blessed. 🤲
+        </p>
+        <button
+          onClick={onVerified}
+          className="w-full bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          Continue to Kulmi <ArrowRight className="w-4 h-4" />
+        </button>
+      </Shell>
+    );
+  }
 
   if (status === 'loading') {
     return <Shell><div className="py-10 flex justify-center text-[#8B7355]"><Loader2 className="w-8 h-8 animate-spin" /></div></Shell>;

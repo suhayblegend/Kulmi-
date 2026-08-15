@@ -116,6 +116,9 @@ function MemberApp() {
   // from re-populating `user` on token refresh.
   const [staffSession, setStaffSession] = useState<'admin' | 'wali' | null>(null);
   const staffRef = useRef(false);
+  // Show a splash until we've resolved the session, so a returning/just-confirmed
+  // user never sees the logged-out landing page flash (which looks broken).
+  const [initializing, setInitializing] = useState(true);
 
   // The URL the app was opened at, used to honour a deep link (e.g. /admin)
   // once the session has loaded.
@@ -176,11 +179,14 @@ function MemberApp() {
 
   useEffect(() => {
     // Restore an existing session on reload (reliable path).
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user && !routedRef.current) {
-        loadProfileAndRoute(session.user);
+        await loadProfileAndRoute(session.user);
       }
+      setInitializing(false);
     });
+    // Safety net: never get stuck on the splash.
+    const splashTimer = setTimeout(() => setInitializing(false), 5000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
@@ -211,12 +217,13 @@ function MemberApp() {
           setMyProfile(null);
           setAppState(wantAuth ? 'auth' : 'landing');
         }
+        setInitializing(false);
         return;
       }
 
       if (!routedRef.current) {
         // First time we learn who the user is (initial load or a fresh sign-in) → route in.
-        loadProfileAndRoute(session.user);
+        loadProfileAndRoute(session.user).finally(() => setInitializing(false));
       } else if (!staffRef.current) {
         // Already inside the member app: token refresh / focus / spurious SIGNED_IN →
         // keep the profile fresh, NEVER navigate. (Staff stay logged-out here.)
@@ -225,7 +232,7 @@ function MemberApp() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { subscription.unsubscribe(); clearTimeout(splashTimer); };
   }, []);
 
   // Keep the address bar in sync with the current screen.
@@ -258,6 +265,16 @@ function MemberApp() {
     setSelectedSessionId(sessionId);
     setAppState('session');
   };
+
+  // ---- Splash while the session resolves (prevents a landing-page flash) ----
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center gap-5">
+        <span className="font-serif text-3xl font-bold tracking-tight text-[#1B4332] uppercase">Kulmi</span>
+        <div className="w-8 h-8 rounded-full border-2 border-[#E5E0D8] border-t-[#1B4332] animate-spin" />
+      </div>
+    );
+  }
 
   // ---- Full-screen states (no app chrome) ----
   if (appState === 'onboarding') {

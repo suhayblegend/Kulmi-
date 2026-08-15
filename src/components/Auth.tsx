@@ -16,6 +16,7 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
   const setMode = (m: 'signin' | 'signup') => { setModeState(m); onModeChange?.(m); };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -63,6 +64,16 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
         }
         if (!seriousPledge) {
           setError('Please confirm you are here for marriage with sincere intention.');
+          setIsLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters.');
+          setIsLoading(false);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError('Passwords do not match.');
           setIsLoading(false);
           return;
         }
@@ -166,6 +177,23 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
               </button>
             </div>
           </div>
+
+          {mode === 'signup' && (
+            <div>
+              <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Repeat Password</label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:border-transparent transition-all text-[#2D2926]"
+                placeholder="Re-enter your password"
+              />
+              {confirmPassword && password !== confirmPassword && (
+                <p className="text-[11px] text-red-600 mt-1">Passwords don't match.</p>
+              )}
+            </div>
+          )}
 
           <AnimatePresence>
             {mode === 'signup' && (
