@@ -201,7 +201,11 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   };
 
   const handleReview = async (userId: string, approve: boolean, note?: string) => {
-    await adminReviewVerification(userId, approve, note);
+    try {
+      await adminReviewVerification(userId, approve, note);
+    } catch (e: any) {
+      alert(e?.message || 'Could not update verification. Please try again.');
+    }
     await reload();
   };
 

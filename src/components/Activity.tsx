@@ -98,6 +98,11 @@ export function Activity({ onOpenSession, onBack, onChanged }: ActivityProps) {
       onChanged?.();
       if (accept && sessionId) {
         onOpenSession(sessionId);
+      } else if (accept) {
+        // Accepted but the session id wasn't returned in time — reload so the
+        // new compatibility session shows up, and tell the user where it is.
+        await load();
+        setError('Accepted! Your compatibility session is ready below — tap it to begin.');
       } else {
         load();
       }

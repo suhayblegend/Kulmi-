@@ -549,17 +549,30 @@ export async function respondToInvitation(
   invitationId: string,
   accept: boolean
 ): Promise<string | null> {
-  const { data, error } = await supabase
+  // Read the pair FIRST — after v21 locked invitation UPDATEs to the `status`
+  // column, a plain update without RETURNING is the reliable path (RETURNING
+  // extra columns could trip column privileges), and we still know the pair.
+  const { data: inv } = await supabase
+    .from('invitations')
+    .select('sender_id, receiver_id')
+    .eq('id', invitationId)
+    .maybeSingle();
+  const { error } = await supabase
     .from('invitations')
     .update({ status: accept ? 'accepted' : 'declined' })
-    .eq('id', invitationId)
-    .select('sender_id, receiver_id')
-    .single();
+    .eq('id', invitationId);
   if (error) throw error;
-  if (!accept || !data) return null;
+  if (!accept || !inv) return null;
   const uid = await getCurrentUserId();
-  const otherId = data.sender_id === uid ? data.receiver_id : data.sender_id;
-  return findSessionWith(otherId);
+  const otherId = inv.sender_id === uid ? inv.receiver_id : inv.sender_id;
+  // The AFTER-UPDATE trigger creates the session; retry briefly so a fresh
+  // accept always lands in the session instead of silently reloading.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const id = await findSessionWith(otherId);
+    if (id) return id;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return null;
 }
 
 async function findSessionWith(otherId: string): Promise<string | null> {
