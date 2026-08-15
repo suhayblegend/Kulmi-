@@ -1283,26 +1283,45 @@ export async function adminListPendingVerifications(): Promise<Profile[]> {
 }
 
 export async function adminReviewVerification(userId: string, approve: boolean, note?: string): Promise<void> {
-  // Prefer the service-role function so the status change can never be silently
-  // blocked by RLS; fall back to a direct update if the function is unavailable.
-  let done = false;
-  try {
-    const { data, error } = await supabase.functions.invoke(BROADCAST_FN, {
-      body: { action: 'review-verification', userId, approve, note: note ?? '' },
-    });
-    if (!error && (data as any)?.ok) done = true;
-  } catch { /* fall back below */ }
-  if (!done) {
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        photo_verified: approve,
-        verification_status: approve ? 'verified' : 'rejected',
-        verification_note: approve ? null : (note?.trim() || null),
-      })
-      .eq('id', userId);
-    if (error) throw error;
+  const target = approve ? 'verified' : 'rejected';
+
+  // 1) Direct update. As admin, RLS ("Admins update any profile") + the guard
+  //    trigger's is_admin() bypass let this persist. RETURNING reflects the row
+  //    AFTER triggers, so we can tell immediately whether it actually stuck.
+  const direct = await supabase
+    .from('profiles')
+    .update({
+      photo_verified: approve,
+      verification_status: target,
+      verification_note: approve ? null : (note?.trim() || null),
+    })
+    .eq('id', userId)
+    .select('verification_status')
+    .maybeSingle();
+  let ok = !direct.error && (direct.data as any)?.verification_status === target;
+
+  // 2) If it didn't stick (missing admin policy / guard reverted it), go through
+  //    the service-role Edge function which bypasses RLS entirely.
+  if (!ok) {
+    try {
+      const { data, error } = await supabase.functions.invoke(BROADCAST_FN, {
+        body: { action: 'review-verification', userId, approve, note: note ?? '' },
+      });
+      if (!error && (data as any)?.ok) ok = true;
+    } catch { /* verified below */ }
   }
+
+  // 3) Confirm it truly persisted; if not, surface a precise, actionable error.
+  if (!ok) {
+    const check = await supabase.from('profiles').select('verification_status').eq('id', userId).maybeSingle();
+    ok = (check.data as any)?.verification_status === target;
+  }
+  if (!ok) {
+    throw new Error(
+      'The verification change did not save. Your database is likely missing the latest updates — run kulmi_setup.sql in the Supabase SQL editor, then try again.'
+    );
+  }
+
   // On rejection, email the member the reason (best-effort — never blocks the review).
   if (!approve) {
     try {

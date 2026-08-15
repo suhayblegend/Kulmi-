@@ -160,16 +160,22 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
   const reload = async () => {
     setLoading(true);
-    const [s, u, p, se, c, r, su, cm] = await Promise.all([
+    // allSettled so one missing table/column (e.g. a migration not yet run) can
+    // never blank the whole dashboard or stop a refresh after an approve.
+    const [s, u, p, se, c, r, su, cm] = await Promise.allSettled([
       getAdminStats(), adminListUsers(), adminListPendingVerifications(),
       adminListSessions(), adminListChats(), adminListReports(), adminListSuccesses(),
       adminListContactMessages(),
     ]);
-    setStats(s); setUsers(u); setPending(p); setSessions(se); setChats(c); setReports(r); setSuccesses(su); setMessages(cm);
+    const val = <T,>(res: PromiseSettledResult<T>, fallback: T): T => (res.status === 'fulfilled' ? res.value : fallback);
+    if (s.status === 'fulfilled') setStats(s.value);
+    setUsers(val(u, [])); setPending(val(p, [])); setSessions(val(se, []));
+    setChats(val(c, [])); setReports(val(r, [])); setSuccesses(val(su, [])); setMessages(val(cm, []));
+    const p2 = val(p, [] as any[]);
     adminListDeletions().then(setDeletions).catch(() => {});
     // Selfies live in the private bucket — resolve to short-lived signed URLs for review.
     const selfies: Record<string, string> = {};
-    await Promise.all(p.map(async (v: any) => {
+    await Promise.all(p2.map(async (v: any) => {
       const url = await resolveMediaUrl(v.verification_selfie_url);
       if (url) selfies[v.id] = url;
     }));
