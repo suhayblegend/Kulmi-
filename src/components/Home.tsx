@@ -28,6 +28,13 @@ interface HomeProps {
 }
 
 const MAX_OPEN = 3; // one-at-a-time intentionality — no swipe-machine behaviour
+// Module scope for a stable identity — defined inside the component it caused
+// the whole discover subtree to remount (and images to reload) on every state
+// change, which showed up as UI flicker.
+const Shell = ({ children }: { children: React.ReactNode }) => (
+  <div className="w-full max-w-md mx-auto space-y-6">{children}</div>
+);
+
 const PRAYER_OPTS = ['5 Daily Prayers', 'Usually prays', 'Sometimes prays', 'Working on it'];
 const MARITAL_OPTS = ['Never married', 'Divorced', 'Widowed'];
 const WANT_KIDS_OPTS = ['Want children', "Don't want children", 'Open / not sure'];
@@ -148,10 +155,6 @@ export function Home({ onOpenSession }: HomeProps) {
       actionRef.current = false;
     }
   };
-
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="w-full max-w-md mx-auto space-y-6">{children}</div>
-  );
 
   if (loading) {
     return (

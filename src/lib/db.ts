@@ -208,14 +208,22 @@ async function uploadSecure(data: File | Blob, category: 'selfie' | 'gallery' | 
 
 const isUrlLike = (ref: string) => /^(https?:|data:|blob:)/.test(ref);
 
+// path → {signed url, expiry}; keeps media URLs stable across refreshes.
+const signedUrlCache = new Map<string, { url: string; exp: number }>();
+
 /** Turn a stored media reference into a loadable URL. Full URLs / data URIs
  *  (public or legacy) pass through unchanged; bare paths are signed against the
  *  private bucket (1h). Returns null if it can't be resolved. */
 export async function resolveMediaUrl(ref?: string | null): Promise<string | null> {
   if (!ref) return null;
   if (isUrlLike(ref)) return ref;
-  // 1-week signed URLs so media doesn't break in a long-open chat/session.
+  // 1-week signed URLs, cached per path: repeated refreshes reuse the SAME URL,
+  // so <img>/<audio> elements don't reload (which looked like flicker) and the
+  // browser cache works. Re-signed well before expiry.
+  const cached = signedUrlCache.get(ref);
+  if (cached && cached.exp > Date.now()) return cached.url;
   const { data } = await supabase.storage.from(SECURE_BUCKET).createSignedUrl(ref, 60 * 60 * 24 * 7);
+  if (data?.signedUrl) signedUrlCache.set(ref, { url: data.signedUrl, exp: Date.now() + 60 * 60 * 24 * 6 * 1000 });
   return data?.signedUrl ?? null;
 }
 

@@ -7,6 +7,19 @@ import { CameraCapture } from './CameraCapture';
 
 type Status = 'loading' | 'unverified' | 'pending' | 'rejected';
 
+// Module scope for a stable identity — inline it remounted the whole card on
+// every poll tick / state change, causing a rhythmic flicker on this screen.
+const Shell = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center px-4 py-16">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white rounded-3xl p-8 border border-[#E5E0D8] shadow-sm text-center">
+      {children}
+    </motion.div>
+    <button onClick={() => signOut()} className="mt-6 text-xs font-bold text-[#8B7355] hover:text-[#1B4332] uppercase tracking-widest">
+      Sign Out
+    </button>
+  </div>
+);
+
 /**
  * Mandatory identity check. New members must submit a selfie and be approved by
  * an admin before they can see any profiles. Shown instead of the app until
@@ -74,17 +87,6 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
       setSubmitting(false);
     }
   };
-
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center px-4 py-16">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white rounded-3xl p-8 border border-[#E5E0D8] shadow-sm text-center">
-        {children}
-      </motion.div>
-      <button onClick={() => signOut()} className="mt-6 text-xs font-bold text-[#8B7355] hover:text-[#1B4332] uppercase tracking-widest">
-        Sign Out
-      </button>
-    </div>
-  );
 
   if (celebrate) {
     return (

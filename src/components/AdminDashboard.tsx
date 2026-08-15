@@ -22,6 +22,40 @@ interface AdminDashboardProps {
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
 
+// Module scope so these keep a stable identity across renders — defining them
+// inside the component made React remount their whole subtree on every state
+// change (each keystroke in search, every data refresh), causing visible
+// flicker and image reloads.
+const StatCard = ({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) => (
+  <div className="bg-white p-6 rounded-2xl border border-[#E5E0D8] shadow-sm">
+    <div className="w-12 h-12 rounded-full bg-[#FDFBF7] flex items-center justify-center border border-[#E5E0D8] mb-4">{icon}</div>
+    <h3 className="text-[#8B7355] text-sm font-medium">{label}</h3>
+    <p className="text-2xl font-serif text-[#1B4332] mt-1">{value}</p>
+  </div>
+);
+
+const Empty = ({ text }: { text: string }) => (
+  <div className="flex flex-col items-center justify-center py-16 text-[#8B7355]">
+    <Activity className="w-10 h-10 mb-3 opacity-40" />
+    <p className="text-sm">{text}</p>
+  </div>
+);
+
+const Table = ({ head, children }: { head: string[]; children: React.ReactNode }) => (
+  <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm overflow-hidden">
+    <div className="overflow-x-auto">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-[#FDFBF7] text-xs uppercase tracking-wider text-[#8B7355] border-b border-[#E5E0D8]">
+            {head.map((h) => <th key={h} className="p-4 font-medium">{h}</th>)}
+          </tr>
+        </thead>
+        <tbody className="text-sm divide-y divide-[#E5E0D8]">{children}</tbody>
+      </table>
+    </div>
+  </div>
+);
+
 export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -183,21 +217,6 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     setTranscript({ title: `${pair.userA} & ${pair.userB}`, messages });
   };
 
-  const StatCard = ({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) => (
-    <div className="bg-white p-6 rounded-2xl border border-[#E5E0D8] shadow-sm">
-      <div className="w-12 h-12 rounded-full bg-[#FDFBF7] flex items-center justify-center border border-[#E5E0D8] mb-4">{icon}</div>
-      <h3 className="text-[#8B7355] text-sm font-medium">{label}</h3>
-      <p className="text-2xl font-serif text-[#1B4332] mt-1">{value}</p>
-    </div>
-  );
-
-  const Empty = ({ text }: { text: string }) => (
-    <div className="flex flex-col items-center justify-center py-16 text-[#8B7355]">
-      <Activity className="w-10 h-10 mb-3 opacity-40" />
-      <p className="text-sm">{text}</p>
-    </div>
-  );
-
   const renderOverview = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <StatCard label="Total Users" value={stats?.users ?? 0} icon={<Users className="w-6 h-6 text-[#1B4332]" />} />
@@ -318,21 +337,6 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
         Emails send from <span className="font-medium">noreply@kulmi.uk</span> via Resend. If sending isn't working, the
         <span className="font-medium"> broadcast</span> function or Resend key may not be set up yet.
       </p>
-    </div>
-  );
-
-  const Table = ({ head, children }: { head: string[]; children: React.ReactNode }) => (
-    <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[#FDFBF7] text-xs uppercase tracking-wider text-[#8B7355] border-b border-[#E5E0D8]">
-              {head.map((h) => <th key={h} className="p-4 font-medium">{h}</th>)}
-            </tr>
-          </thead>
-          <tbody className="text-sm divide-y divide-[#E5E0D8]">{children}</tbody>
-        </table>
-      </div>
     </div>
   );
 
