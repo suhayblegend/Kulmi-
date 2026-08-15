@@ -61,6 +61,34 @@ serve(async (req) => {
       return json({ deleted: true });
     }
 
+    // ---- Notify a member their verification was rejected (admin only) ----
+    if (body.action === "notify-rejection") {
+      const { data: adminRow } = await admin.from("profiles").select("role").eq("id", caller).single();
+      if (adminRow?.role !== "admin") return json({ error: "Admins only" }, 403);
+      const { data: target } = await admin.from("profiles").select("email, first_name").eq("id", body.userId).single();
+      if (!target?.email) return json({ sent: false, note: "No email on file." });
+      const RESEND = Deno.env.get("RESEND_API_KEY");
+      if (!RESEND) return json({ sent: false, note: "Email not configured." });
+      const FROM = Deno.env.get("BROADCAST_FROM") || "Kulmi <noreply@kulmi.uk>";
+      const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const reason = (body.reason || "").trim();
+      const emailHtml = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+        <h2 style="color:#1B4332;font-family:Georgia,serif">Verification not approved</h2>
+        <p>Assalamu alaikum${target.first_name ? " " + esc(target.first_name) : ""},</p>
+        <p>Thanks for submitting your verification. Unfortunately it wasn't approved this time.</p>
+        ${reason ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
+        <p>Please sign in and submit a new, clear <b>live selfie</b> that matches your profile photo to try again.</p>
+        <p><a href="https://kulmi.uk" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:500">Open Kulmi</a></p>
+        <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+      </div>`;
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: FROM, to: [target.email], subject: "Your Kulmi verification", html: emailHtml }),
+      });
+      return json({ sent: res.ok });
+    }
+
     // ---- Admin email blast ----
     const { data: me } = await admin.from("profiles").select("role").eq("id", caller).single();
     if (me?.role !== "admin") return json({ error: "Admins only" }, 403);

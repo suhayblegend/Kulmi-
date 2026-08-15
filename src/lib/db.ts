@@ -1202,6 +1202,12 @@ export async function adminReviewVerification(userId: string, approve: boolean, 
     })
     .eq('id', userId);
   if (error) throw error;
+  // On rejection, email the member the reason (best-effort — never blocks the review).
+  if (!approve) {
+    try {
+      await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'notify-rejection', userId, reason: note ?? '' } });
+    } catch { /* email is best-effort */ }
+  }
 }
 
 export async function adminSetRole(userId: string, role: 'user' | 'wali' | 'admin'): Promise<void> {
