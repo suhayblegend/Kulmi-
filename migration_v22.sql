@@ -22,7 +22,7 @@ alter table public.profiles add column if not exists personality_traits text[];
 alter table public.profiles add column if not exists future_goals text[];
 alter table public.profiles add column if not exists communication_style text[];
 
-drop view if exists public.public_profiles;
+drop view if exists public.public_profiles cascade; -- cascade: get_my_wards() depends on the view and is recreated below/later
 create view public.public_profiles as
   select
     id, first_name, age, gender, location, bio, role, profile_picture_url,
@@ -141,5 +141,30 @@ $$;
 -- -------------------------------------------------------------
 drop policy if exists "Media publicly readable" on storage.objects;
 update public.profiles set intro_audio_url = null where intro_audio_url like '%/media/%';
+
+-- -------------------------------------------------------------
+-- Recreate get_my_wards(): it depends on the public_profiles view type, so the
+-- cascade drops above removed it — rebuild it against the final view.
+-- -------------------------------------------------------------
+-- Reads the BASE table (same safe columns as the view) so a wali still sees
+-- their ward while the ward is unverified or hidden from discovery.
+create or replace function public.get_my_wards()
+returns setof public.public_profiles
+language sql stable security definer set search_path = public as $$
+  select
+    p.id, p.first_name, p.age, p.gender, p.location, p.bio, p.role,
+    p.profile_picture_url, p.country, p.city, p.occupation, p.education,
+    p.languages, p.marital_status, p.height, p.heritage,
+    p.marriage_intent, p.timeline, p.relocate, p.children, p.has_children,
+    p.prayer_level, p.islamic_practice, p.faith_statement,
+    p.religious_dress, p.smoking, p.khat, p.open_to_polygyny,
+    p.personality_traits, p.future_goals, p.communication_style,
+    p.photo_verified, p.verification_status, p.show_in_discovery,
+    case when p.intro_public then p.intro_audio_url else null end
+  from public.profiles p
+  where p.wali_email is not null
+    and lower(p.wali_email) = lower(public.my_email());
+$$;
+grant execute on function public.get_my_wards() to authenticated;
 
 notify pgrst, 'reload schema';

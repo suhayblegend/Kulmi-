@@ -7,7 +7,7 @@ alter table public.profiles add column if not exists religious_dress text; -- hi
 alter table public.profiles add column if not exists open_to_polygyny text;
 
 -- Rebuild the public view to expose the new lifestyle fields to other members.
-drop view if exists public.public_profiles;
+drop view if exists public.public_profiles cascade; -- cascade: get_my_wards() depends on the view and is recreated below/later
 create view public.public_profiles as
   select
     id, first_name, age, gender, location, bio, role, profile_picture_url,

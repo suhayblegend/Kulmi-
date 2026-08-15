@@ -30,7 +30,7 @@ create policy "Profiles readable by owner, admin, wali"
 --    Exposes ONLY non-sensitive columns; runs with definer rights
 --    so it can read across users while the base table stays locked.
 -- -------------------------------------------------------------
-drop view if exists public.public_profiles;
+drop view if exists public.public_profiles cascade; -- cascade: get_my_wards() depends on the view and is recreated below/later
 create view public.public_profiles as
   select
     id, first_name, age, gender, location, bio, role, profile_picture_url,
