@@ -8,6 +8,20 @@
 -- R1a: the public view now only exposes members who are verified AND visible
 -- in discovery — no more enumerating hidden/suspended users via the API.
 -- -------------------------------------------------------------
+-- Safety net: make sure every column the view references actually exists on
+-- profiles, even if an earlier migration was skipped. Prevents both the view
+-- creation and the discovery page from failing on a missing column.
+alter table public.profiles add column if not exists religious_dress text;
+alter table public.profiles add column if not exists smoking text;
+alter table public.profiles add column if not exists khat text;
+alter table public.profiles add column if not exists open_to_polygyny text;
+alter table public.profiles add column if not exists intro_public boolean default false;
+alter table public.profiles add column if not exists intro_audio_url text;
+alter table public.profiles add column if not exists show_in_discovery boolean default true;
+alter table public.profiles add column if not exists personality_traits text[];
+alter table public.profiles add column if not exists future_goals text[];
+alter table public.profiles add column if not exists communication_style text[];
+
 drop view if exists public.public_profiles;
 create view public.public_profiles as
   select
