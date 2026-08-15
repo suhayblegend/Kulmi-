@@ -138,8 +138,10 @@ function MemberApp() {
     // Staff accounts (admin/wali) are exempt.
     const exempt = profile.role === 'admin' || profile.role === 'wali';
     // A profile that was never finished (e.g. connection dropped during signup)
-    // resumes onboarding instead of getting stuck at the verify gate.
-    if (!exempt && !profile.profile_picture_url) return 'onboarding';
+    // resumes onboarding instead of getting stuck at the verify gate. Gender is
+    // as essential as the photo — without it, opposite-gender-only discovery
+    // cannot work, so the member must complete onboarding first.
+    if (!exempt && (!profile.profile_picture_url || !(profile.gender ?? '').trim())) return 'onboarding';
     if (!exempt && profile.verification_status !== 'verified') return 'verify';
     if (!target || target === 'landing' || target === 'auth') return 'discover';
     if (target === 'admin' && profile.role !== 'admin') return 'discover';

@@ -434,8 +434,19 @@ export interface DiscoverFilters {
 }
 
 export async function discoverCandidates(filters: DiscoverFilters = {}): Promise<Profile[]> {
-  const me = await getMyProfile();
+  let me = await getMyProfile();
   if (!me) return [];
+  // If the (possibly cached) profile has no usable gender, re-read once —
+  // onboarding may have just saved it.
+  if (!normGender(me.gender)) me = await getMyProfile(true);
+  if (!me) return [];
+  // FAIL CLOSED: Kulmi only ever shows opposite-gender introductions. If we
+  // don't know the member's gender we show NOBODY — never everybody.
+  if (!normGender(me.gender)) {
+    throw new Error(
+      'Your profile is incomplete (gender is not set), so introductions are paused — Kulmi only ever shows opposite-gender members. Please refresh the page to finish your profile.'
+    );
+  }
 
   // Everyone I've already interacted with via invitations.
   const { data: invs } = await supabase
@@ -464,15 +475,15 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
   });
   ((blockedIds as string[]) ?? []).forEach((id) => excluded.add(id));
 
-  const myGender = normGender(me.gender);
-  const wantGender = myGender === 'male' ? 'female' : myGender === 'female' ? 'male' : null;
+  // Guaranteed non-null: we failed closed above if gender was unknown.
+  const wantGender = normGender(me.gender) === 'male' ? 'female' : 'male';
 
   const { data, error } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => {
     // Only verified members with a real photo appear in Discover.
     q = q.eq('show_in_discovery', true).eq('verification_status', 'verified').not('profile_picture_url', 'is', null).limit(100);
     // Opposite gender only. ilike is case-insensitive so legacy 'Female'/'MALE'
     // rows still match; the client filter below is the final guarantee.
-    if (wantGender) q = q.ilike('gender', wantGender);
+    q = q.ilike('gender', wantGender);
     if (filters.ageMin) q = q.gte('age', filters.ageMin);
     if (filters.ageMax) q = q.lte('age', filters.ageMax);
     if (filters.country?.trim()) q = q.ilike('country', `%${filters.country.trim()}%`);
@@ -488,7 +499,7 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
     .filter((p) => !excluded.has(p.id))
     // Belt-and-braces: never show the same gender (or unknown gender) — this
     // holds even if a row's gender is stored in a legacy/mixed-case form.
-    .filter((p) => !wantGender || normGender(p.gender) === wantGender)
+    .filter((p) => normGender(p.gender) === wantGender)
     .slice(0, 50);
 }
 
@@ -670,15 +681,21 @@ async function partnerIdFor(session: { user1_id: string; user2_id: string }, uid
   return session.user1_id === uid ? session.user2_id : session.user1_id;
 }
 
+/** Select session rows; retries without the `questions` column if the DB
+ *  doesn't have it yet (migration_v14 not applied) so sessions never vanish. */
+async function selectSessions(apply: (q: any) => any): Promise<any[] | null> {
+  const first = await apply(supabase.from('sessions').select('id, user1_id, user2_id, status, questions'));
+  if (!first.error) return first.data;
+  const retry = await apply(supabase.from('sessions').select('id, user1_id, user2_id, status'));
+  return retry.data;
+}
+
 export async function listActiveSessions(): Promise<SessionSummary[]> {
   const uid = await getCurrentUserId();
   if (!uid) return [];
-  const { data: sessions } = await supabase
-    .from('sessions')
-    .select('id, user1_id, user2_id, status, questions')
-    .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
-    .neq('status', 'ended')
-    .order('created_at', { ascending: false });
+  const sessions = await selectSessions((q) =>
+    q.or(`user1_id.eq.${uid},user2_id.eq.${uid}`).neq('status', 'ended').order('created_at', { ascending: false })
+  );
   if (!sessions || sessions.length === 0) return [];
 
   const partnerIds = sessions.map((s: any) => (s.user1_id === uid ? s.user2_id : s.user1_id));
@@ -739,11 +756,8 @@ export async function getSession(sessionId: string): Promise<SessionSummary | nu
   // fell out of a filtered list or the partner's profile couldn't be read.
   const uid = await getCurrentUserId();
   if (!uid) return null;
-  const { data: s } = await supabase
-    .from('sessions')
-    .select('id, user1_id, user2_id, status, questions')
-    .eq('id', sessionId)
-    .maybeSingle();
+  const rows = await selectSessions((q) => q.eq('id', sessionId));
+  const s = rows?.[0];
   if (!s) return null;
   if (s.user1_id !== uid && s.user2_id !== uid) return null; // not a participant
   const partnerId = s.user1_id === uid ? s.user2_id : s.user1_id;
