@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, type Profile } from '../lib/db';
+import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, type Profile } from '../lib/db';
+import { STRIPE_LINK_MONTHLY, STRIPE_LINK_QUARTERLY, PRICE_MONTHLY, PRICE_QUARTERLY, BILLING_READY, checkoutUrl } from '../lib/billing';
 
 const DELETE_REASONS = [
   'I found my spouse (on Kulmi!)',
@@ -147,6 +148,53 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
     <div className="w-full max-w-3xl mx-auto py-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
         <h2 className="text-3xl font-serif text-[#1B4332] mb-6">Settings</h2>
+
+        {/* Kulmi+ membership */}
+        <div className="bg-gradient-to-br from-[#1B4332] to-[#143326] text-white rounded-3xl p-6 md:p-8 shadow-sm">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-white/70 mb-1">✨ Kulmi+</p>
+              {isPremium(profile) ? (
+                <>
+                  <h3 className="font-serif text-xl mb-1">
+                    {profile.founding_member ? "You're a Founding Member 🌟" : "You're a Kulmi+ member"}
+                  </h3>
+                  <p className="text-sm text-white/75">
+                    {profile.premium_until
+                      ? `Active until ${new Date(profile.premium_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}${profile.founding_member && profile.plan !== 'premium' ? ' — your founding gift' : ''}.`
+                      : 'Active.'}
+                    {' '}You have who-viewed-you, 5 open introductions & priority verification.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-serif text-xl mb-1">Upgrade to Kulmi+</h3>
+                  <p className="text-sm text-white/75">See who viewed your profile · 5 open introductions · priority verification.</p>
+                </>
+              )}
+            </div>
+          </div>
+          {(!isPremium(profile) || (profile.founding_member && profile.plan !== 'premium')) && (
+            <div className="flex flex-col sm:flex-row gap-3 mt-5">
+              {BILLING_READY ? (
+                <>
+                  <a href={checkoutUrl(STRIPE_LINK_MONTHLY, profile.id, profile.email)} target="_blank" rel="noreferrer"
+                    className="flex-1 bg-white text-[#1B4332] text-center px-5 py-3 rounded-xl text-sm font-bold hover:bg-[#F0EEE8] transition-colors">
+                    {PRICE_MONTHLY}
+                  </a>
+                  <a href={checkoutUrl(STRIPE_LINK_QUARTERLY, profile.id, profile.email)} target="_blank" rel="noreferrer"
+                    className="flex-1 bg-white/15 border border-white/30 text-white text-center px-5 py-3 rounded-xl text-sm font-bold hover:bg-white/25 transition-colors">
+                    {PRICE_QUARTERLY}
+                  </a>
+                </>
+              ) : (
+                <p className="text-xs text-white/60">
+                  {isPremium(profile) ? 'Continue after your founding gift — plans open soon.' : 'Membership plans open soon, insha’Allah.'}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="bg-white rounded-3xl overflow-hidden border border-[#E5E0D8] shadow-sm">
           {/* Wali */}

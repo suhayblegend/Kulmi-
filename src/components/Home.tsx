@@ -12,6 +12,9 @@ import {
   countMyOpenThreads,
   sendInvitation,
   avatarFor,
+  getMyProfile,
+  isPremium,
+  recordProfileView,
   type Profile,
   type InvitationWithProfile,
   type SentInvitation,
@@ -25,7 +28,8 @@ interface HomeProps {
   onActivityCount?: (n: number) => void;
 }
 
-const MAX_OPEN = 3; // one-at-a-time intentionality — no swipe-machine behaviour
+const MAX_OPEN_FREE = 3; // intentionality cap — Kulmi+ members get 5
+const MAX_OPEN_PLUS = 5;
 // Module scope for a stable identity — defined inside the component it caused
 // the whole discover subtree to remount (and images to reload) on every state
 // change, which showed up as UI flicker.
@@ -55,6 +59,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [openThreads, setOpenThreads] = useState(0);
+  const [premium, setPremium] = useState(false);
   const [pendingSent, setPendingSent] = useState(0);
 
   const [showFilters, setShowFilters] = useState(false);
@@ -66,13 +71,15 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
     setLoading(true);
     setError('');
     try {
-      const [cands, incoming, active, open, mySent] = await Promise.all([
+      const [cands, incoming, active, open, mySent, meProf] = await Promise.all([
         discoverCandidates(f),
         listIncomingInvitations(),
         listActiveSessions(),
         countMyOpenThreads(),
         listMySentInvitations(),
+        getMyProfile(),
       ]);
+      setPremium(isPremium(meProf));
       setCandidates(cands);
       setInvites(incoming);
       setSessions(active);
@@ -103,13 +110,17 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   useEffect(() => { load(); }, [load]);
 
   const current = candidates[index];
+  useEffect(() => { if (current?.id) recordProfileView(current.id); }, [current?.id]);
   const remaining = candidates.length - index;
 
   const actionRef = useRef(false); // synchronous guard against rapid double-clicks
   const handleInvite = async () => {
     if (!current || actionRef.current) return;
-    if (openThreads >= MAX_OPEN) {
-      setError(`You can have ${MAX_OPEN} introductions at a time. Finish or end one before starting another — quality over quantity.`);
+    const maxOpen = premium ? MAX_OPEN_PLUS : MAX_OPEN_FREE;
+    if (openThreads >= maxOpen) {
+      setError(premium
+        ? `You can have ${maxOpen} introductions at a time. Finish or end one before starting another — quality over quantity.`
+        : `You can have ${maxOpen} introductions at a time (Kulmi+ members get ${MAX_OPEN_PLUS}). Finish or end one before starting another.`);
       return;
     }
     actionRef.current = true;

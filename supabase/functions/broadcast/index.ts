@@ -67,12 +67,58 @@ async function destroyAccount(admin: ReturnType<typeof createClient>, uid: strin
   return error ?? null;
 }
 
+async function hmacHexWith(secret: string, value: string): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Months purchased from the amount paid (pence): £19.99 = 3 months, else 1.
+const daysFor = (amount: number) => (amount >= 1900 ? 92 : 31);
+
+async function grantPremium(admin: ReturnType<typeof createClient>, uid: string, days: number, customerId?: string | null) {
+  const { data: row } = await admin.from("profiles").select("premium_until").eq("id", uid).single();
+  const base = row?.premium_until && new Date(row.premium_until) > new Date() ? new Date(row.premium_until) : new Date();
+  const until = new Date(base.getTime() + days * 86400_000).toISOString();
+  const patch: Record<string, unknown> = { plan: "premium", premium_until: until };
+  if (customerId) patch.stripe_customer_id = customerId;
+  await admin.from("profiles").update(patch).eq("id", uid);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const url = new URL(req.url);
   const u = url.searchParams.get("u");
   const t = url.searchParams.get("t");
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  // ---- Stripe webhook (add ?stripe=1 to the endpoint URL in Stripe) ----
+  if (url.searchParams.get("stripe") === "1") {
+    const whSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    if (!whSecret) return json({ error: "STRIPE_WEBHOOK_SECRET not set" }, 500);
+    const raw = await req.text();
+    // Verify Stripe's signature: header "stripe-signature: t=...,v1=..."
+    const sigHeader = req.headers.get("stripe-signature") || "";
+    const parts = Object.fromEntries(sigHeader.split(",").map((p) => p.split("=") as [string, string]));
+    const expected = await hmacHexWith(whSecret, `${parts.t}.${raw}`);
+    if (!parts.v1 || parts.v1 !== expected) return json({ error: "Bad signature" }, 400);
+
+    const event = JSON.parse(raw);
+    const obj = event?.data?.object ?? {};
+    try {
+      if (event.type === "checkout.session.completed") {
+        // First payment: client_reference_id carries the Kulmi user id.
+        const uid = obj.client_reference_id;
+        if (uid) await grantPremium(admin, uid, daysFor(obj.amount_total ?? 0), obj.customer ?? null);
+      } else if (event.type === "invoice.paid") {
+        // Subscription renewal: map the Stripe customer back to the member.
+        const { data: prof } = await admin.from("profiles").select("id").eq("stripe_customer_id", obj.customer).maybeSingle();
+        if (prof?.id) await grantPremium(admin, prof.id, daysFor(obj.amount_paid ?? 0));
+      }
+      // Cancellations need no handling — premium_until simply lapses.
+    } catch { /* never bounce Stripe retries for our own errors */ }
+    return json({ received: true });
+  }
 
   // ---- Wali confirms guardianship (GET link from the invite email) ----
   const w = url.searchParams.get("w");

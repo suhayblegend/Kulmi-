@@ -574,7 +574,12 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             </div>
             <div className="p-5">
               <div className="flex items-center justify-between gap-2 mb-4">
-                <h4 className="font-medium text-[#1B4332]">{v.first_name || 'Member'}{v.age ? `, ${v.age}` : ''}</h4>
+                <h4 className="font-medium text-[#1B4332] flex items-center gap-1.5">
+                  {v.first_name || 'Member'}{v.age ? `, ${v.age}` : ''}
+                  {((v as any).plan === 'premium' || ((v as any).premium_until && new Date((v as any).premium_until) > new Date())) && (
+                    <span title="Kulmi+ — priority review" className="text-amber-500">⚡</span>
+                  )}
+                </h4>
                 {/* Stated gender — check the photos match it; reject if they don't. */}
                 {(() => {
                   const g = (v.gender ?? '').trim().toLowerCase();

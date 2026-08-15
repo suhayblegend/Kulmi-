@@ -44,6 +44,9 @@ export interface Profile {
   verification_note?: string | null;
   wali_email?: string | null;
   wali_confirmed?: boolean | null;
+  plan?: string | null;
+  premium_until?: string | null;
+  founding_member?: boolean | null;
   gallery?: string[] | null;
   photo_hash?: string | null;
   compat_questions?: string[] | null;
@@ -1295,6 +1298,39 @@ export async function adminDeletePost(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// -------------------------------------------------------------
+// Kulmi+ membership
+// -------------------------------------------------------------
+export function isPremium(p?: Profile | null): boolean {
+  if (!p) return false;
+  const anyP = p as any;
+  return anyP.plan === 'premium' || (!!anyP.premium_until && new Date(anyP.premium_until) > new Date());
+}
+
+/** Record that I viewed someone's profile (feeds their "who viewed you"). */
+export async function recordProfileView(viewedId: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid || uid === viewedId) return;
+  try {
+    await supabase.from('profile_views').upsert(
+      { viewer_id: uid, viewed_id: viewedId, viewed_at: new Date().toISOString() },
+      { onConflict: 'viewer_id,viewed_id' }
+    );
+  } catch { /* analytics-grade — never block the UI */ }
+}
+
+export interface ViewerRow {
+  id: string; first_name: string | null; age: number | null; city: string | null;
+  country: string | null; profile_picture_url: string | null; viewed_at: string;
+}
+
+/** Premium: who viewed my profile (empty array when not premium / not installed). */
+export async function listMyViewers(): Promise<ViewerRow[]> {
+  const { data, error } = await supabase.rpc('get_my_viewers');
+  if (error || !Array.isArray(data)) return [];
+  return data as ViewerRow[];
+}
+
 /** Admin: quietly set a member back to unverified (no rejection email). */
 export async function adminUnverify(userId: string): Promise<void> {
   const { error } = await supabase
@@ -1404,7 +1440,8 @@ export async function adminListPendingVerifications(): Promise<Profile[]> {
     .not('profile_picture_url', 'is', null) // hide legacy/incomplete rows the current app can't create
     .order('updated_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Profile[];
+  // Kulmi+ members get priority review — float them to the top of the queue.
+  return ((data ?? []) as Profile[]).sort((a, b) => Number(isPremium(b)) - Number(isPremium(a)));
 }
 
 export async function adminReviewVerification(userId: string, approve: boolean, note?: string): Promise<void> {

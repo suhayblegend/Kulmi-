@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Shield, HeartHandshake, Sparkles, UserPlus } from 'lucide-react';
+import { FOUNDING_ACTIVE } from '../lib/billing';
 
 interface LandingProps {
   onStart: () => void;
@@ -12,6 +13,12 @@ interface LandingProps {
 export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps) {
   return (
     <div className="w-full flex flex-col items-center">
+      {/* Founding Member offer */}
+      {FOUNDING_ACTIVE && (
+        <button onClick={onStart} className="w-full bg-[#1B4332] text-white text-center px-4 py-3 text-sm hover:bg-[#143326] transition-colors">
+          🌟 <b>Founding Member offer:</b> join in August and get <b>Kulmi+ free until 30 September</b> — who viewed you, 5 introductions &amp; priority verification.
+        </button>
+      )}
       {/* Hero Section */}
       <section className="w-full max-w-5xl mx-auto flex flex-col items-center text-center py-20 px-6">
         <motion.div 

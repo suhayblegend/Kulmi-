@@ -7,10 +7,14 @@ import {
   listMySentInvitations,
   respondToInvitation,
   avatarFor,
+  getMyProfile,
+  isPremium,
+  listMyViewers,
   COMPATIBILITY_QUESTIONS,
   type InvitationWithProfile,
   type SentInvitation,
   type SessionSummary,
+  type ViewerRow,
 } from '../lib/db';
 
 const DISMISSED_KEY = 'kulmi_dismissed_declines';
@@ -57,6 +61,8 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
   const [sent, setSent] = useState<SentInvitation[]>([]);
   const [viewingInvite, setViewingInvite] = useState<InvitationWithProfile | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(loadDismissed);
+  const [premium, setPremium] = useState(false);
+  const [viewers, setViewers] = useState<ViewerRow[]>([]);
   const actionRef = useRef(false);
 
   const dismissDecline = (id: string) => {
@@ -80,6 +86,11 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
       setSessions(active);
       setSent(mySent);
       onCount?.(incoming.length + active.filter((x) => x.status !== 'completed').length);
+      // Kulmi+ — who viewed you
+      const me = await getMyProfile();
+      const prem = isPremium(me);
+      setPremium(prem);
+      if (prem) listMyViewers().then(setViewers).catch(() => {});
     } catch (err: any) {
       setError(err.message || 'Could not load your activity.');
     } finally {
@@ -248,6 +259,35 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
             </SectionCard>
           )}
         </>
+      )}
+
+      {/* Kulmi+ — who viewed you */}
+      {!loading && (
+        premium ? (
+          viewers.length > 0 && (
+            <SectionCard icon={<Sparkles className="w-4 h-4" />} title="Who viewed you" count={viewers.length}>
+              <div className="divide-y divide-[#F0EEE8]">
+                {viewers.map((v) => (
+                  <div key={v.id} className="flex items-center gap-4 p-4">
+                    <img src={avatarFor(v as any)} alt="" className="w-11 h-11 rounded-full object-cover border border-[#E5E0D8]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-serif font-medium text-[#1B4332] truncate">{v.first_name || 'Member'}{v.age ? `, ${v.age}` : ''}</p>
+                      <p className="text-xs text-[#8B7355] truncate">
+                        {[v.city, v.country].filter(Boolean).join(', ') || 'Viewed your profile'} · {new Date(v.viewed_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )
+        ) : (
+          <div className="w-full bg-gradient-to-br from-[#1B4332] to-[#143326] text-white rounded-2xl p-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-1">✨ Kulmi+</p>
+            <p className="font-serif text-lg mb-1">See who viewed your profile</p>
+            <p className="text-sm text-white/75 leading-relaxed">Plus 5 open introductions and priority verification. Upgrade any time from Settings.</p>
+          </div>
+        )
       )}
 
       {/* Inviter profile modal */}
