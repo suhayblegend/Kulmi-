@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, type Profile } from '../lib/db';
-import { STRIPE_LINK_MONTHLY, STRIPE_LINK_QUARTERLY, PRICE_MONTHLY, PRICE_QUARTERLY, BILLING_READY, checkoutUrl } from '../lib/billing';
+import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, premiumDaysLeft, type Profile } from '../lib/db';
+import { STRIPE_LINK_MONTHLY, STRIPE_LINK_QUARTERLY, PRICE_MONTHLY, PRICE_QUARTERLY, BILLING_READY, DONATE_URL, checkoutUrl } from '../lib/billing';
 
 const DELETE_REASONS = [
   'I found my spouse (on Kulmi!)',
@@ -159,9 +159,15 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                   <h3 className="font-serif text-xl mb-1">
                     {profile.founding_member ? "You're a Founding Member 🌟" : "You're a Kulmi+ member"}
                   </h3>
+                  {profile.premium_until && (
+                    <div className="inline-flex items-baseline gap-1.5 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 my-2">
+                      <span className="font-serif text-2xl leading-none tabular-nums">{premiumDaysLeft(profile)}</span>
+                      <span className="text-xs text-white/70">{premiumDaysLeft(profile) === 1 ? 'day left' : 'days left'}</span>
+                    </div>
+                  )}
                   <p className="text-sm text-white/75">
                     {profile.premium_until
-                      ? `Active until ${new Date(profile.premium_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}${profile.founding_member && profile.plan !== 'premium' ? ' — your founding gift' : ''}.`
+                      ? `${profile.founding_member && profile.plan !== 'premium' ? 'Your founding gift is active' : 'Active'} until ${new Date(profile.premium_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
                       : 'Active.'}
                     {' '}You have who-viewed-you, 5 open introductions & priority verification.
                   </p>
@@ -193,6 +199,9 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                 </p>
               )}
             </div>
+          )}
+          {isPremium(profile) && profile.founding_member && profile.plan !== 'premium' && premiumDaysLeft(profile) <= 10 && (
+            <p className="text-xs text-white/70 mt-3">Your founding gift ends soon — keep Kulmi+ by choosing a plan above. No pressure, the core app stays free either way.</p>
           )}
         </div>
 
@@ -284,6 +293,12 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
           <div className="p-6 border-b border-[#E5E0D8]">
             <div className="flex items-center gap-3 mb-2"><LifeBuoy className="w-5 h-5 text-[#1B4332]" /><h3 className="font-bold text-[#2D2926]">Support &amp; About</h3></div>
             <div className="space-y-3 mt-3">
+              {DONATE_URL && (
+                <a href={DONATE_URL} target="_blank" rel="noreferrer" className="w-full flex items-center justify-between text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">
+                  <span className="flex items-center gap-2">☕ Support Kulmi <span className="text-xs font-normal text-[#8B7355]">— optional, never required</span></span>
+                  <ChevronRight className="w-4 h-4 text-[#8B7355]" />
+                </a>
+              )}
               {onSafety && (
                 <button onClick={onSafety} className="w-full flex items-center justify-between text-sm font-medium text-[#2D2926] hover:text-[#1B4332] py-2">
                   <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-[#8B7355]" /> Trust &amp; Safety</span>

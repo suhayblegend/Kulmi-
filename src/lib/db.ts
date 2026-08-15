@@ -1307,6 +1307,14 @@ export function isPremium(p?: Profile | null): boolean {
   return anyP.plan === 'premium' || (!!anyP.premium_until && new Date(anyP.premium_until) > new Date());
 }
 
+/** Whole days left on the premium period (0 if none / already lapsed). */
+export function premiumDaysLeft(p?: Profile | null): number {
+  const until = (p as any)?.premium_until;
+  if (!until) return 0;
+  const ms = new Date(until).getTime() - Date.now();
+  return ms > 0 ? Math.ceil(ms / 86400_000) : 0;
+}
+
 /** Record that I viewed someone's profile (feeds their "who viewed you"). */
 export async function recordProfileView(viewedId: string): Promise<void> {
   const uid = await getCurrentUserId();
