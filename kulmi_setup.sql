@@ -1,4 +1,4 @@
--- KULMI combined setup — v22 (self-healing + partner-read fix). Run in Supabase SQL editor. Safe to re-run.
+-- KULMI combined setup — v23 (gender normalisation). Run in Supabase SQL editor. Safe to re-run.
 
 -- >>> migration.sql
 -- =============================================================
@@ -1736,6 +1736,31 @@ $$;
 -- -------------------------------------------------------------
 drop policy if exists "Media publicly readable" on storage.objects;
 update public.profiles set intro_audio_url = null where intro_audio_url like '%/media/%';
+
+notify pgrst, 'reload schema';
+
+
+-- >>> migration_v23.sql
+-- =============================================================
+--  KULMI migration v23 — normalise gender so opposite-gender-only
+--  discovery is reliable. Idempotent.
+-- =============================================================
+
+-- Collapse any legacy / mixed-case / variant gender labels down to the two
+-- canonical lowercase values the app matches on. Anything unrecognised is left
+-- as-is (and simply won't appear as a match until corrected).
+update public.profiles
+set gender = case
+  when lower(trim(gender)) in ('male', 'man', 'brother', 'boy', 'm')   then 'male'
+  when lower(trim(gender)) in ('female', 'woman', 'sister', 'girl', 'f') then 'female'
+  else gender
+end
+where gender is not null
+  and gender <> case
+    when lower(trim(gender)) in ('male', 'man', 'brother', 'boy', 'm')   then 'male'
+    when lower(trim(gender)) in ('female', 'woman', 'sister', 'girl', 'f') then 'female'
+    else gender
+  end;
 
 notify pgrst, 'reload schema';
 

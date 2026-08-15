@@ -141,6 +141,15 @@ function minimalPartner(id: string): Profile {
   return { id, first_name: 'Member' } as unknown as Profile;
 }
 
+/** Normalise any stored gender value to 'male' | 'female' | null so matching is
+ *  robust to casing and legacy/variant labels (Man/Woman/Brother/Sister/etc.). */
+export function normGender(g?: string | null): 'male' | 'female' | null {
+  const s = (g ?? '').trim().toLowerCase();
+  if (['male', 'man', 'brother', 'boy', 'm'].includes(s)) return 'male';
+  if (['female', 'woman', 'sister', 'girl', 'f'].includes(s)) return 'female';
+  return null;
+}
+
 // Neutral placeholder (no human face) — a real photo is required at onboarding,
 // so this only shows for edge cases, never as someone's apparent face.
 const FALLBACK_AVATAR =
@@ -455,12 +464,15 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
   });
   ((blockedIds as string[]) ?? []).forEach((id) => excluded.add(id));
 
+  const myGender = normGender(me.gender);
+  const wantGender = myGender === 'male' ? 'female' : myGender === 'female' ? 'male' : null;
+
   const { data, error } = await readProfiles(PUBLIC_PROFILE_COLS, (q) => {
     // Only verified members with a real photo appear in Discover.
     q = q.eq('show_in_discovery', true).eq('verification_status', 'verified').not('profile_picture_url', 'is', null).limit(100);
-    if (me.gender === 'male' || me.gender === 'female') {
-      q = q.eq('gender', me.gender === 'male' ? 'female' : 'male');
-    }
+    // Opposite gender only. ilike is case-insensitive so legacy 'Female'/'MALE'
+    // rows still match; the client filter below is the final guarantee.
+    if (wantGender) q = q.ilike('gender', wantGender);
     if (filters.ageMin) q = q.gte('age', filters.ageMin);
     if (filters.ageMax) q = q.lte('age', filters.ageMax);
     if (filters.country?.trim()) q = q.ilike('country', `%${filters.country.trim()}%`);
@@ -472,7 +484,12 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
   });
   if (error) throw error;
 
-  return (data as Profile[]).filter((p) => !excluded.has(p.id)).slice(0, 50);
+  return (data as Profile[])
+    .filter((p) => !excluded.has(p.id))
+    // Belt-and-braces: never show the same gender (or unknown gender) — this
+    // holds even if a row's gender is stored in a legacy/mixed-case form.
+    .filter((p) => !wantGender || normGender(p.gender) === wantGender)
+    .slice(0, 50);
 }
 
 export interface SentInvitation {
