@@ -4,7 +4,7 @@ import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2,
 import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, getMyCompatQuestions, setMyCompatQuestions, COMPATIBILITY_QUESTIONS, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
-import { MARITAL, HAS_KIDS, MARRIAGE_INTENT, TIMELINE, RELOCATE, WANT_KIDS, PRAYER, PRACTICE } from '../lib/options';
+import { MARITAL, HAS_KIDS, MARRIAGE_INTENT, TIMELINE, RELOCATE, WANT_KIDS, PRAYER, PRACTICE, TRAITS, GOALS, STYLES } from '../lib/options';
 
 type ProfileForm = {
   firstName: string;
@@ -234,9 +234,9 @@ export function Profile() {
     };
   }, []);
 
-  const AVAILABLE_TRAITS = ['Calm', 'Funny', 'Patient', 'Ambitious', 'Introvert', 'Extrovert', 'Family-Oriented', 'Adventurous', 'Organized'];
-  const AVAILABLE_GOALS = ['Strong Islamic Home', 'Children', 'Career', 'Business', 'Education', 'Travel', 'Financial Stability'];
-  const AVAILABLE_STYLES = ['Calm', 'Direct', 'Gentle', 'Honest', 'Listener', 'Problem Solver'];
+  const AVAILABLE_TRAITS = TRAITS;
+  const AVAILABLE_GOALS = GOALS;
+  const AVAILABLE_STYLES = STYLES;
 
   const toggleArrayItem = (key: 'personalityTraits' | 'futureGoals' | 'communicationStyle', item: string) => {
     setEditForm(prev => {

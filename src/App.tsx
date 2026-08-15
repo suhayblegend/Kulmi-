@@ -146,7 +146,7 @@ function MemberApp() {
     const su = sessionUser ?? (await supabase.auth.getSession()).data.session?.user ?? null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const profile = await getMyProfile();
+        const profile = await getMyProfile(true); // fresh — reflects a just-finished onboarding/verify
         setMyProfile(profile);
         const staffRole = profile?.role === 'admin' ? 'admin' : profile?.role === 'wali' ? 'wali' : null;
         if (staffRole) {

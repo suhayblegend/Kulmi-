@@ -52,10 +52,12 @@ serve(async (req) => {
     const caller = userData.user.id;
     const body = await req.json().catch(() => ({}));
 
-    // ---- Self-delete account (removes profile via cascade + the auth login) ----
+    // ---- Self-delete account. Delete the auth user FIRST (cascades the profile
+    // and all their data); then clean up the profile row in case no cascade. ----
     if (body.action === "delete-account") {
+      const { error: delErr } = await admin.auth.admin.deleteUser(caller);
+      if (delErr) return json({ error: `Could not delete account: ${delErr.message}` }, 500);
       await admin.from("profiles").delete().eq("id", caller);
-      await admin.auth.admin.deleteUser(caller);
       return json({ deleted: true });
     }
 
