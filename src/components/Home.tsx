@@ -9,6 +9,7 @@ import {
   listIncomingInvitations,
   listActiveSessions,
   listMySentInvitations,
+  listMyViewers,
   countMyOpenThreads,
   sendInvitation,
   avatarFor,
@@ -105,6 +106,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   const [pendingSent, setPendingSent] = useState(0);
   const [viewProfile, setViewProfile] = useState<Profile | null>(null);
   const [myProfile, setMyProfile] = useState<Profile | null>(null);
+  const [viewersCount, setViewersCount] = useState(0);
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
@@ -123,8 +125,10 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
         listMySentInvitations(),
         getMyProfile(),
       ]);
-      setPremium(isPremium(meProf));
+      const prem = isPremium(meProf);
+      setPremium(prem);
       setMyProfile(meProf);
+      if (prem) listMyViewers().then((v) => setViewersCount(v.length)).catch(() => {});
       setCandidates(cands);
       setInvites(incoming);
       setSessions(active);
@@ -244,6 +248,23 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
             </p>
           </div>
           <ChevronRight className="w-5 h-5 opacity-80 shrink-0" />
+        </button>
+      )}
+
+      {/* Kulmi+ — who viewed you (visible nudge, taps through to Activity) */}
+      {premium && viewersCount > 0 && (
+        <button
+          onClick={onOpenActivity}
+          className="w-full flex items-center gap-3 bg-white border border-[#E5E0D8] rounded-2xl px-4 py-3.5 text-left hover:border-[#1B4332] transition-colors"
+        >
+          <div className="w-9 h-9 rounded-full bg-[#F0EEE8] flex items-center justify-center shrink-0 text-lg">👀</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[#1B4332] leading-tight">
+              {viewersCount} {viewersCount === 1 ? 'person' : 'people'} viewed your profile
+            </p>
+            <p className="text-[11px] text-[#8B7355] mt-0.5">Tap to see who's interested</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-[#8B7355] shrink-0" />
         </button>
       )}
 

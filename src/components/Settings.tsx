@@ -222,7 +222,10 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
               {claiming ? <Loader2 className="w-4 h-4 animate-spin" /> : '🌟 Claim free membership until 30 Sept'}
             </button>
           )}
-          {((!isPremium(profile) && !FOUNDING_ACTIVE) || (profile.founding_member && profile.plan !== 'premium')) && (
+          {/* Pricing is hidden for founding members — their Kulmi+ is already free
+              until 30 Sept, so no upsell. Only genuinely free members (after the
+              founding window) see plans. */}
+          {!isPremium(profile) && !FOUNDING_ACTIVE && (
             <div className="flex flex-col sm:flex-row gap-3 mt-5">
               {BILLING_READY ? (
                 <>
@@ -243,7 +246,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
             </div>
           )}
           {isPremium(profile) && profile.founding_member && profile.plan !== 'premium' && premiumDaysLeft(profile) <= 10 && (
-            <p className="text-xs text-white/70 mt-3">Your founding gift ends soon — keep Kulmi+ by choosing a plan above. No pressure, the core app stays free either way.</p>
+            <p className="text-xs text-white/70 mt-3">Your founding gift ends soon. The core app — matching, sessions and chat — always stays free, insha'Allah.</p>
           )}
           {profile.plan === 'premium' && (
             <button onClick={manageSubscription} disabled={portalBusy} className="mt-4 text-sm font-medium text-white/90 underline underline-offset-2 hover:text-white disabled:opacity-50">

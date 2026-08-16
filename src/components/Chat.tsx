@@ -9,6 +9,7 @@ import {
   setChatStatus,
   getChatMeta,
   listMessages,
+  markChatRead,
   sendMessage,
   sendVoiceMessage,
   reportUser,
@@ -75,6 +76,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
       setMessages(msgs);
       setIceDeadline(meta.iceDeadline);
       setChatStatus(meta.chatStatus);
+      markChatRead(chatId); // I'm viewing → mark the partner's messages read
       if (p) {
         // Matched → their extra photos + voice intro unlock.
         const [extra, intro] = await Promise.all([getMatchGallery(p.id), getMatchIntro(p.id)]);
@@ -90,7 +92,18 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
         (payload) => {
-          setMessages((prev) => upsert(prev, payload.new as Message));
+          const msg = payload.new as Message;
+          setMessages((prev) => upsert(prev, msg));
+          // A message arrived while I'm viewing → mark it read for the sender.
+          if (msg.sender_id && msg.sender_id !== myId) markChatRead(chatId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
+        (payload) => {
+          const msg = payload.new as Message;
+          setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)));
         }
       )
       .subscribe();
@@ -125,6 +138,14 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     return h >= 1 ? `${h}h ${m}m` : `${m}m`;
   })();
   const iWrote = myId ? senders.has(myId) : false;
+  // The last message I sent that the partner has read → show a single "Read" marker.
+  const lastReadMineId = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.sender_id === myId && m.read_at) return m.id;
+    }
+    return null;
+  })();
 
   // Voice notes are private (stored as paths) — sign them for playback on demand.
   useEffect(() => {
@@ -644,7 +665,8 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
             {messages.map((msg) => {
               const mine = msg.sender_id === myId;
               return (
-                <div key={msg.id} className={`flex gap-4 ${mine ? 'justify-end' : 'justify-start'}`}>
+                <React.Fragment key={msg.id}>
+                <div className={`flex gap-4 ${mine ? 'justify-end' : 'justify-start'}`}>
                   {!mine && partner && (
                     <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 mt-auto border border-[#E5E0D8]">
                       <img src={avatarFor(partner)} alt="" className="w-full h-full object-cover" />
@@ -668,6 +690,12 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
                     )}
                   </div>
                 </div>
+                {msg.id === lastReadMineId && (
+                  <div className="flex justify-end -mt-2.5 pr-1">
+                    <span className="text-[10px] text-[#8B7355] font-medium">Read ✓✓</span>
+                  </div>
+                )}
+                </React.Fragment>
               );
             })}
           </div>

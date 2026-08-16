@@ -88,6 +88,7 @@ export interface Message {
   content: string;
   type?: 'text' | 'audio';
   created_at: string;
+  read_at?: string | null;
 }
 
 // Read OTHER users' safe columns through the public_profiles VIEW.
@@ -768,6 +769,9 @@ export async function getSession(sessionId: string): Promise<SessionSummary | nu
   // fell out of a filtered list or the partner's profile couldn't be read.
   const uid = await getCurrentUserId();
   if (!uid) return null;
+  // Pull the sender's latest questions into the session if it hasn't started yet
+  // (so edits/reordering made after the invite are honoured). Best-effort.
+  await supabase.rpc('sync_session_questions', { sess: sessionId }).then(() => {}, () => {});
   const rows = await selectSessions((q) => q.eq('id', sessionId));
   const s = rows?.[0];
   if (!s) return null;
@@ -993,6 +997,12 @@ export async function getChatPartner(chatId: string): Promise<Profile | null> {
   // Chat row exists → the partner exists; if their display profile is unreadable
   // (hidden + RPC missing) fall back to a stand-in so the chat still opens.
   return partners[0] ?? minimalPartner(partnerId);
+}
+
+/** Mark the partner's messages in this chat as read (respects my read-receipts
+ *  preference server-side). Best-effort — never blocks the UI. */
+export async function markChatRead(chatId: string): Promise<void> {
+  try { await supabase.rpc('mark_chat_read', { c: chatId }); } catch { /* best-effort */ }
 }
 
 export async function listMessages(chatId: string): Promise<Message[]> {
