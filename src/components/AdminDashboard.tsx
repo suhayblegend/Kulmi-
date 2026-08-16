@@ -12,7 +12,7 @@ import {
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   adminListContactMessages, adminMarkContactHandled,
   adminCountRecipients, adminBroadcast, adminListDeletions,
-  adminListPosts, adminSavePost, adminDeletePost,
+  adminListPosts, adminSavePost, adminDeletePost, uploadBlogImage,
   getMyProfile, signOut, avatarFor, resolveMediaUrl,
   type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage, type BroadcastAudience, type DeletionRow, type BlogPost,
 } from '../lib/db';
@@ -210,8 +210,21 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
   // ---- Blog authoring ----
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [postDraft, setPostDraft] = useState<{ id?: string; title: string; excerpt: string; content: string; published: boolean } | null>(null);
+  const [postDraft, setPostDraft] = useState<{ id?: string; title: string; excerpt: string; content: string; published: boolean; image_url: string | null } | null>(null);
   const [savingPost, setSavingPost] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const pickCover = async (file?: File) => {
+    if (!file || !postDraft) return;
+    setUploadingCover(true);
+    try {
+      const url = await uploadBlogImage(file);
+      setPostDraft((d) => d && { ...d, image_url: url });
+    } catch (e: any) {
+      alert(e?.message || 'Could not upload image. Have you run the latest SQL (blog bucket)?');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
   const loadPosts = () => adminListPosts().then(setPosts).catch(() => setPosts([]));
   useEffect(() => { loadPosts(); }, []);
   const savePost = async () => {
@@ -388,6 +401,23 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
             placeholder="One-line summary shown on the article list (optional)"
             className="w-full px-4 py-3 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm focus:outline-none focus:border-[#1B4332]"
           />
+          {/* Cover image */}
+          <div>
+            <label className="block text-xs font-bold text-[#1B4332] uppercase tracking-wider mb-2">Cover image (optional)</label>
+            {postDraft.image_url && (
+              <img src={postDraft.image_url} alt="cover" className="w-full h-44 object-cover rounded-xl border border-[#E5E0D8] mb-2" />
+            )}
+            <div className="flex items-center gap-3">
+              <label className="cursor-pointer text-sm font-medium text-[#1B4332] border border-[#1B4332] px-4 py-2 rounded-xl hover:bg-[#F0EEE8] transition-colors">
+                {uploadingCover ? 'Uploading…' : postDraft.image_url ? 'Change image' : 'Upload image'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingCover}
+                  onChange={(e) => pickCover(e.target.files?.[0])} />
+              </label>
+              {postDraft.image_url && (
+                <button onClick={() => setPostDraft((d) => d && { ...d, image_url: null })} className="text-sm font-medium text-red-500 hover:underline">Remove</button>
+              )}
+            </div>
+          </div>
           <textarea
             rows={14}
             value={postDraft.content}
@@ -407,7 +437,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
           </div>
         </div>
       ) : (
-        <button onClick={() => setPostDraft({ title: '', excerpt: '', content: '', published: true })} className="bg-[#1B4332] text-white px-5 py-3 rounded-xl text-sm font-medium hover:bg-[#143326]">
+        <button onClick={() => setPostDraft({ title: '', excerpt: '', content: '', published: true, image_url: null })} className="bg-[#1B4332] text-white px-5 py-3 rounded-xl text-sm font-medium hover:bg-[#143326]">
           + Write new article
         </button>
       )}
@@ -425,7 +455,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                   <span className={p.published ? 'text-green-700 font-medium' : 'text-amber-600 font-medium'}>{p.published ? 'Published' : 'Draft'}</span>
                 </p>
               </div>
-              <button onClick={() => setPostDraft({ id: p.id, title: p.title, excerpt: p.excerpt ?? '', content: p.content, published: p.published })} className="text-xs font-medium text-[#1B4332] border border-[#E5E0D8] px-3 py-1.5 rounded-lg hover:bg-[#FDFBF7]">Edit</button>
+              <button onClick={() => setPostDraft({ id: p.id, title: p.title, excerpt: p.excerpt ?? '', content: p.content, published: p.published, image_url: p.image_url ?? null })} className="text-xs font-medium text-[#1B4332] border border-[#E5E0D8] px-3 py-1.5 rounded-lg hover:bg-[#FDFBF7]">Edit</button>
               <button onClick={() => deletePost(p.id, p.title)} className="text-xs font-medium text-red-500 border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
             </div>
           ))}

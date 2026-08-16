@@ -22,10 +22,15 @@ export function Blog({ onBack }: { onBack: () => void }) {
         <button onClick={() => { setOpen(null); window.scrollTo(0, 0); }} className="flex items-center gap-2 text-sm font-medium text-[#8B7355] hover:text-[#1B4332] mb-8">
           <ArrowLeft className="w-4 h-4" /> All articles
         </button>
-        <article className="bg-white border border-[#E5E0D8] rounded-3xl p-7 md:p-10 shadow-sm">
-          <p className="flex items-center gap-1.5 text-xs text-[#8B7355] mb-3"><Calendar className="w-3.5 h-3.5" /> {fmtDate(open.created_at)}</p>
-          <h1 className="font-serif text-3xl text-[#1B4332] mb-6 leading-snug">{open.title}</h1>
-          <div className="text-[15px] text-[#2D2926] leading-[1.9] whitespace-pre-wrap font-serif">{open.content}</div>
+        <article className="bg-white border border-[#E5E0D8] rounded-3xl overflow-hidden shadow-sm">
+          {open.image_url && (
+            <img src={open.image_url} alt="" className="w-full h-56 md:h-72 object-cover" />
+          )}
+          <div className="p-7 md:p-10">
+            <p className="flex items-center gap-1.5 text-xs text-[#8B7355] mb-3"><Calendar className="w-3.5 h-3.5" /> {fmtDate(open.created_at)}</p>
+            <h1 className="font-serif text-3xl text-[#1B4332] mb-6 leading-snug">{open.title}</h1>
+            <div className="text-[15px] text-[#2D2926] leading-[1.9] whitespace-pre-wrap font-serif">{open.content}</div>
+          </div>
         </article>
       </motion.div>
     );
@@ -58,12 +63,15 @@ export function Blog({ onBack }: { onBack: () => void }) {
             <button
               key={p.id}
               onClick={() => { setOpen(p); window.scrollTo(0, 0); }}
-              className="w-full text-left bg-white border border-[#E5E0D8] rounded-2xl p-6 shadow-sm hover:border-[#1B4332]/40 hover:shadow transition-all"
+              className="w-full text-left bg-white border border-[#E5E0D8] rounded-2xl overflow-hidden shadow-sm hover:border-[#1B4332]/40 hover:shadow transition-all"
             >
-              <p className="flex items-center gap-1.5 text-[11px] text-[#8B7355] mb-2"><Calendar className="w-3 h-3" /> {fmtDate(p.created_at)}</p>
-              <h2 className="font-serif text-xl text-[#1B4332] mb-1.5 leading-snug">{p.title}</h2>
-              {p.excerpt && <p className="text-sm text-[#5C574F] leading-relaxed line-clamp-2">{p.excerpt}</p>}
-              <p className="text-sm font-medium text-[#1B4332] mt-3">Read →</p>
+              {p.image_url && <img src={p.image_url} alt="" className="w-full h-40 object-cover" />}
+              <div className="p-6">
+                <p className="flex items-center gap-1.5 text-[11px] text-[#8B7355] mb-2"><Calendar className="w-3 h-3" /> {fmtDate(p.created_at)}</p>
+                <h2 className="font-serif text-xl text-[#1B4332] mb-1.5 leading-snug">{p.title}</h2>
+                {p.excerpt && <p className="text-sm text-[#5C574F] leading-relaxed line-clamp-2">{p.excerpt}</p>}
+                <p className="text-sm font-medium text-[#1B4332] mt-3">Read →</p>
+              </div>
             </button>
           ))}
         </div>

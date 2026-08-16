@@ -1262,9 +1262,19 @@ export interface BlogPost {
   title: string;
   excerpt: string | null;
   content: string;
+  image_url: string | null;
   published: boolean;
   created_at: string;
   updated_at: string;
+}
+
+/** Admin: upload a blog cover image to the public `blog` bucket; returns URL. */
+export async function uploadBlogImage(file: File): Promise<string> {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `covers/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from('blog').upload(path, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+  if (error) throw new Error(error.message || 'Could not upload image.');
+  return supabase.storage.from('blog').getPublicUrl(path).data.publicUrl;
 }
 
 export async function listPublishedPosts(): Promise<BlogPost[]> {
@@ -1282,8 +1292,8 @@ export async function adminListPosts(): Promise<BlogPost[]> {
   return ((data as BlogPost[]) ?? []);
 }
 
-export async function adminSavePost(post: { id?: string; title: string; excerpt?: string; content: string; published: boolean }): Promise<void> {
-  const row: any = { title: post.title.trim(), excerpt: post.excerpt?.trim() || null, content: post.content, published: post.published };
+export async function adminSavePost(post: { id?: string; title: string; excerpt?: string; content: string; published: boolean; image_url?: string | null }): Promise<void> {
+  const row: any = { title: post.title.trim(), excerpt: post.excerpt?.trim() || null, content: post.content, published: post.published, image_url: post.image_url ?? null };
   if (post.id) {
     const { error } = await supabase.from('posts').update(row).eq('id', post.id);
     if (error) throw error;
