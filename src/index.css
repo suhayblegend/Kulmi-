@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+/* Premium shimmer for loading skeletons — a soft light sweep across the
+   placeholder instead of a flat opacity pulse. */
+@keyframes kulmi-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.kulmi-skeleton {
+  background-color: #EFEAE1;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 30%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: kulmi-shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kulmi-skeleton { animation: none; }
+}
