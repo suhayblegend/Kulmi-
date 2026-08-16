@@ -33,6 +33,7 @@ import { Faq } from './components/FaqList';
 import { supabase } from './lib/supabase';
 import { getMyProfile, touchLastActive, type Profile as DbProfile } from './lib/db';
 import { cacheClear } from './lib/cache';
+import { prefetchAppData } from './lib/prefetch';
 
 export type AppState =
   | 'landing'
@@ -215,6 +216,8 @@ function MemberApp() {
           setUser(su);
           setAppState(routeFor(profile));
           touchLastActive(); // stamp activity for admin analytics (best-effort)
+          // Warm Discover/Chats/Activity in the background so they open instantly.
+          if (profile.verification_status === 'verified') prefetchAppData();
           return;
         }
         // profile === null:
