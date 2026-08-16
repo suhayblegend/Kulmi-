@@ -1,4 +1,4 @@
-// Kulmi — email blast + unsubscribe + account removal + verification actions.
+// Kulmi &mdash; email blast + unsubscribe + account removal + verification actions.
 // Deployed under slug "smart-service".
 // Secrets: RESEND_API_KEY (required for email), BROADCAST_FROM (optional).
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are injected automatically.
@@ -29,7 +29,7 @@ async function sha256Hex(value: string): Promise<string> {
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // Branded header prepended to every email. Pure inline CSS (no external image),
-// so it always renders — Gmail/Outlook block remote images by default.
+// so it always renders &mdash; Gmail/Outlook block remote images by default.
 const LOGO_BLOCK = `
 <div style="text-align:center;padding:12px 0 18px">
   <img src="https://kulmi.uk/kulmi-logo.png" width="52" height="52" alt="Kulmi"
@@ -79,7 +79,7 @@ async function removeUserStorage(admin: ReturnType<typeof createClient>, uid: st
   }
 }
 
-// Full account removal: storage → PII in broadcast_sends → profile row → auth user.
+// Full account removal: storage &rarr; PII in broadcast_sends &rarr; profile row &rarr; auth user.
 async function destroyAccount(admin: ReturnType<typeof createClient>, uid: string, email: string | null) {
   await removeUserStorage(admin, uid);
   if (email) { try { await admin.from("broadcast_sends").delete().eq("email", email); } catch { /* ok */ } }
@@ -141,9 +141,9 @@ serve(async (req) => {
           const { data: p } = await admin.from("profiles").select("email, first_name").eq("id", uid).single();
           const to = p?.email || obj.customer_details?.email;
           if (to) {
-            await sendEmail(to, "Welcome to Kulmi+ 🌟",
+            await sendEmail(to, "Welcome to Kulmi+",
               `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
-                <h2 style="color:#1B4332;font-family:Georgia,serif">Welcome to Kulmi+ 🌟</h2>
+                <h2 style="color:#1B4332;font-family:Georgia,serif">Welcome to Kulmi+ &#127775;</h2>
                 <p>Assalamu alaikum${p?.first_name ? " " + esc(p.first_name) : ""},</p>
                 <p>Jazakallahu khairan for supporting Kulmi and becoming a Kulmi+ member. Your membership is now active. You can:</p>
                 <ul style="line-height:1.9;color:#5C574F">
@@ -153,7 +153,7 @@ serve(async (req) => {
                 </ul>
                 <p>May Allah make Kulmi a means of a blessed marriage for you, insha'Allah.</p>
                 <p><a href="https://kulmi.uk/discover" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Open Kulmi</a></p>
-                <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage or cancel your membership anytime in Kulmi → Settings. Kulmi — kulmi.uk</p>
+                <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage or cancel your membership anytime in Kulmi &rarr; Settings. Kulmi &mdash; kulmi.uk</p>
               </div>`);
           }
         }
@@ -162,7 +162,7 @@ serve(async (req) => {
         const { data: prof } = await admin.from("profiles").select("id").eq("stripe_customer_id", obj.customer).maybeSingle();
         if (prof?.id) await grantPremium(admin, prof.id, daysFor(obj.amount_paid ?? 0));
       }
-      // Cancellations need no handling — premium_until simply lapses.
+      // Cancellations need no handling &mdash; premium_until simply lapses.
     } catch { /* never bounce Stripe retries for our own errors */ }
     return json({ received: true });
   }
@@ -195,7 +195,7 @@ serve(async (req) => {
         }
       }
     } catch { reason = "invalid"; }
-    // Redirect to a static branded page (reliable — no Content-Type quirks).
+    // Redirect to a static branded page (reliable &mdash; no Content-Type quirks).
     return Response.redirect(
       `https://kulmi.uk/wali-confirmed.html?ok=${ok ? 1 : 0}&reason=${reason}&name=${encodeURIComponent(wardName)}`, 302);
   }
@@ -224,21 +224,21 @@ serve(async (req) => {
       const to = userData.user.email;
       if (!to) return json({ sent: false });
       const name = (body.firstName || "").toString().trim();
-      const sent = await sendEmail(to, "Welcome to Kulmi 💚",
+      const sent = await sendEmail(to, "Welcome to Kulmi",
         `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
-          <h2 style="color:#1B4332;font-family:Georgia,serif">Welcome to Kulmi 💚</h2>
+          <h2 style="color:#1B4332;font-family:Georgia,serif">Welcome to Kulmi &#128154;</h2>
           <p>Assalamu alaikum${name ? " " + esc(name) : ""},</p>
-          <p>Welcome to <b>Kulmi</b> — a serious, halal path to marriage, built for our community. We're honoured you've joined.</p>
+          <p>Welcome to <b>Kulmi</b> &mdash; a serious, halal path to marriage, built for our community. We're honoured you've joined.</p>
           <p>A few things that make Kulmi different:</p>
           <ul style="line-height:1.9;color:#5C574F">
-            <li>Every member is verified by a live selfie — real people only</li>
+            <li>Every member is verified by a live selfie &mdash; real people only</li>
             <li>You meet one thoughtful introduction at a time, no swiping</li>
             <li>Your photos stay private until you both match</li>
             <li>Your wali can be involved, with full transparency</li>
           </ul>
           <p>May Allah bless your search and grant you a righteous spouse, insha'Allah.</p>
           <p><a href="https://kulmi.uk/discover" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Start on Kulmi</a></p>
-          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi &mdash; kulmi.uk</p>
         </div>`);
       return json({ sent });
     }
@@ -290,7 +290,7 @@ serve(async (req) => {
       if (!premium) return json({ error: "Wali oversight is a Kulmi+ feature. Please upgrade to invite your wali." }, 403);
       const waliEmail = (meRow?.wali_email || "").trim().toLowerCase();
       if (!waliEmail) return json({ error: "No wali email saved on your profile." }, 400);
-      // The confirmation link expires — change WALI_LINK_TTL_MIN to adjust.
+      // The confirmation link expires &mdash; change WALI_LINK_TTL_MIN to adjust.
       const WALI_LINK_TTL_MIN = 60 * 24 * 3; // 3 days
       const exp = Date.now() + WALI_LINK_TTL_MIN * 60 * 1000;
       const token = await hmacHex(`wali|${caller}|${waliEmail}|${exp}`);
@@ -301,12 +301,12 @@ serve(async (req) => {
         `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
           <h2 style="color:#1B4332;font-family:Georgia,serif">Assalamu alaikum</h2>
           <p><b>${esc(name)}</b> has named you as their wali (guardian) on <b>Kulmi</b>, a serious Somali marriage platform.</p>
-          <p>As their wali you'll be able to oversee their introductions — seeing who they're speaking with, with full transparency.</p>
+          <p>As their wali you'll be able to oversee their introductions &mdash; seeing who they're speaking with, with full transparency.</p>
           <p>If you accept this responsibility, please confirm:</p>
-          <p><a href="${link}" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Confirm — I am their wali</a></p>
+          <p><a href="${link}" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Confirm &mdash; I am their wali</a></p>
           <p style="font-size:13px;color:#8B7355">This link expires in <b>3 days</b>. If it expires, ${esc(name)} can re-send it from their Kulmi settings.</p>
-          <p style="font-size:13px;color:#8B7355">If you don't recognise this person, you can safely ignore this email — nothing will be shared with you.</p>
-          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+          <p style="font-size:13px;color:#8B7355">If you don't recognise this person, you can safely ignore this email &mdash; nothing will be shared with you.</p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi &mdash; kulmi.uk</p>
         </div>`);
       return json({ sent });
     }
@@ -331,7 +331,7 @@ serve(async (req) => {
             <p>Your Kulmi account has been removed by our moderation team.</p>
             ${reason ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
             <p>If you believe this was a mistake, reply to this email or contact us at support@kulmi.uk.</p>
-            <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+            <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi &mdash; kulmi.uk</p>
           </div>`);
       }
       const delErr = await destroyAccount(admin, body.userId, email);
@@ -339,7 +339,7 @@ serve(async (req) => {
       return json({ removed: true, emailed: !!email, banned: !!body.ban });
     }
 
-    // ---- Approve/reject a verification (service-role — never blocked by RLS) ----
+    // ---- Approve/reject a verification (service-role &mdash; never blocked by RLS) ----
     if (body.action === "review-verification") {
       const approve = !!body.approve;
       const { error: e2 } = await admin.from("profiles").update({
@@ -364,7 +364,7 @@ serve(async (req) => {
           ${reason ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
           <p>Please sign in and submit a new, clear <b>live selfie</b> that matches your profile photo to try again.</p>
           <p><a href="https://kulmi.uk" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 22px;border-radius:12px;font-weight:500">Open Kulmi</a></p>
-          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi &mdash; kulmi.uk</p>
         </div>`);
       return json({ sent });
     }
@@ -381,7 +381,7 @@ serve(async (req) => {
           <p>Our moderation team has issued a warning on your Kulmi account.</p>
           ${reason ? `<p style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px 16px"><b>Reason:</b> ${esc(reason)}</p>` : ""}
           <p>Kulmi is a serious marriage platform built on Islamic values and respect. If this behaviour continues, your account will be <b>permanently removed and banned</b>.</p>
-          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi &mdash; kulmi.uk</p>
         </div>`);
       return json({ sent });
     }
