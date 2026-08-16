@@ -24,6 +24,7 @@ import { ResetPassword } from './components/ResetPassword';
 import { StaffArea } from './components/StaffArea';
 import { NotificationBell } from './components/NotificationBell';
 import { Contact } from './components/Contact';
+import { Footer } from './components/Footer';
 import { Safety } from './components/Safety';
 import { Blog } from './components/Blog';
 import { Pricing } from './components/Pricing';
@@ -579,6 +580,12 @@ function MemberApp() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Footer on public content pages (not the login screen) so navigation is
+          always available. */}
+      {(['landing', 'terms', 'privacy', 'contact', 'safety', 'blog', 'pricing', 'faq', 'notfound'] as AppState[]).includes(appState) && (
+        <Footer />
+      )}
 
       {/* Mobile Navigation */}
       {!PUBLIC_STATES.includes(appState) && (

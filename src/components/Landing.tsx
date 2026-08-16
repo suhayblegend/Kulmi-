@@ -215,58 +215,6 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
         </button>
       </section>
 
-      {/* Footer */}
-      <footer className="w-full bg-[#1B4332] text-white">
-        <div className="max-w-5xl mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-10">
-          <div className="col-span-2 md:col-span-1">
-            <p className="font-serif text-2xl font-bold uppercase tracking-tight mb-3">Kulmi</p>
-            <p className="text-sm text-white/60 leading-relaxed">
-              A serious, verified, wali-friendly marriage platform for the Somali community. Deen iyo dhaqan.
-            </p>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-4">Platform</p>
-            <ul className="space-y-2.5 text-sm">
-              <li><FooterLink to="/pricing">Pricing</FooterLink></li>
-              <li><FooterLink to="/safety">Trust &amp; Safety</FooterLink></li>
-              <li><FooterLink to="/blog">The Journal</FooterLink></li>
-              <li><FooterLink to="/faq">FAQ</FooterLink></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-4">Company</p>
-            <ul className="space-y-2.5 text-sm">
-              {onContact && <li><button onClick={onContact} className="text-white/75 hover:text-white transition-colors">Contact us</button></li>}
-              <li><FooterLink to="/pricing">Support us ☕</FooterLink></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-4">Legal</p>
-            <ul className="space-y-2.5 text-sm">
-              <li><button onClick={onTerms} className="text-white/75 hover:text-white transition-colors">Terms of Service</button></li>
-              <li><button onClick={onPrivacy} className="text-white/75 hover:text-white transition-colors">Privacy Policy</button></li>
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-white/10">
-          <div className="max-w-5xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/40">
-            <p>© {new Date().getFullYear()} Kulmi — kulmi.uk</p>
-            <p className="font-serif italic text-white/50">"And We created you in pairs" — Qur'an 78:8</p>
-          </div>
-        </div>
-      </footer>
     </div>
-  );
-}
-
-// Footer navigation via the SPA's popstate router.
-function FooterLink({ to, children }: { to: string; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={() => { window.history.pushState({}, '', to); window.dispatchEvent(new PopStateEvent('popstate')); }}
-      className="text-white/75 hover:text-white transition-colors"
-    >
-      {children}
-    </button>
   );
 }
