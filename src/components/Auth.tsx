@@ -29,6 +29,7 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [awaitingConfirm, setAwaitingConfirm] = useState<string | null>(null); // email we just signed up
+  const [justCreated, setJustCreated] = useState(false); // auto-confirmed → show a welcome step
   const [resent, setResent] = useState(false);
 
   const handleResend = async () => {
@@ -112,8 +113,9 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
         if (error) throw error;
 
         if (data.session) {
-          // Email confirmation is disabled in Supabase → the user is signed in now.
-          onSuccess();
+          // Email confirmation is disabled in Supabase → the user is signed in
+          // now. Show a welcome step so they know what to do next.
+          setJustCreated(true);
         } else {
           // Confirmation required → show a clear, dedicated "check your inbox" screen.
           setAwaitingConfirm(email);
@@ -137,6 +139,46 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
       setIsLoading(false);
     }
   };
+
+  if (justCreated) {
+    return (
+      <div className="w-full max-w-md mx-auto py-12">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl p-8 border border-[#E5E0D8] shadow-sm text-center">
+          <div className="w-16 h-16 bg-[#E8F3ED] rounded-2xl flex items-center justify-center mx-auto mb-5 text-[#1B4332]">
+            <Check className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-serif text-[#1B4332] italic mb-2">Account created 🎉</h2>
+          <p className="text-[#5C574F] text-sm leading-relaxed">
+            Assalamu alaikum{firstName ? ' ' + firstName : ''}, and welcome to <span className="font-medium text-[#1B4332]">Kulmi</span>. Here's what happens next:
+          </p>
+
+          <div className="mt-5 space-y-3 text-left">
+            {[
+              { n: '1', t: 'Complete your profile', d: 'Tell us about yourself so we can find thoughtful introductions.' },
+              { n: '2', t: 'Verify with a quick selfie', d: 'This keeps Kulmi real — only verified members can be seen or send invitations.' },
+              { n: '3', t: 'Start discovering', d: 'Meet one serious introduction at a time, insha’Allah.' },
+            ].map((s) => (
+              <div key={s.n} className="flex items-start gap-3 bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-3">
+                <div className="w-6 h-6 rounded-full bg-[#1B4332] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{s.n}</div>
+                <div>
+                  <p className="text-sm font-medium text-[#1B4332] leading-tight">{s.t}</p>
+                  <p className="text-[12px] text-[#8B7355] mt-0.5 leading-snug">{s.d}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={onSuccess}
+            className="w-full mt-6 bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <span>Set up my profile</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (awaitingConfirm) {
     return (
