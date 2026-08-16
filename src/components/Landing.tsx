@@ -148,7 +148,7 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-serif text-[#1B4332] mb-4 italic">Not another dating app</h2>
-            <p className="text-[#8B7355] max-w-xl mx-auto">Built for one purpose — a serious, halal path to marriage.</p>
+            <p className="text-[#8B7355] max-w-xl mx-auto">Kulmi is Somali matchmaking done the halal way — the serious, verified alternative to Somali dating apps, built for one purpose: marriage.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
