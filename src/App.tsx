@@ -140,6 +140,7 @@ function MemberApp() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [activityCount, setActivityCount] = useState(0);
+  const [signupWelcome, setSignupWelcome] = useState<string | null>(null); // first name of a just-created account
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>(
     pathWantsSignup(typeof window !== 'undefined' ? window.location.pathname : '/') ? 'signup' : 'signin'
   );
@@ -362,6 +363,13 @@ function MemberApp() {
     );
   }
 
+  // ---- In-app confirmation after signup (shows before onboarding so a freshly
+  //      created account always gets an acknowledgment, even when the app
+  //      auto-signs them in and routes straight to onboarding). ----
+  if (signupWelcome !== null) {
+    return <SignupWelcome firstName={signupWelcome} onContinue={() => setSignupWelcome(null)} />;
+  }
+
   // ---- Full-screen states (no app chrome) ----
   if (appState === 'onboarding') {
     return (
@@ -477,7 +485,7 @@ function MemberApp() {
 
           {appState === 'auth' && (
             <motion.div key={`auth-${authMode}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
-              <Auth initialMode={authMode} onModeChange={setAuthMode} onSuccess={() => { /* routing handled by the auth listener (SIGNED_IN) */ }} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
+              <Auth initialMode={authMode} onModeChange={setAuthMode} onSuccess={() => { /* routing handled by the auth listener (SIGNED_IN) */ }} onSignedUp={(name) => setSignupWelcome(name || '')} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
             </motion.div>
           )}
 
@@ -638,6 +646,53 @@ function NotFound({ onHome, loggedIn }: { onHome: () => void; loggedIn: boolean 
       <button onClick={onHome} className="bg-[#1B4332] text-white hover:bg-[#143326] px-8 py-3 rounded-xl font-medium tracking-wide transition-colors">
         {loggedIn ? 'Back to Discover' : 'Back to home'}
       </button>
+    </div>
+  );
+}
+
+// Shown once, right after a new account is created, so the member always gets a
+// clear in-app confirmation and knows what to do next.
+function SignupWelcome({ firstName, onContinue }: { firstName: string; onContinue: () => void }) {
+  const steps = [
+    { n: '1', t: 'Complete your profile', d: 'Tell us about yourself so we can find thoughtful introductions.' },
+    { n: '2', t: 'Verify with a quick selfie', d: 'This keeps Kulmi real — only verified members can be seen or send invitations.' },
+    { n: '3', t: 'Start discovering', d: 'Meet one serious introduction at a time, insha’Allah.' },
+  ];
+  return (
+    <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center px-4 py-10">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md bg-white rounded-3xl p-8 border border-[#E5E0D8] shadow-sm text-center"
+      >
+        <div className="w-16 h-16 bg-[#E8F3ED] rounded-2xl flex items-center justify-center mx-auto mb-5">
+          <span className="text-3xl">🎉</span>
+        </div>
+        <h2 className="text-2xl font-serif text-[#1B4332] italic mb-2">Account created</h2>
+        <p className="text-[#5C574F] text-sm leading-relaxed">
+          Assalamu alaikum{firstName ? ' ' + firstName : ''}, and welcome to{' '}
+          <span className="font-medium text-[#1B4332]">Kulmi</span>. Here's what happens next:
+        </p>
+
+        <div className="mt-5 space-y-3 text-left">
+          {steps.map((s) => (
+            <div key={s.n} className="flex items-start gap-3 bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-3">
+              <div className="w-6 h-6 rounded-full bg-[#1B4332] text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{s.n}</div>
+              <div>
+                <p className="text-sm font-medium text-[#1B4332] leading-tight">{s.t}</p>
+                <p className="text-[12px] text-[#8B7355] mt-0.5 leading-snug">{s.d}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={onContinue}
+          className="w-full mt-6 bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium tracking-wide transition-colors"
+        >
+          Set up my profile
+        </button>
+      </motion.div>
     </div>
   );
 }

@@ -5,13 +5,14 @@ import { supabase } from '../lib/supabase';
 
 interface AuthProps {
   onSuccess: () => void;
+  onSignedUp?: (firstName: string) => void; // fresh account created + auto-signed-in
   onTerms: () => void;
   onPrivacy: () => void;
   initialMode?: 'signin' | 'signup';
   onModeChange?: (m: 'signin' | 'signup') => void;
 }
 
-export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', onModeChange }: AuthProps) {
+export function Auth({ onSuccess, onSignedUp, onTerms, onPrivacy, initialMode = 'signin', onModeChange }: AuthProps) {
   const [mode, setModeState] = useState<'signin' | 'signup'>(initialMode);
   const setMode = (m: 'signin' | 'signup') => { setModeState(m); onModeChange?.(m); };
   const [email, setEmail] = useState('');
@@ -114,8 +115,10 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
 
         if (data.session) {
           // Email confirmation is disabled in Supabase → the user is signed in
-          // now. Show a welcome step so they know what to do next.
-          setJustCreated(true);
+          // now. Hand off to App, which shows the welcome step on top of routing
+          // (this component unmounts as soon as SIGNED_IN fires).
+          if (onSignedUp) onSignedUp(firstName.trim());
+          else { setJustCreated(true); onSuccess(); }
         } else {
           // Confirmation required → show a clear, dedicated "check your inbox" screen.
           setAwaitingConfirm(email);
