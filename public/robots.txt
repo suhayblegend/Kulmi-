@@ -1,17 +1,23 @@
 User-agent: *
 Allow: /$
+Allow: /pricing
+Allow: /faq
+Allow: /safety
+Allow: /blog
+Allow: /contact
 Allow: /terms
 Allow: /privacy
 
 # Private app areas — keep out of search results
 Disallow: /discover
+Disallow: /activity
 Disallow: /chats
+Disallow: /chat
 Disallow: /profile
 Disallow: /progress
 Disallow: /settings
-Disallow: /admin
 Disallow: /wali
 Disallow: /auth
+Disallow: /login
 
-# Replace with your real domain after deploying
 Sitemap: https://kulmi.uk/sitemap.xml

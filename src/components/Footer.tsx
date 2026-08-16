@@ -19,7 +19,8 @@ export function Footer() {
     <footer className="w-full bg-[#1B4332] text-white mt-16">
       <div className="max-w-5xl mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-10">
         <div className="col-span-2 md:col-span-1">
-          <button onClick={() => go('/')} className="font-serif text-2xl font-bold uppercase tracking-tight mb-3 hover:opacity-80 transition-opacity">Kulmi</button>
+          <button onClick={() => go('/')} className="font-serif text-2xl font-bold uppercase tracking-tight mb-1 hover:opacity-80 transition-opacity">Kulmi</button>
+          <p className="font-serif italic text-sm text-white/80 mb-3">Isla Kulma, Isla Noolada</p>
           <p className="text-sm text-white/60 leading-relaxed">
             A serious, verified, wali-friendly marriage platform for the Somali community. Deen iyo dhaqan.
           </p>

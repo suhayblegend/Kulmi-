@@ -55,8 +55,18 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           No Swiping.<br/>
           <span className="italic text-[#8B7355]">Meaningful Introductions.</span>
         </motion.h1>
-        
-        <motion.p 
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="font-serif italic text-lg md:text-xl text-[#1B4332] mb-6"
+        >
+          Isla Kulma, Isla Noolada
+          <span className="block text-sm not-italic text-[#8B7355] mt-1">Come together, live together.</span>
+        </motion.p>
+
+        <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
