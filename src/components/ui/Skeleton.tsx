@@ -2,8 +2,8 @@ import React from 'react';
 
 // A single shimmering placeholder block. Uses a calm pulse (not a spinner) so
 // page loads feel like the content is arriving, not like the app is stuck.
-export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-[#EFEAE1] rounded-lg ${className}`} />;
+export function Skeleton({ className = '', ...rest }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={`animate-pulse bg-[#EFEAE1] rounded-lg ${className}`} {...rest} />;
 }
 
 // Skeleton for a single Discover profile card.
