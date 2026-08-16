@@ -91,6 +91,10 @@ const IS_RECOVERY = typeof window !== 'undefined' && /type=recovery/.test(window
 // the user is (almost certainly) logged in — keep the splash up until routing
 // finishes instead of flashing the logged-out homepage while the (sometimes
 // slow / cold-starting) backend restores the session.
+// Set once a member has a real profile; lets refresh-restore distinguish an
+// existing member (transient read miss → retry) from a brand-new signup.
+const HAS_PROFILE_KEY = 'kulmi_has_profile';
+
 const HAS_STORED_SESSION = (() => {
   try {
     return Object.keys(window.localStorage).some((k) => k.startsWith('sb-') && k.includes('auth-token'));
@@ -170,33 +174,52 @@ function MemberApp() {
   const loadProfileAndRoute = async (sessionUser?: any) => {
     routedRef.current = true;
     const su = sessionUser ?? (await supabase.auth.getSession()).data.session?.user ?? null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    // We remember (in localStorage) once someone has a real profile. So if the
+    // profile read comes back empty for a KNOWN member, we treat it as a
+    // transient miss (expired-token window / RLS timing) and retry — we never
+    // dump an existing member back into onboarding.
+    const knownMember = (() => { try { return localStorage.getItem(HAS_PROFILE_KEY) === '1'; } catch { return false; } })();
+    const maxAttempts = knownMember ? 8 : 3;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const profile = await getMyProfile(true); // fresh — reflects a just-finished onboarding/verify
-        setMyProfile(profile);
         const staffRole = profile?.role === 'admin' ? 'admin' : profile?.role === 'wali' ? 'wali' : null;
         if (staffRole) {
-          // Staff sign-in should NOT log them into the consumer app. Show the
-          // public landing; a small bar offers their dashboard or sign-out.
+          setMyProfile(profile);
           staffRef.current = true;
           setStaffSession(staffRole);
           setUser(null);
           setAppState('landing');
           return;
         }
-        staffRef.current = false;
-        setStaffSession(null);
-        setUser(su);
-        setAppState(routeFor(profile));
-        return;
+        if (profile) {
+          // Real profile loaded → route normally, and remember they're a member.
+          if (profile.profile_picture_url) { try { localStorage.setItem(HAS_PROFILE_KEY, '1'); } catch { /* ignore */ } }
+          setMyProfile(profile);
+          staffRef.current = false;
+          setStaffSession(null);
+          setUser(su);
+          setAppState(routeFor(profile));
+          return;
+        }
+        // profile === null:
+        if (!knownMember && attempt >= 1) {
+          // No stored membership + persistent null → genuinely a new signup.
+          setMyProfile(null);
+          setUser(su);
+          setAppState('onboarding');
+          return;
+        }
+        // Known member (or first try) → transient miss. Refresh the session
+        // once mid-way, then keep retrying.
+        if (attempt === 3) { try { await supabase.auth.refreshSession(); } catch { /* ignore */ } }
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       } catch {
-        // transient error (e.g. network) — back off and retry before giving up
         await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       }
     }
-    // Couldn't load the profile after retries. Don't leave a signed-in user
-    // stranded on the landing page — release the guard so the next auth event
-    // (token refresh, focus) re-attempts routing.
+    // Exhausted. Never strand a known member on onboarding/landing — release the
+    // guard so the next auth event (token refresh, focus) re-attempts routing.
     routedRef.current = false;
   };
 
@@ -237,6 +260,7 @@ function MemberApp() {
         setAppState('landing');
         routedRef.current = false;
         initialPathRef.current = '/';
+        try { localStorage.removeItem(HAS_PROFILE_KEY); } catch { /* ignore */ }
         setInitializing(false); // in case we were still holding the splash
         return;
       }

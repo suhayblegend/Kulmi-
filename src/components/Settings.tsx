@@ -196,18 +196,18 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                     {profile.premium_until
                       ? `${profile.founding_member && profile.plan !== 'premium' ? 'Your founding gift is active' : 'Active'} until ${new Date(profile.premium_until).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`
                       : 'Active.'}
-                    {' '}You have who-viewed-you, 5 open introductions & priority verification.
+                    {' '}You have Wali oversight, who-viewed-you, 5 open introductions & priority verification.
                   </p>
                 </>
               ) : FOUNDING_ACTIVE ? (
                 <>
                   <h3 className="font-serif text-xl mb-1">🌟 Claim your Founding Membership</h3>
-                  <p className="text-sm text-white/75">Get <b>Kulmi+ free until 30 September</b> — who viewed you, 5 introductions & priority verification. No card needed.</p>
+                  <p className="text-sm text-white/75">Get <b>Kulmi+ free until 30 September</b> — Wali oversight, who viewed you, 5 introductions & priority verification. No card needed.</p>
                 </>
               ) : (
                 <>
                   <h3 className="font-serif text-xl mb-1">Upgrade to Kulmi+</h3>
-                  <p className="text-sm text-white/75">See who viewed your profile · 5 open introductions · priority verification.</p>
+                  <p className="text-sm text-white/75">Invite your Wali · see who viewed you · 5 open introductions · priority verification.</p>
                 </>
               )}
             </div>
@@ -259,8 +259,16 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
             </div>
             <p className="text-xs text-[#8B7355] mb-4 leading-relaxed">
               Add a trusted family member or Wali by email. They can view your sessions and conversations (read-only) to support you.
+              <span className="ml-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#1B4332] bg-[#E8F3ED] rounded-full px-2 py-0.5">✨ Kulmi+</span>
             </p>
-            {profile.wali_email ? (
+            {!isPremium(profile) ? (
+              <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-4 text-center">
+                <p className="text-sm text-[#5C574F] mb-3">Wali oversight is a Kulmi+ feature — {FOUNDING_ACTIVE ? 'claim your free founding membership above to enable it.' : 'upgrade to invite your wali.'}</p>
+                <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-sm font-bold text-[#1B4332] hover:underline">
+                  {FOUNDING_ACTIVE ? '🌟 See the founding offer above' : 'See Kulmi+ above'}
+                </button>
+              </div>
+            ) : profile.wali_email ? (
               <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm text-[#2D2926]">

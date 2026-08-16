@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Check, Sparkles, ArrowLeft } from 'lucide-react';
-import { FOUNDING_ACTIVE, FOUNDING_DEADLINE, PRICE_QUARTERLY, DONATE_URL } from '../lib/billing';
+import { FOUNDING_ACTIVE, FOUNDING_DEADLINE, DONATE_URL } from '../lib/billing';
 
 /** Live countdown to the founding deadline. */
 export function useCountdown(target: Date) {
@@ -25,12 +25,12 @@ const FREE_FEATURES = [
   'Compatibility sessions (8 questions)',
   'Unlimited chat with your matches',
   'Voice notes & voice answers',
-  'Wali (guardian) oversight',
   'Report, block & privacy controls',
 ];
 
 const PLUS_FEATURES = [
   'Everything in Free, plus:',
+  'Invite your Wali (guardian oversight)',
   'See who viewed your profile',
   '5 open introductions at a time',
   'Priority verification (reviewed first)',
@@ -38,6 +38,7 @@ const PLUS_FEATURES = [
 
 export function Pricing({ onJoin, onBack }: { onJoin: () => void; onBack: () => void }) {
   const { d, h, m, s, over } = useCountdown(FOUNDING_DEADLINE);
+  const [cycle, setCycle] = useState<'monthly' | 'quarterly'>('monthly');
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-4xl mx-auto py-8 px-2">
@@ -95,9 +96,22 @@ export function Pricing({ onJoin, onBack }: { onJoin: () => void; onBack: () => 
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1B4332] text-white text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-full flex items-center gap-1">
             <Sparkles className="w-3 h-3" /> Kulmi+
           </span>
-          <h2 className="font-serif text-2xl text-[#1B4332] mb-1 mt-2">Kulmi+</h2>
-          <p className="text-3xl font-serif text-[#1B4332] mb-1">£9.99<span className="text-base text-[#8B7355]">/month</span></p>
-          <p className="text-xs text-[#8B7355] mb-6">or {PRICE_QUARTERLY}</p>
+          <h2 className="font-serif text-2xl text-[#1B4332] mb-3 mt-2">Kulmi+</h2>
+
+          {/* Monthly / 3-month toggle */}
+          <div className="inline-flex items-center bg-[#F0EEE8] rounded-full p-1 mb-4">
+            <button onClick={() => setCycle('monthly')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${cycle === 'monthly' ? 'bg-[#1B4332] text-white' : 'text-[#5C574F]'}`}>Monthly</button>
+            <button onClick={() => setCycle('quarterly')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${cycle === 'quarterly' ? 'bg-[#1B4332] text-white' : 'text-[#5C574F]'}`}>3 months</button>
+          </div>
+
+          {cycle === 'monthly' ? (
+            <p className="text-3xl font-serif text-[#1B4332] mb-1">£9.99<span className="text-base text-[#8B7355]">/month</span></p>
+          ) : (
+            <p className="text-3xl font-serif text-[#1B4332] mb-1">£19.99<span className="text-base text-[#8B7355]">/3 months</span></p>
+          )}
+          <p className="text-xs text-[#8B7355] mb-6">
+            {cycle === 'monthly' ? 'Billed monthly · cancel anytime' : 'Just £6.66/month · save 33% 🎉'}
+          </p>
           <ul className="space-y-3">
             {PLUS_FEATURES.map((f, i) => (
               <li key={f} className={`flex items-start gap-2.5 text-sm ${i === 0 ? 'text-[#8B7355] italic' : 'text-[#2D2926]'}`}>

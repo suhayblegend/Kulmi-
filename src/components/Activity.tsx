@@ -285,7 +285,7 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
           <div className="w-full bg-gradient-to-br from-[#1B4332] to-[#143326] text-white rounded-2xl p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-1">✨ Kulmi+</p>
             <p className="font-serif text-lg mb-1">See who viewed your profile</p>
-            <p className="text-sm text-white/75 leading-relaxed">Plus 5 open introductions and priority verification. Upgrade any time from Settings.</p>
+            <p className="text-sm text-white/75 leading-relaxed">Plus invite your Wali, 5 open introductions and priority verification. Upgrade any time from Settings.</p>
           </div>
         )
       )}

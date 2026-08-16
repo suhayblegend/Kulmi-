@@ -248,7 +248,10 @@ serve(async (req) => {
     // ---- Member asks us to email their wali a confirmation link ----
     if (body.action === "wali-invite") {
       const { data: meRow } = await admin
-        .from("profiles").select("first_name, wali_email").eq("id", caller).single();
+        .from("profiles").select("first_name, wali_email, plan, premium_until").eq("id", caller).single();
+      // Wali oversight is a Kulmi+ feature.
+      const premium = meRow && (meRow.plan === "premium" || (meRow.premium_until && new Date(meRow.premium_until) > new Date()));
+      if (!premium) return json({ error: "Wali oversight is a Kulmi+ feature. Please upgrade to invite your wali." }, 403);
       const waliEmail = (meRow?.wali_email || "").trim().toLowerCase();
       if (!waliEmail) return json({ error: "No wali email saved on your profile." }, 400);
       const token = await hmacHex(`wali|${caller}|${waliEmail}`);
