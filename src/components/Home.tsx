@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Loader2, UserMinus, MapPin, Send, Inbox, SlidersHorizontal, BadgeCheck,
-  Heart, Sparkles, ChevronRight, Briefcase, Moon, Baby, Users,
+  Heart, Sparkles, ChevronRight, Briefcase, Moon, Baby, Users, X,
 } from 'lucide-react';
 import {
   discoverCandidates,
@@ -49,6 +49,36 @@ const DetailChip = ({ icon, label }: { icon: React.ReactNode; label: string }) =
   </span>
 );
 
+// A labelled row for the full-profile modal (renders only when there's a value).
+const Field = ({ label, value }: { label: string; value?: string | null }) =>
+  value ? (
+    <div className="flex justify-between gap-4 py-2 border-b border-[#F0EEE8] last:border-0">
+      <span className="text-xs text-[#8B7355] shrink-0">{label}</span>
+      <span className="text-sm text-[#2D2926] text-right">{value}</span>
+    </div>
+  ) : null;
+
+const ModalSection = ({ title, children }: { title: string; children: React.ReactNode }) => {
+  const has = React.Children.toArray(children).some(Boolean);
+  if (!has) return null;
+  return (
+    <div className="mb-5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-1.5">{title}</p>
+      <div>{children}</div>
+    </div>
+  );
+};
+
+const TagRow = ({ label, items }: { label: string; items?: string[] | null }) =>
+  items && items.length ? (
+    <div className="py-2 border-b border-[#F0EEE8] last:border-0">
+      <span className="text-xs text-[#8B7355] block mb-1.5">{label}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((t) => <span key={t} className="px-2.5 py-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">{t}</span>)}
+      </div>
+    </div>
+  ) : null;
+
 export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomeProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -61,6 +91,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   const [openThreads, setOpenThreads] = useState(0);
   const [premium, setPremium] = useState(false);
   const [pendingSent, setPendingSent] = useState(0);
+  const [viewProfile, setViewProfile] = useState<Profile | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
@@ -359,7 +390,14 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                   </div>
                 )}
 
-                <div className="flex gap-3 mt-8">
+                <button
+                  onClick={() => setViewProfile(current)}
+                  className="w-full mt-5 text-sm font-medium text-[#1B4332] border border-[#E5E0D8] rounded-2xl py-3 hover:bg-[#FDFBF7] transition-colors flex items-center justify-center gap-2"
+                >
+                  View full profile <ChevronRight className="w-4 h-4" />
+                </button>
+
+                <div className="flex gap-3 mt-3">
                   <button
                     disabled={busy}
                     onClick={handleSkip}
@@ -406,6 +444,92 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
           </div>
         </div>
       )}
+
+      {/* Full profile modal */}
+      <AnimatePresence>
+        {viewProfile && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#2D2926]/50 backdrop-blur-sm" onClick={() => setViewProfile(null)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              className="relative z-10 w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] max-h-[92vh] overflow-y-auto"
+            >
+              <button onClick={() => setViewProfile(null)} className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4 h-4" /></button>
+              <div className="relative h-72 bg-[#F0EEE8]">
+                <img src={avatarFor(viewProfile)} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5 text-white">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-serif drop-shadow-sm">{viewProfile.first_name}{viewProfile.age ? `, ${viewProfile.age}` : ''}</h2>
+                    {(viewProfile.verification_status === 'verified' || viewProfile.photo_verified) && (
+                      <span className="flex items-center gap-1 bg-white/90 text-[#1B4332] text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"><BadgeCheck className="w-3 h-3" /> Verified</span>
+                    )}
+                  </div>
+                  {(viewProfile.location || viewProfile.city) && (
+                    <p className="flex items-center gap-1.5 text-sm opacity-90 mt-0.5"><MapPin className="w-3.5 h-3.5" /> {viewProfile.location || [viewProfile.city, viewProfile.country].filter(Boolean).join(', ')}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6">
+                {viewProfile.bio && <p className="text-sm text-[#5C574F] leading-relaxed font-serif italic mb-5">"{viewProfile.bio}"</p>}
+
+                <ModalSection title="About">
+                  <Field label="Occupation" value={viewProfile.occupation} />
+                  <Field label="Education" value={viewProfile.education} />
+                  <Field label="Languages" value={viewProfile.languages} />
+                  <Field label="Height" value={viewProfile.height} />
+                  <Field label="Heritage" value={viewProfile.heritage} />
+                  <Field label="Marital status" value={viewProfile.marital_status} />
+                  <Field label="Has children" value={(viewProfile as any).has_children} />
+                </ModalSection>
+
+                <ModalSection title="Faith & values">
+                  <Field label="Prayer" value={viewProfile.prayer_level} />
+                  <Field label="Practice" value={(viewProfile as any).islamic_practice} />
+                  <Field label={viewProfile.gender === 'male' ? 'Beard' : 'Hijab'} value={(viewProfile as any).religious_dress} />
+                  <Field label="Faith statement" value={(viewProfile as any).faith_statement} />
+                </ModalSection>
+
+                <ModalSection title="Lifestyle">
+                  <Field label="Smoking" value={(viewProfile as any).smoking} />
+                  <Field label="Khat" value={(viewProfile as any).khat} />
+                  <Field label="Open to polygyny" value={(viewProfile as any).open_to_polygyny} />
+                </ModalSection>
+
+                <ModalSection title="Marriage intentions">
+                  <Field label="Looking for" value={viewProfile.marriage_intent} />
+                  <Field label="Timeline" value={viewProfile.timeline} />
+                  <Field label="Relocate" value={viewProfile.relocate} />
+                  <Field label="Children" value={viewProfile.children} />
+                </ModalSection>
+
+                <ModalSection title="Personality">
+                  <TagRow label="Traits" items={(viewProfile as any).personality_traits} />
+                  <TagRow label="Communication" items={(viewProfile as any).communication_style} />
+                  <TagRow label="Future goals" items={(viewProfile as any).future_goals} />
+                </ModalSection>
+
+                {viewProfile.intro_audio_url && (
+                  <div className="mb-5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1.5">🎤 Voice intro</p>
+                    <audio controls src={viewProfile.intro_audio_url} className="w-full" />
+                  </div>
+                )}
+
+                <p className="text-[11px] text-[#8B7355] mb-4">More photos unlock after you both match.</p>
+
+                <div className="flex gap-3">
+                  <button disabled={busy} onClick={() => { setViewProfile(null); handleSkip(); }} className="flex-1 px-6 py-3 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not now</button>
+                  <button disabled={busy} onClick={() => { setViewProfile(null); handleInvite(); }} className="flex-[1.4] px-6 py-3 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Heart className="w-4 h-4" /> Send invitation</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </Shell>
   );
 }
