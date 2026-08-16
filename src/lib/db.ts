@@ -556,6 +556,7 @@ export async function sendInvitation(receiverId: string): Promise<void> {
     .from('invitations')
     .insert([{ sender_id: uid, receiver_id: receiverId, status: 'pending' }]);
   if (error) throw error;
+  notifyInvitation(receiverId); // email the receiver (best-effort, capped)
 }
 
 export async function listIncomingInvitations(): Promise<InvitationWithProfile[]> {
@@ -1438,6 +1439,18 @@ export interface AdminStats {
   activeSessions: number;
   pendingReports: number;
   successes: number;
+}
+
+/** Email the receiver that they got an introduction (best-effort, capped server-side). */
+export async function notifyInvitation(receiverId: string): Promise<void> {
+  try { await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'notify-invitation', receiverId } }); }
+  catch { /* email is best-effort */ }
+}
+
+/** Email both members that they matched (best-effort, once per chat server-side). */
+export async function notifyMatch(chatId: string): Promise<void> {
+  try { await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'notify-match', chatId } }); }
+  catch { /* email is best-effort */ }
 }
 
 /** Stamp the current user's last-active time (best-effort, call on app load). */

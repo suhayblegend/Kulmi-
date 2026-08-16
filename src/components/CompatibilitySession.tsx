@@ -10,6 +10,7 @@ import {
   uploadSessionAnswerAudio,
   analyzeCompatibility,
   chatForSession,
+  notifyMatch,
   avatarFor,
   type SessionSummary,
   type CompatibilityAnalysis,
@@ -75,6 +76,7 @@ function SessionCard({ onExit, summary, children }: { onExit: () => void; summar
 }
 
 export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
+  const goMatched = (chatId: string) => { notifyMatch(chatId); onMatched(chatId); };
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [questions, setQuestions] = useState<string[]>(COMPATIBILITY_QUESTIONS);
@@ -125,7 +127,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
         if (!active) return;
         if (s?.status === 'completed') {
           const chatId = await chatForSession(sessionId);
-          if (chatId) return onMatched(chatId);
+          if (chatId) return goMatched(chatId);
         }
         // Start on the first question not yet answered (typed or recorded).
         const firstUnanswered = qs.findIndex((_, i) => !(a.mine[i] ?? '').trim() && !a.mineAudio[i]);
@@ -250,7 +252,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
     stopPoll();
     pollRef.current = setInterval(async () => {
       const chatId = await chatForSession(sessionId);
-      if (chatId) { stopPoll(); onMatched(chatId); return; }
+      if (chatId) { stopPoll(); goMatched(chatId); return; }
       const s = await getSession(sessionId);
       // Partner said no (status becomes 'ended') or session vanished — stop
       // the spinner and show the gentle "not the right fit" screen.
@@ -264,7 +266,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
       await submitSessionDecision(sessionId, decision);
       if (decision === 'no') { onExit(); return; }
       const chatId = await chatForSession(sessionId);
-      if (chatId) onMatched(chatId);
+      if (chatId) goMatched(chatId);
       else startPollingForMatch();
     } catch (e: any) {
       alert(e?.message || 'Could not save your decision. Please check your connection and try again.');

@@ -243,6 +243,52 @@ serve(async (req) => {
       return json({ sent });
     }
 
+    // ---- Re-engagement: email the receiver that they got an introduction ----
+    // (Identity stays private — "a verified member". Capped to ~1/day/person.)
+    if (body.action === "notify-invitation") {
+      const receiverId = body.receiverId;
+      const { data: inv } = await admin.from("profiles").select("id").eq("id", caller).maybeSingle(); // sanity
+      const { data: exists } = await admin.from("invitations").select("id").eq("sender_id", caller).eq("receiver_id", receiverId).maybeSingle();
+      if (!inv || !exists) return json({ sent: false });
+      const { data: r } = await admin.from("profiles").select("email, first_name, email_unsubscribed, last_reengage_email_at").eq("id", receiverId).single();
+      if (!r?.email || r.email_unsubscribed) return json({ sent: false });
+      if (r.last_reengage_email_at && Date.now() - new Date(r.last_reengage_email_at).getTime() < 20 * 3600_000) return json({ sent: false, capped: true });
+      const sent = await sendEmail(r.email, "Someone would like to get to know you on Kulmi",
+        `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+          <h2 style="color:#1B4332;font-family:Georgia,serif">You have a new introduction</h2>
+          <p>Assalamu alaikum${r.first_name ? " " + esc(r.first_name) : ""},</p>
+          <p>A verified member has sent you an introduction on <b>Kulmi</b>. Open the app to view their profile and decide whether to begin a compatibility session, insha'Allah.</p>
+          <p><a href="https://kulmi.uk/activity" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">View your invitation</a></p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">You're receiving this because someone reached out to you on Kulmi. Manage emails in Settings. Kulmi &mdash; kulmi.uk</p>
+        </div>`);
+      await admin.from("profiles").update({ last_reengage_email_at: new Date().toISOString() }).eq("id", receiverId);
+      return json({ sent });
+    }
+
+    // ---- Re-engagement: email both members when they match (once per chat) ----
+    if (body.action === "notify-match") {
+      const { data: c } = await admin.from("chats").select("id, user1_id, user2_id, match_emailed").eq("id", body.chatId).maybeSingle();
+      if (!c) return json({ sent: false });
+      if (c.user1_id !== caller && c.user2_id !== caller) return json({ error: "Not a participant" }, 403);
+      if (c.match_emailed) return json({ sent: false, already: true });
+      await admin.from("chats").update({ match_emailed: true }).eq("id", c.id); // set first (dedup)
+      const { data: people } = await admin.from("profiles").select("id, email, first_name, email_unsubscribed").in("id", [c.user1_id, c.user2_id]);
+      for (const p of (people ?? [])) {
+        if (!p.email || p.email_unsubscribed) continue;
+        const other = (people ?? []).find((x: any) => x.id !== p.id);
+        await sendEmail(p.email, "It's a match on Kulmi",
+          `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+            <h2 style="color:#1B4332;font-family:Georgia,serif">Alhamdulillah &mdash; it's a match!</h2>
+            <p>Assalamu alaikum${p.first_name ? " " + esc(p.first_name) : ""},</p>
+            <p>You and <b>${esc(other?.first_name || "your match")}</b> have both chosen to continue. Your private chat is now open on Kulmi.</p>
+            <p>Begin with adab and good intention, and may Allah make it a means of khayr.</p>
+            <p><a href="https://kulmi.uk/chats" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Open your chat</a></p>
+            <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage emails in Settings. Kulmi &mdash; kulmi.uk</p>
+          </div>`);
+      }
+      return json({ sent: true });
+    }
+
     // ---- Claim the August founding offer (free Kulmi+ until 30 Sept) ----
     if (body.action === "claim-founding") {
       if (Date.now() >= Date.parse("2026-09-01T00:00:00Z")) {
