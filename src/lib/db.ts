@@ -304,11 +304,12 @@ export async function sha256Hex(data: Blob): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Reject obviously-unusable images (too small / undecodable → likely not a real photo). */
+/** Reject low-quality images — too small = blurry when shown larger. We require
+ *  a reasonably sharp, HD-ish photo (at least 500px on the short side). */
 export async function isAcceptablePhoto(file: Blob): Promise<boolean> {
   try {
     const bmp = await createImageBitmap(file);
-    const ok = bmp.width >= 200 && bmp.height >= 200;
+    const ok = bmp.width >= 500 && bmp.height >= 500;
     (bmp as any).close?.();
     return ok;
   } catch {

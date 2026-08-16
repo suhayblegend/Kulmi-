@@ -316,28 +316,27 @@ export function Profile() {
 
   // ---- Profile completeness (a strong profile earns better introductions) ----
   const completeness = (() => {
-    if (!profile) return { pct: 0, missing: [] as string[] };
-    const p: any = profile;
+    const p = profile; // ProfileForm (camelCase fields)
     const has = (v: any) => (Array.isArray(v) ? v.length > 0 : !!(v ?? '').toString().trim());
     const checks: [boolean, string][] = [
-      [has(p.profile_picture_url), 'profile photo'],
-      [(p.bio ?? '').trim().length >= 20, 'a thoughtful bio'],
+      [has(pictureUrl), 'profile photo'],
+      [(p.aboutMe ?? '').trim().length >= 20, 'a thoughtful bio'],
       [has(p.occupation), 'occupation'],
       [has(p.education), 'education'],
       [has(p.languages), 'languages'],
       [has(p.height), 'height'],
-      [has(p.prayer_level), 'prayer level'],
-      [has(p.islamic_practice), 'islamic practice'],
-      [has(p.faith_statement), 'faith statement'],
-      [has(p.religious_dress), p.gender === 'male' ? 'beard answer' : 'hijab answer'],
+      [has(p.prayerLevel), 'prayer level'],
+      [has(p.islamicPractice), 'islamic practice'],
+      [has(p.faithStatement), 'faith statement'],
+      [has(p.religiousDress), p.gender === 'male' ? 'beard answer' : 'hijab answer'],
       [has(p.smoking), 'smoking answer'],
-      [has(p.marriage_intent), 'marriage intention'],
+      [has(p.marriageIntent), 'marriage intention'],
       [has(p.timeline), 'timeline'],
       [has(p.children), 'children plans'],
-      [has(p.personality_traits), 'personality traits'],
-      [has(p.future_goals), 'future goals'],
+      [has(p.personalityTraits), 'personality traits'],
+      [has(p.futureGoals), 'future goals'],
       [gallery.length >= 1, 'an extra photo'],
-      [has(p.intro_audio_url), 'a voice intro'],
+      [has(introUrl), 'a voice intro'],
     ];
     const done = checks.filter(([ok]) => ok).length;
     return {

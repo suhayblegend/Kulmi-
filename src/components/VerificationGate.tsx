@@ -202,6 +202,10 @@ export function VerificationGate({ onVerified }: { onVerified: () => void }) {
         </div>
       ) : (
         <div className="space-y-3">
+          <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-3 text-xs text-[#5C574F] leading-relaxed text-left">
+            ✅ <b className="text-[#1B4332]">For a quick approval:</b> good lighting, face fully visible and centred, looking at the camera.
+            <b> No sunglasses, hats, masks or filters</b>, and make sure the photo is sharp — blurry selfies are rejected.
+          </div>
           <button
             onClick={() => setCapturing(true)}
             className="w-full bg-[#1B4332] hover:bg-[#143326] text-white py-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"

@@ -167,7 +167,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       // included. This way a dropped connection mid-signup never leaves a stuck,
       // photoless profile row — nothing is saved until everything is ready.
       const mainFile = (photos[highlight] ?? photos[0]).file;
-      if (!(await isAcceptablePhoto(mainFile))) throw new Error('Please use a clear, real photo of your face (at least 200×200).');
+      if (!(await isAcceptablePhoto(mainFile))) throw new Error('Please use a clear, high-quality photo of your face — at least 500×500px. Blurry or low-resolution photos are not accepted.');
       const mainHash = await sha256Hex(mainFile);
       const main = await uploadPhoto(mainFile);
       if (!main) throw new Error('Your main photo did not upload. Please check your connection and try again.');
@@ -248,6 +248,10 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
                   <span className="font-bold text-[#1B4332]">main photo</span> (the only one shown in Discover). The rest stay
                   private and are revealed <span className="font-bold text-[#1B4332]">only to a match</span>.
                 </p>
+                <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-3 text-xs text-[#5C574F] leading-relaxed">
+                  📸 <b className="text-[#1B4332]">Photo tips:</b> use clear, well-lit <b>HD</b> photos where your face is fully visible.
+                  No sunglasses, masks or heavy filters, and no blurry or low-resolution images — these will be rejected at verification.
+                </div>
                 <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleAddPhotos} />
                 <div className="grid grid-cols-3 gap-3">
                   {photos.map((p, i) => (
