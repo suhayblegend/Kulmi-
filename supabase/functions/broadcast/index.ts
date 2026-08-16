@@ -32,7 +32,8 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 // so it always renders — Gmail/Outlook block remote images by default.
 const LOGO_BLOCK = `
 <div style="text-align:center;padding:12px 0 18px">
-  <span style="display:inline-block;width:46px;height:46px;line-height:46px;border-radius:13px;background:#1B4332;color:#F0EEE8;font-family:Georgia,serif;font-size:24px;font-weight:bold;text-align:center;vertical-align:middle">K</span>
+  <img src="https://kulmi.uk/kulmi-logo.png" width="52" height="52" alt="Kulmi"
+       style="display:inline-block;width:52px;height:52px;border-radius:14px;border:0" />
   <div style="font-family:Georgia,serif;font-size:20px;font-weight:bold;letter-spacing:2px;color:#1B4332;margin-top:8px;text-transform:uppercase">Kulmi</div>
 </div>`;
 
