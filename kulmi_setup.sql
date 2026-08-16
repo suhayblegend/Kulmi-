@@ -1651,6 +1651,7 @@ grant select on public.public_profiles to authenticated;
 -- chat — either direction) stay readable even if they later hide from
 -- discovery, via this definer function. Admins can read any.
 -- -------------------------------------------------------------
+drop function if exists public.get_profile_cards(uuid[]);
 create or replace function public.get_profile_cards(ids uuid[])
 returns table (
   id uuid, first_name text, age int, gender text, location text, bio text, role text,
