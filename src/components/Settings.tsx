@@ -31,8 +31,10 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={on}
       onClick={() => onChange(!on)}
-      className={`w-11 h-6 rounded-full relative transition-colors ${on ? 'bg-[#1B4332]' : 'bg-[#E5E0D8]'}`}
+      className={`shrink-0 w-11 h-6 rounded-full relative transition-colors ${on ? 'bg-[#1B4332]' : 'bg-[#E5E0D8]'}`}
     >
       <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${on ? 'right-1' : 'left-1'}`} />
     </button>
@@ -305,7 +307,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
               <span>In-app alerts are on. The bell at the top shows you new introductions, matches and messages in real time.</span>
             </div>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div><p className="font-medium text-sm text-[#2D2926]">Product &amp; tips emails</p><p className="text-xs text-[#8B7355]">News, tips and announcements from Kulmi. Account emails (like password resets) always send.</p></div>
                 <Toggle on={profile.email_unsubscribed !== true} onChange={(v) => setToggle('email_unsubscribed', !v)} />
               </div>
@@ -320,7 +322,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                 <div><p className="font-medium text-sm text-[#2D2926]">Pause my profile</p><p className="text-xs text-[#8B7355]">Hide yourself from Discover — great while you're focused on a conversation. Your existing chats and sessions are unaffected, and you can un-pause any time.</p></div>
                 <Toggle on={profile.show_in_discovery === false} onChange={(v) => setToggle('show_in_discovery', !v)} />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div><p className="font-medium text-sm text-[#2D2926]">Read Receipts</p><p className="text-xs text-[#8B7355]">Let matches know when you've read their messages</p></div>
                 <Toggle on={profile.read_receipts !== false} onChange={(v) => setToggle('read_receipts', v)} />
               </div>

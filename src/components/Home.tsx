@@ -404,7 +404,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                 )}
 
                 <button
-                  onClick={() => setViewProfile(current)}
+                  onClick={() => { if (current?.id) recordProfileView(current.id); setViewProfile(current); }}
                   className="w-full mt-5 text-sm font-medium text-[#1B4332] border border-[#E5E0D8] rounded-2xl py-3 hover:bg-[#FDFBF7] transition-colors flex items-center justify-center gap-2"
                 >
                   View full profile <ChevronRight className="w-4 h-4" />
