@@ -36,6 +36,18 @@ const LOGO_BLOCK = `
   <div style="font-family:Georgia,serif;font-size:20px;font-weight:bold;letter-spacing:2px;color:#1B4332;margin-top:8px;text-transform:uppercase">Kulmi</div>
 </div>`;
 
+// Convert every non-ASCII char (emoji, em-dash, curly quotes…) to a numeric
+// HTML entity so it renders correctly in every email client regardless of how
+// the client decodes the charset. Iterates by code point (handles emoji).
+const entify = (s: string) => Array.from(s).map((ch) => {
+  const cp = ch.codePointAt(0)!;
+  return cp > 126 ? `&#${cp};` : ch;
+}).join("");
+
+// Strip non-ASCII from subject lines (entities don't render in subjects; UTF-8
+// there is hit-or-miss across clients).
+const cleanSubject = (s: string) => Array.from(s).filter((ch) => ch.codePointAt(0)! <= 126).join("").replace(/\s+/g, " ").trim();
+
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const RESEND = Deno.env.get("RESEND_API_KEY");
   if (!RESEND) return false;
@@ -43,7 +55,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html: LOGO_BLOCK + html }),
+    body: JSON.stringify({ from: FROM, to: [to], subject: cleanSubject(subject), html: entify(LOGO_BLOCK + html) }),
   });
   return res.ok;
 }
@@ -405,7 +417,7 @@ serve(async (req) => {
       const batch = await Promise.all(slice.map(async (p: { id: string; email: string }) => {
         const unsub = `${FN_URL}?u=${p.id}&t=${await hmacHex(p.id)}`;
         const footer = `<p style="font-size:12px;color:#8B7355;margin-top:20px">Don't want these emails? <a href="${unsub}" style="color:#8B7355">Unsubscribe</a>.</p>`;
-        return { from: FROM, to: [p.email], subject, html: LOGO_BLOCK + bodyHtml + footer, headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } };
+        return { from: FROM, to: [p.email], subject: cleanSubject(subject), html: entify(LOGO_BLOCK + bodyHtml + footer), headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } };
       }));
       const res = await fetch("https://api.resend.com/emails/batch", { method: "POST", headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" }, body: JSON.stringify(batch) });
       if (res.ok) {
