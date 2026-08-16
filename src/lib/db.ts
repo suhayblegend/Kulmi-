@@ -676,6 +676,9 @@ export async function getMyCompatQuestions(): Promise<string[]> {
 export async function setMyCompatQuestions(questions: string[]): Promise<void> {
   const cleaned = questions.map((q) => q.trim()).filter(Boolean);
   await updateMyProfile({ compat_questions: cleaned.length ? cleaned : null } as any);
+  // Immediately apply the new set to any of my not-yet-answered sessions
+  // (sessions I started), so a reordered/added question shows up right away.
+  try { await supabase.rpc('push_my_compat_questions'); } catch { /* best-effort */ }
 }
 
 /** Upload a recorded voice answer to the private bucket; returns its path. */
