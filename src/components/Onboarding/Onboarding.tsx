@@ -60,7 +60,7 @@ function ChipsField({ value, options, max, onToggle }: { value: string[]; option
 
 type Form = {
   first_name: string; age: string; gender: string; marital_status: string; country: string; city: string;
-  bio: string; occupation: string; education: string; languages: string; height: string; heritage: string;
+  bio: string; occupation: string; education: string; languages: string; height: string; heritage: string; qabiil: string;
   prayer_level: string; islamic_practice: string; faith_statement: string;
   religious_dress: string; smoking: string; khat: string; open_to_polygyny: string;
   marriage_intent: string; timeline: string; relocate: string; children: string; has_children: string;
@@ -69,7 +69,7 @@ type Form = {
 
 const EMPTY: Form = {
   first_name: '', age: '', gender: '', marital_status: '', country: '', city: '',
-  bio: '', occupation: '', education: '', languages: '', height: '', heritage: '',
+  bio: '', occupation: '', education: '', languages: '', height: '', heritage: '', qabiil: '',
   prayer_level: '', islamic_practice: '', faith_statement: '',
   religious_dress: '', smoking: '', khat: '', open_to_polygyny: '',
   marriage_intent: '', timeline: '', relocate: '', children: '', has_children: '',
@@ -182,7 +182,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
         location: [form.city, form.country].filter(Boolean).join(', '),
         latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null,
         bio: form.bio, occupation: form.occupation, education: form.education,
-        languages: form.languages, height: form.height, heritage: form.heritage,
+        languages: form.languages, height: form.height, heritage: form.heritage, qabiil: form.qabiil || null,
         prayer_level: form.prayer_level, islamic_practice: form.islamic_practice, faith_statement: form.faith_statement,
         religious_dress: form.religious_dress, smoking: form.smoking, khat: form.khat, open_to_polygyny: form.open_to_polygyny,
         marriage_intent: form.marriage_intent, timeline: form.timeline, relocate: form.relocate,
@@ -291,7 +291,11 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
                   <Field label="Languages"><input value={form.languages} onChange={(e) => set('languages', e.target.value)} placeholder="Somali, English" className={INPUT_CLS} />{form.languages && !looksReal(form.languages) && <p className="text-[11px] text-red-600 mt-1">Please list real languages.</p>}</Field>
                   <Field label="Height (cm)"><input type="number" min={120} max={250} value={form.height} onChange={(e) => set('height', e.target.value)} placeholder="e.g. 170" className={INPUT_CLS} />{form.height && !validHeightCm(form.height) && <p className="text-[11px] text-red-600 mt-1">Enter your height in cm (120–250).</p>}</Field>
                 </div>
-                <Field label="Heritage / Background (optional)"><input value={form.heritage} onChange={(e) => set('heritage', e.target.value)} placeholder="e.g. Somali — Mogadishu" className={INPUT_CLS} /></Field>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Heritage / Background (optional)"><input value={form.heritage} onChange={(e) => set('heritage', e.target.value)} placeholder="e.g. Somali — Mogadishu" className={INPUT_CLS} /></Field>
+                  <Field label="Qabiil / Clan (optional)"><input value={form.qabiil} onChange={(e) => set('qabiil', e.target.value)} placeholder="Only if you wish to share" className={INPUT_CLS} /></Field>
+                </div>
+                <p className="text-[11px] text-[#8B7355] -mt-1">Qabiil is optional and entirely your choice — share it only if it matters to you.</p>
               </>
             )}
 

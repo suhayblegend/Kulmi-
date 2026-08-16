@@ -53,6 +53,7 @@ export interface Profile {
   intro_audio_url?: string | null;
   intro_public?: boolean | null;
   is_premium?: boolean | null;
+  qabiil?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   show_in_discovery?: boolean | null;
@@ -91,7 +92,7 @@ export interface Message {
 // If that view isn't present yet (the privacy migration hasn't been run),
 // transparently fall back to the base `profiles` table so the app still works.
 const PUBLIC_PROFILE_COLS =
-  'id, first_name, age, gender, location, bio, role, profile_picture_url, country, city, occupation, education, languages, marital_status, height, heritage, marriage_intent, timeline, relocate, children, has_children, prayer_level, islamic_practice, faith_statement, religious_dress, smoking, khat, open_to_polygyny, personality_traits, future_goals, communication_style, photo_verified, verification_status, intro_audio_url, is_premium';
+  'id, first_name, age, gender, location, bio, role, profile_picture_url, country, city, occupation, education, languages, marital_status, height, heritage, qabiil, marriage_intent, timeline, relocate, children, has_children, prayer_level, islamic_practice, faith_statement, religious_dress, smoking, khat, open_to_polygyny, personality_traits, future_goals, communication_style, photo_verified, verification_status, intro_audio_url, is_premium';
 
 let PROFILE_SRC = 'public_profiles';
 // Only fall back when the VIEW genuinely doesn't exist (missing relation),

@@ -18,6 +18,7 @@ type ProfileForm = {
   maritalStatus: string;
   height: string;
   heritage: string;
+  qabiil: string;
   hasChildren: string;
   marriageIntent: string;
   timeline: string;
@@ -39,7 +40,7 @@ type ProfileForm = {
 
 const EMPTY_FORM: ProfileForm = {
   firstName: '', gender: '', age: '', country: '', city: '', occupation: '', education: '', languages: '',
-  maritalStatus: '', height: '', heritage: '', hasChildren: '',
+  maritalStatus: '', height: '', heritage: '', qabiil: '', hasChildren: '',
   marriageIntent: MARRIAGE_INTENT[0], timeline: TIMELINE[0], relocate: RELOCATE[0], children: WANT_KIDS[0],
   prayerLevel: PRAYER[0], islamicPractice: PRACTICE[0], faithStatement: '',
   religiousDress: '', smoking: '', khat: '', openToPolygyny: '',
@@ -59,6 +60,7 @@ function fromDb(p: DbProfile): ProfileForm {
     maritalStatus: p.marital_status ?? '',
     height: p.height ?? '',
     heritage: p.heritage ?? '',
+    qabiil: (p as any).qabiil ?? '',
     hasChildren: p.has_children ?? '',
     marriageIntent: p.marriage_intent ?? EMPTY_FORM.marriageIntent,
     timeline: p.timeline ?? EMPTY_FORM.timeline,
@@ -279,6 +281,7 @@ export function Profile() {
         marital_status: editForm.maritalStatus,
         height: editForm.height,
         heritage: editForm.heritage,
+        qabiil: editForm.qabiil || null,
         has_children: editForm.hasChildren,
         marriage_intent: editForm.marriageIntent,
         timeline: editForm.timeline,
@@ -598,6 +601,10 @@ export function Profile() {
                     <div>
                       <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Heritage / Background</label>
                       <input type="text" value={editForm.heritage} onChange={e => setEditForm({...editForm, heritage: e.target.value})} placeholder="e.g. Somali — Mogadishu" className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332]" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#8B7355] uppercase tracking-wider mb-1">Qabiil / Clan (optional)</label>
+                      <input type="text" value={editForm.qabiil} onChange={e => setEditForm({...editForm, qabiil: e.target.value})} placeholder="Only if you wish to share" className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-2 text-[#2D2926] focus:outline-none focus:border-[#1B4332]" />
                     </div>
                   </div>
                 </div>

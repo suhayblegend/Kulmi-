@@ -544,6 +544,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                   <Fact label="Languages" value={viewProfile.languages} />
                   <Fact label="Height" value={viewProfile.height} />
                   <Fact label="Heritage" value={viewProfile.heritage} />
+                  <Fact label="Qabiil" value={(viewProfile as any).qabiil} />
                   <Fact label="Marital status" value={viewProfile.marital_status} />
                 </ModalSection>
 
