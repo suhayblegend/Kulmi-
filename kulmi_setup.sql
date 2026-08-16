@@ -2492,12 +2492,13 @@ alter table public.chats add column if not exists status text not null default '
 
 -- New chats get a 48h window from creation. Backfill existing chats:
 --  * if both people already messaged  -> no window (null), it's a live match
---  * otherwise                        -> window = created_at + 48h
+--  * otherwise                        -> a fresh 48h grace from now, so no
+--    existing conversation is closed retroactively.
 update public.chats c
 set ice_deadline = case
     when (select count(distinct m.sender_id) from public.messages m where m.chat_id = c.id) >= 2
       then null
-    else c.created_at + interval '48 hours'
+    else now() + interval '48 hours'
   end
 where c.ice_deadline is null and c.status = 'active';
 
