@@ -261,11 +261,11 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
         </>
       )}
 
-      {/* Kulmi+ — who viewed you */}
+      {/* Kulmi+ — who viewed you (always visible for premium, incl. empty state) */}
       {!loading && (
         premium ? (
-          viewers.length > 0 && (
-            <SectionCard icon={<Sparkles className="w-4 h-4" />} title="Who viewed you" count={viewers.length}>
+          <SectionCard icon={<Sparkles className="w-4 h-4" />} title="Who viewed you" count={viewers.length}>
+            {viewers.length > 0 ? (
               <div className="divide-y divide-[#F0EEE8]">
                 {viewers.map((v) => (
                   <div key={v.id} className="flex items-center gap-4 p-4">
@@ -279,8 +279,13 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
                   </div>
                 ))}
               </div>
-            </SectionCard>
-          )
+            ) : (
+              <div className="p-6 text-center">
+                <p className="text-sm text-[#5C574F]">No one has viewed your profile yet.</p>
+                <p className="text-xs text-[#8B7355] mt-1">When a verified member views you in Discover, they'll appear here. ✨</p>
+              </div>
+            )}
+          </SectionCard>
         ) : (
           <div className="w-full bg-gradient-to-br from-[#1B4332] to-[#143326] text-white rounded-2xl p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-1">✨ Kulmi+</p>
