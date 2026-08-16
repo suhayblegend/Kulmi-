@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { CheckCircle2, Circle, Trophy, Star, Loader2 } from 'lucide-react';
+import { CheckCircle2, Circle, Trophy, Star } from 'lucide-react';
 import { getMyStats, type MyStats } from '../lib/db';
+import { Skeleton } from './ui/Skeleton';
 
 export function Progress() {
   const [stats, setStats] = useState<MyStats | null>(null);
@@ -16,8 +17,10 @@ export function Progress() {
 
   if (!stats) {
     return (
-      <div className="w-full max-w-3xl mx-auto py-24 flex justify-center text-[#8B7355]">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="w-full max-w-3xl mx-auto space-y-4">
+        <Skeleton className="h-32 rounded-3xl" />
+        <Skeleton className="h-24 rounded-2xl" />
+        <Skeleton className="h-24 rounded-2xl" />
       </div>
     );
   }

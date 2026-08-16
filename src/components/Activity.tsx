@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Check, X, MapPin, Send, Inbox, BadgeCheck, Clock, Sparkles, ArrowLeft, HeartHandshake } from 'lucide-react';
+import { Check, X, MapPin, Send, Inbox, BadgeCheck, Clock, Sparkles, ArrowLeft, HeartHandshake } from 'lucide-react';
+import { ListRowSkeleton } from './ui/Skeleton';
 import {
   listIncomingInvitations,
   listActiveSessions,
@@ -152,11 +153,8 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
       )}
 
       {loading ? (
-        <div className="w-full border border-[#E5E0D8] bg-white shadow-sm rounded-2xl">
-          <div className="py-20 flex flex-col items-center text-center px-10">
-            <Loader2 className="w-8 h-8 text-[#1B4332] animate-spin mb-4" />
-            <p className="text-[#8B7355] text-sm">Loading your activity…</p>
-          </div>
+        <div className="w-full border border-[#E5E0D8] bg-white shadow-sm rounded-2xl divide-y divide-[#F0EEE8]">
+          {Array.from({ length: 4 }).map((_, i) => <ListRowSkeleton key={i} />)}
         </div>
       ) : isEmpty ? (
         <div className="w-full overflow-hidden border border-[#E5E0D8] bg-white shadow-sm rounded-2xl">

@@ -22,6 +22,7 @@ import {
   type DiscoverFilters,
 } from '../lib/db';
 import { ReferSomeone } from './ReferSomeone';
+import { DiscoverCardSkeleton } from './ui/Skeleton';
 
 interface HomeProps {
   onOpenSession: (sessionId: string) => void;
@@ -189,18 +190,13 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   if (loading) {
     return (
       <Shell>
-        <div className="w-full overflow-hidden border border-[#E5E0D8] bg-white shadow-sm rounded-3xl">
-          <div className="pt-16 pb-20 flex flex-col items-center text-center px-10">
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }} className="mb-10 relative">
-              <div className="absolute inset-0 bg-[#F0EEE8] rounded-full blur-xl opacity-70" />
-              <Loader2 className="w-12 h-12 text-[#1B4332] relative z-10" />
-            </motion.div>
-            <h2 className="text-2xl font-medium text-[#1B4332] mb-4 font-serif italic">Finding suitable introductions</h2>
-            <p className="text-[#8B7355] text-sm max-w-[280px] leading-relaxed">
-              Reviewing values, faith, and goals to show you someone truly suitable.
-            </p>
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="font-serif text-2xl text-[#1B4332] italic leading-none">Discover</h2>
+            <p className="text-xs text-[#8B7355] mt-1.5">Thoughtful introductions, one at a time</p>
           </div>
         </div>
+        <DiscoverCardSkeleton />
       </Shell>
     );
   }

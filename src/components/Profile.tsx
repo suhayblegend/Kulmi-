@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Mic, Square, Trash2, Loader2 } from 'lucide-react';
+import { Skeleton } from './ui/Skeleton';
 import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, resolveMediaUrl, getMyCompatQuestions, setMyCompatQuestions, COMPATIBILITY_QUESTIONS, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
@@ -311,8 +312,14 @@ export function Profile() {
 
   if (loading) {
     return (
-      <div className="w-full max-w-4xl mx-auto py-24 flex justify-center text-[#8B7355]">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="w-full max-w-4xl mx-auto space-y-4">
+        <Skeleton className="h-40 rounded-3xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
+        </div>
+        <Skeleton className="h-64 rounded-3xl" />
       </div>
     );
   }

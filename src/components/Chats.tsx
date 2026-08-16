@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Search, Heart, Loader2, BadgeCheck, Hourglass, Clock } from 'lucide-react';
+import { Search, Heart, BadgeCheck, Hourglass, Clock } from 'lucide-react';
 import { listChats, avatarFor, type ChatSummary } from '../lib/db';
+import { ListRowSkeleton } from './ui/Skeleton';
 
 interface ChatsProps {
   onSelectChat: (chatId: string) => void;
@@ -76,8 +77,8 @@ export function Chats({ onSelectChat }: ChatsProps) {
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto bg-white p-4">
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-[#8B7355]">
-            <Loader2 className="w-6 h-6 animate-spin" />
+          <div className="divide-y divide-[#F0EEE8]">
+            {Array.from({ length: 5 }).map((_, i) => <ListRowSkeleton key={i} />)}
           </div>
         ) : (
           <>
