@@ -49,12 +49,12 @@ const DetailChip = ({ icon, label }: { icon: React.ReactNode; label: string }) =
   </span>
 );
 
-// A labelled row for the full-profile modal (renders only when there's a value).
-const Field = ({ label, value }: { label: string; value?: string | null }) =>
+// A compact fact tile (icon + label + value), used in the full-profile modal grid.
+const Fact = ({ label, value }: { label: string; value?: string | null }) =>
   value ? (
-    <div className="flex justify-between gap-4 py-2 border-b border-[#F0EEE8] last:border-0">
-      <span className="text-xs text-[#8B7355] shrink-0">{label}</span>
-      <span className="text-sm text-[#2D2926] text-right">{value}</span>
+    <div className="bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-3 py-2.5">
+      <p className="text-[10px] uppercase tracking-wider text-[#8B7355] mb-0.5">{label}</p>
+      <p className="text-sm text-[#2D2926] leading-snug">{value}</p>
     </div>
   ) : null;
 
@@ -63,21 +63,24 @@ const ModalSection = ({ title, children }: { title: string; children: React.Reac
   if (!has) return null;
   return (
     <div className="mb-5">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-1.5">{title}</p>
-      <div>{children}</div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2">{title}</p>
+      <div className="grid grid-cols-2 gap-2">{children}</div>
     </div>
   );
 };
 
-const TagRow = ({ label, items }: { label: string; items?: string[] | null }) =>
+const TagSection = ({ title, items }: { title: string; items?: string[] | null }) =>
   items && items.length ? (
-    <div className="py-2 border-b border-[#F0EEE8] last:border-0">
-      <span className="text-xs text-[#8B7355] block mb-1.5">{label}</span>
+    <div className="mb-5">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2">{title}</p>
       <div className="flex flex-wrap gap-1.5">
-        {items.map((t) => <span key={t} className="px-2.5 py-1 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">{t}</span>)}
+        {items.map((t) => <span key={t} className="px-3 py-1.5 bg-[#FDFBF7] border border-[#E5E0D8] rounded-full text-xs text-[#1B4332]">{t}</span>)}
       </div>
     </div>
   ) : null;
+
+// Normalise a value for comparison (case/space-insensitive).
+const norm = (v?: string | null) => (v ?? '').trim().toLowerCase();
 
 export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomeProps) {
   const [loading, setLoading] = useState(true);
@@ -92,6 +95,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   const [premium, setPremium] = useState(false);
   const [pendingSent, setPendingSent] = useState(0);
   const [viewProfile, setViewProfile] = useState<Profile | null>(null);
+  const [myProfile, setMyProfile] = useState<Profile | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
@@ -111,6 +115,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
         getMyProfile(),
       ]);
       setPremium(isPremium(meProf));
+      setMyProfile(meProf);
       setCandidates(cands);
       setInvites(incoming);
       setSessions(active);
@@ -476,52 +481,97 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               <div className="p-6">
                 {viewProfile.bio && <p className="text-sm text-[#5C574F] leading-relaxed font-serif italic mb-5">"{viewProfile.bio}"</p>}
 
+                {/* How you compare */}
+                {(() => {
+                  if (!myProfile) return null;
+                  const dims: { label: string; key: keyof Profile }[] = [
+                    { label: 'Prayer', key: 'prayer_level' as keyof Profile },
+                    { label: 'Wants children', key: 'children' as keyof Profile },
+                    { label: 'Timeline', key: 'timeline' as keyof Profile },
+                    { label: 'Relocate', key: 'relocate' as keyof Profile },
+                    { label: 'Marital status', key: 'marital_status' as keyof Profile },
+                    { label: 'Smoking', key: 'smoking' as keyof Profile },
+                  ];
+                  const rows = dims
+                    .map((d) => ({ label: d.label, mine: (myProfile as any)[d.key] as string, theirs: (viewProfile as any)[d.key] as string }))
+                    .filter((r) => r.mine || r.theirs);
+                  if (rows.length === 0) return null;
+                  const comparable = rows.filter((r) => r.mine && r.theirs);
+                  const aligned = comparable.filter((r) => norm(r.mine) === norm(r.theirs)).length;
+                  const pct = comparable.length ? Math.round((aligned / comparable.length) * 100) : 0;
+                  return (
+                    <div className="bg-[#E8F3ED] border border-[#1B4332]/15 rounded-2xl p-4 mb-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-bold text-[#1B4332]">How you compare</p>
+                        {comparable.length > 0 && (
+                          <span className="text-xs font-bold text-[#1B4332] bg-white rounded-full px-2.5 py-1">{pct}% aligned</span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-[1fr_20px_1fr] gap-x-2 text-[10px] uppercase tracking-wider text-[#8B7355] mb-1.5">
+                        <span className="text-right">You</span><span></span><span>{viewProfile.first_name}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {rows.map((r) => {
+                          const match = r.mine && r.theirs && norm(r.mine) === norm(r.theirs);
+                          return (
+                            <div key={r.label} className="grid grid-cols-[1fr_20px_1fr] items-center gap-x-2">
+                              <span className="text-xs text-[#2D2926] text-right leading-tight">{r.mine || '—'}</span>
+                              <span className={`text-center text-sm ${match ? 'text-green-600' : 'text-[#C9C4BA]'}`}>{match ? '✓' : '·'}</span>
+                              <span className="text-xs text-[#2D2926] leading-tight">{r.theirs || '—'}</span>
+                              <span className="col-span-3 text-[10px] text-[#8B7355] -mt-1">{r.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <ModalSection title="About">
-                  <Field label="Occupation" value={viewProfile.occupation} />
-                  <Field label="Education" value={viewProfile.education} />
-                  <Field label="Languages" value={viewProfile.languages} />
-                  <Field label="Height" value={viewProfile.height} />
-                  <Field label="Heritage" value={viewProfile.heritage} />
-                  <Field label="Marital status" value={viewProfile.marital_status} />
-                  <Field label="Has children" value={(viewProfile as any).has_children} />
+                  <Fact label="Occupation" value={viewProfile.occupation} />
+                  <Fact label="Education" value={viewProfile.education} />
+                  <Fact label="Languages" value={viewProfile.languages} />
+                  <Fact label="Height" value={viewProfile.height} />
+                  <Fact label="Heritage" value={viewProfile.heritage} />
+                  <Fact label="Marital status" value={viewProfile.marital_status} />
                 </ModalSection>
 
                 <ModalSection title="Faith & values">
-                  <Field label="Prayer" value={viewProfile.prayer_level} />
-                  <Field label="Practice" value={(viewProfile as any).islamic_practice} />
-                  <Field label={viewProfile.gender === 'male' ? 'Beard' : 'Hijab'} value={(viewProfile as any).religious_dress} />
-                  <Field label="Faith statement" value={(viewProfile as any).faith_statement} />
+                  <Fact label="Prayer" value={viewProfile.prayer_level} />
+                  <Fact label="Practice" value={(viewProfile as any).islamic_practice} />
+                  <Fact label={viewProfile.gender === 'male' ? 'Beard' : 'Hijab'} value={(viewProfile as any).religious_dress} />
                 </ModalSection>
+                {(viewProfile as any).faith_statement && (
+                  <p className="text-sm text-[#5C574F] leading-relaxed italic -mt-2 mb-5">"{(viewProfile as any).faith_statement}"</p>
+                )}
 
                 <ModalSection title="Lifestyle">
-                  <Field label="Smoking" value={(viewProfile as any).smoking} />
-                  <Field label="Khat" value={(viewProfile as any).khat} />
-                  <Field label="Open to polygyny" value={(viewProfile as any).open_to_polygyny} />
+                  <Fact label="Smoking" value={(viewProfile as any).smoking} />
+                  <Fact label="Khat" value={(viewProfile as any).khat} />
+                  <Fact label="Polygyny" value={(viewProfile as any).open_to_polygyny} />
                 </ModalSection>
 
                 <ModalSection title="Marriage intentions">
-                  <Field label="Looking for" value={viewProfile.marriage_intent} />
-                  <Field label="Timeline" value={viewProfile.timeline} />
-                  <Field label="Relocate" value={viewProfile.relocate} />
-                  <Field label="Children" value={viewProfile.children} />
+                  <Fact label="Looking for" value={viewProfile.marriage_intent} />
+                  <Fact label="Timeline" value={viewProfile.timeline} />
+                  <Fact label="Relocate" value={viewProfile.relocate} />
+                  <Fact label="Children" value={viewProfile.children} />
                 </ModalSection>
 
-                <ModalSection title="Personality">
-                  <TagRow label="Traits" items={(viewProfile as any).personality_traits} />
-                  <TagRow label="Communication" items={(viewProfile as any).communication_style} />
-                  <TagRow label="Future goals" items={(viewProfile as any).future_goals} />
-                </ModalSection>
+                <TagSection title="Personality" items={(viewProfile as any).personality_traits} />
+                <TagSection title="Communication style" items={(viewProfile as any).communication_style} />
+                <TagSection title="Future goals" items={(viewProfile as any).future_goals} />
 
                 {viewProfile.intro_audio_url && (
                   <div className="mb-5">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1.5">🎤 Voice intro</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2">🎤 Voice intro</p>
                     <audio controls src={viewProfile.intro_audio_url} className="w-full" />
                   </div>
                 )}
 
-                <p className="text-[11px] text-[#8B7355] mb-4">More photos unlock after you both match.</p>
+                <p className="text-[11px] text-[#8B7355] mb-4 text-center">More photos unlock after you both match.</p>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 sticky bottom-0 bg-white pt-2">
                   <button disabled={busy} onClick={() => { setViewProfile(null); handleSkip(); }} className="flex-1 px-6 py-3 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not now</button>
                   <button disabled={busy} onClick={() => { setViewProfile(null); handleInvite(); }} className="flex-[1.4] px-6 py-3 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Heart className="w-4 h-4" /> Send invitation</button>
                 </div>
