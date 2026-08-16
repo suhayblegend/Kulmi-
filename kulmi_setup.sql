@@ -2230,6 +2230,9 @@ $$;
 grant execute on function public.get_my_wards() to authenticated;
 
 -- Add is_premium to get_profile_cards (relationship reads).
+-- Must DROP first — the return type (columns) changed, which CREATE OR REPLACE
+-- cannot do.
+drop function if exists public.get_profile_cards(uuid[]);
 create or replace function public.get_profile_cards(ids uuid[])
 returns table (
   id uuid, first_name text, age int, gender text, location text, bio text, role text,
