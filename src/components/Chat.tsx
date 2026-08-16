@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, ShieldAlert, Mic, Trash2, Users, AlertTriangle, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, ShieldAlert, Mic, Trash2, Users, AlertTriangle, Send, Loader2, Hourglass, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import {
@@ -47,6 +47,9 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   const [gallery, setGallery] = useState<string[]>([]);
   const [partnerIntro, setPartnerIntro] = useState<string | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
+  const [iceDeadline, setIceDeadline] = useState<string | null>(null);
+  const [chatStatus, setChatStatus] = useState<string>('active');
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -60,15 +63,18 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   useEffect(() => {
     let active = true;
     (async () => {
-      const [uid, p, msgs] = await Promise.all([
+      const [uid, p, msgs, meta] = await Promise.all([
         getCurrentUserId(),
         getChatPartner(chatId),
         listMessages(chatId),
+        getChatMeta(chatId),
       ]);
       if (!active) return;
       setMyId(uid);
       setPartner(p);
       setMessages(msgs);
+      setIceDeadline(meta.iceDeadline);
+      setChatStatus(meta.chatStatus);
       if (p) {
         // Matched → their extra photos + voice intro unlock.
         const [extra, intro] = await Promise.all([getMatchGallery(p.id), getMatchIntro(p.id)]);
@@ -99,6 +105,27 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
+  // Live countdown for the 48h "break the ice" window.
+  useEffect(() => {
+    if (!iceDeadline || chatStatus !== 'active') return;
+    const t = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, [iceDeadline, chatStatus]);
+
+  // Once both people have spoken, the DB lifts the window — reflect that instantly.
+  const senders = new Set(messages.map((m) => m.sender_id));
+  const bothSpoke = senders.size >= 2;
+  const iceMsLeft = iceDeadline ? new Date(iceDeadline).getTime() - nowTick : 0;
+  const iceOpen = chatStatus === 'active' && !!iceDeadline && !bothSpoke && iceMsLeft > 0;
+  const iceClosed = chatStatus === 'expired' && !bothSpoke;
+  const iceLabel = (() => {
+    if (iceMsLeft <= 0) return 'soon';
+    const h = Math.floor(iceMsLeft / 3600_000);
+    const m = Math.floor((iceMsLeft % 3600_000) / 60_000);
+    return h >= 1 ? `${h}h ${m}m` : `${m}m`;
+  })();
+  const iWrote = myId ? senders.has(myId) : false;
+
   // Voice notes are private (stored as paths) — sign them for playback on demand.
   useEffect(() => {
     let active = true;
@@ -119,6 +146,10 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   const handleSendMessage = async () => {
     const text = message.trim();
     if (!text) return;
+    if (iceClosed) {
+      setSendError('This match has closed because it went quiet.');
+      return;
+    }
     setMessage('');
     setSendError('');
     try {
@@ -571,6 +602,26 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
             </div>
           </div>
 
+          {iceOpen && (
+            <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+              <Hourglass className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-900 leading-relaxed">
+                <span className="font-bold">Break the ice within {iceLabel}.</span>{' '}
+                {iWrote
+                  ? `You've said salaam — this match stays open once ${partnerName} replies. If neither of you continues, it will quietly close.`
+                  : 'New matches stay open for 48 hours. Send a message so this introduction doesn’t close.'}
+              </p>
+            </div>
+          )}
+          {iceClosed && (
+            <div className="mb-6 flex items-start gap-3 bg-[#F0EEE8] border border-[#E5E0D8] rounded-2xl px-4 py-3">
+              <Clock className="w-5 h-5 text-[#8B7355] shrink-0 mt-0.5" />
+              <p className="text-xs text-[#5C574F] leading-relaxed">
+                <span className="font-bold text-[#2D2926]">This match has closed.</span> It went quiet during the first 48 hours, so it was gently closed to keep Kulmi active. You're both free to connect with someone new.
+              </p>
+            </div>
+          )}
+
           {messages.length === 0 && (
             <div className="flex flex-col gap-2 mb-8 items-center">
               <p className="text-[10px] uppercase tracking-widest font-bold text-[#8B7355] mb-2">Conversation Starters</p>
@@ -624,7 +675,12 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
 
         <div className="p-4 sm:p-6 bg-white border-t border-[#E5E0D8] shrink-0">
           {sendError && <p className="text-xs text-red-600 mb-2">{sendError}</p>}
-          {isRecording ? (
+          {iceClosed ? (
+            <div className="flex items-center justify-center gap-2 text-sm text-[#8B7355] py-3">
+              <Clock className="w-4 h-4" />
+              This match has closed. Head back to Discover to meet someone new.
+            </div>
+          ) : isRecording ? (
             <div className="flex items-center gap-3 bg-[#FDFBF7] rounded-xl px-5 py-3 border border-[#E5E0D8]">
               <div className="flex-1 flex items-center gap-4">
                 <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />

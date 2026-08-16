@@ -289,6 +289,39 @@ serve(async (req) => {
       return json({ sent: true });
     }
 
+    // ---- "Refer someone" — send a warm invite to a serious person a member knows ----
+    if (body.action === "refer-someone") {
+      const { data: ref } = await admin
+        .from("referrals")
+        .select("id, referrer_id, name, email, reveal_name, note, status")
+        .eq("id", body.referralId)
+        .maybeSingle();
+      if (!ref || ref.referrer_id !== caller) return json({ sent: false });
+      // Never re-invite someone who is already a Kulmi member.
+      const { data: existing } = await admin.from("profiles").select("id").ilike("email", ref.email).maybeSingle();
+      if (existing) return json({ sent: false, alreadyMember: true });
+      let fromName = "Someone who knows you";
+      if (ref.reveal_name) {
+        const { data: rp } = await admin.from("profiles").select("first_name").eq("id", caller).maybeSingle();
+        if (rp?.first_name) fromName = esc(rp.first_name);
+      }
+      const first = (ref.name || "").toString().trim().split(/\s+/)[0];
+      const noteBlock = ref.note
+        ? `<p style="background:#FDFBF7;border:1px solid #E5E0D8;border-radius:12px;padding:14px 16px;color:#5C574F;font-style:italic">&ldquo;${esc(ref.note)}&rdquo;</p>`
+        : "";
+      const sent = await sendEmail(ref.email, "Someone thought of you for Kulmi",
+        `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+          <h2 style="color:#1B4332;font-family:Georgia,serif">A thoughtful invitation${first ? ", " + esc(first) : ""}</h2>
+          <p>Assalamu alaikum,</p>
+          <p><b>${fromName}</b> thought of you for <b>Kulmi</b> &mdash; a serious, halal path to marriage built for our community. It's not a casual dating app: every member is verified, there's no swiping, and a wali can be involved with full transparency.</p>
+          ${noteBlock}
+          <p>If you're ready for marriage insha'Allah, you're warmly invited to join.</p>
+          <p><a href="https://kulmi.uk/auth" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Explore Kulmi</a></p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">You received this because someone who knows you sent a one-time invitation. You will not be emailed again unless you join. Kulmi &mdash; kulmi.uk &mdash; <a href="https://kulmi.uk" style="color:#8B7355">Isla Kulma, Isla Noolada</a></p>
+        </div>`);
+      return json({ sent });
+    }
+
     // ---- Claim the August founding offer (free Kulmi+ until 30 Sept) ----
     if (body.action === "claim-founding") {
       if (Date.now() >= Date.parse("2026-09-01T00:00:00Z")) {

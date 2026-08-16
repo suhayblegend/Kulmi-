@@ -21,6 +21,7 @@ import {
   type SessionSummary,
   type DiscoverFilters,
 } from '../lib/db';
+import { ReferSomeone } from './ReferSomeone';
 
 interface HomeProps {
   onOpenSession: (sessionId: string) => void;
@@ -249,6 +250,9 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
           <ChevronRight className="w-5 h-5 opacity-80 shrink-0" />
         </button>
       )}
+
+      {/* Grow the community — refer a serious person you know */}
+      <ReferSomeone />
 
       {/* Filters panel */}
       <AnimatePresence>

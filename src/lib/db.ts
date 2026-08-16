@@ -77,6 +77,8 @@ export interface ChatSummary {
   partner: Profile;
   lastMessage: string;
   lastMessageAt: string | null;
+  iceDeadline: string | null; // set while the 48h "break the ice" window is open
+  status: string; // 'active' | 'expired' (went quiet, closed)
 }
 
 export interface Message {
@@ -927,9 +929,12 @@ export async function listChats(): Promise<ChatSummary[]> {
   const uid = await getCurrentUserId();
   if (!uid) return [];
 
+  // Sweep any matches that went quiet past their 48h window (best-effort).
+  await supabase.rpc('expire_stale_chats').then(() => {}, () => {});
+
   const { data: chats, error } = await supabase
     .from('chats')
-    .select('id, user1_id, user2_id, created_at')
+    .select('id, user1_id, user2_id, created_at, ice_deadline, status')
     .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -967,6 +972,8 @@ export async function listChats(): Promise<ChatSummary[]> {
       partner,
       lastMessage: last?.content ?? 'Say Asalamu alaikum!',
       lastMessageAt: last?.created_at ?? null,
+      iceDeadline: c.ice_deadline ?? null,
+      status: c.status ?? 'active',
     });
   }
   return summaries;
@@ -1063,13 +1070,66 @@ export async function setChatStatus(chatId: string, status: string): Promise<voi
   if (error) throw error;
 }
 
-export async function getChatMeta(chatId: string): Promise<{ confirmedStatus: string | null; myStatus: string | null }> {
+export async function getChatMeta(
+  chatId: string
+): Promise<{ confirmedStatus: string | null; myStatus: string | null; iceDeadline: string | null; chatStatus: string }> {
   const uid = await getCurrentUserId();
   const [{ data: chat }, { data: mine }] = await Promise.all([
-    supabase.from('chats').select('confirmed_status').eq('id', chatId).maybeSingle(),
+    supabase.from('chats').select('confirmed_status, ice_deadline, status').eq('id', chatId).maybeSingle(),
     supabase.from('chat_status').select('status').eq('chat_id', chatId).eq('user_id', uid ?? '').maybeSingle(),
   ]);
-  return { confirmedStatus: (chat as any)?.confirmed_status ?? null, myStatus: (mine as any)?.status ?? null };
+  return {
+    confirmedStatus: (chat as any)?.confirmed_status ?? null,
+    myStatus: (mine as any)?.status ?? null,
+    iceDeadline: (chat as any)?.ice_deadline ?? null,
+    chatStatus: (chat as any)?.status ?? 'active',
+  };
+}
+
+// -------------------------------------------------------------
+// Referrals — "Know someone ready for marriage?"
+// -------------------------------------------------------------
+export interface MyReferral {
+  id: string;
+  name: string;
+  email: string;
+  status: string; // 'sent' | 'joined'
+  created_at: string;
+}
+
+/** Privately invite a serious person you know. Kulmi sends them a warm email;
+ *  you stay anonymous unless revealName is true. */
+export async function referFriend(
+  name: string,
+  email: string,
+  revealName: boolean,
+  note?: string
+): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid) throw new Error('Not signed in');
+  const { data, error } = await supabase
+    .from('referrals')
+    .insert([{ referrer_id: uid, name: name.trim(), email: email.trim().toLowerCase(), reveal_name: revealName, note: note?.trim() || null }])
+    .select('id')
+    .single();
+  if (error) throw error;
+  // Fire the invite email (best-effort; the row is already saved either way).
+  try {
+    await supabase.functions.invoke('smart-service', {
+      body: { action: 'refer-someone', referralId: (data as any).id },
+    });
+  } catch { /* email is best-effort; admin can resend */ }
+}
+
+export async function listMyReferrals(): Promise<MyReferral[]> {
+  const uid = await getCurrentUserId();
+  if (!uid) return [];
+  const { data } = await supabase
+    .from('referrals')
+    .select('id, name, email, status, created_at')
+    .eq('referrer_id', uid)
+    .order('created_at', { ascending: false });
+  return ((data as MyReferral[]) ?? []);
 }
 
 // -------------------------------------------------------------

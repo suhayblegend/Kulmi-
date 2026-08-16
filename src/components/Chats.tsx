@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Search, Heart, Loader2, BadgeCheck } from 'lucide-react';
+import { Search, Heart, Loader2, BadgeCheck, Hourglass, Clock } from 'lucide-react';
 import { listChats, avatarFor, type ChatSummary } from '../lib/db';
 
 interface ChatsProps {
@@ -17,6 +17,14 @@ function timeAgo(iso: string | null): string {
   if (hrs < 24) return `${hrs}h`;
   const days = Math.floor(hrs / 24);
   return `${days}d`;
+}
+
+function iceLeft(iso: string | null): string {
+  if (!iso) return '';
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return 'soon';
+  const h = Math.floor(ms / 3600_000);
+  return h >= 1 ? `${h}h` : `${Math.floor(ms / 60_000)}m`;
 }
 
 export function Chats({ onSelectChat }: ChatsProps) {
@@ -80,7 +88,7 @@ export function Chats({ onSelectChat }: ChatsProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
                 onClick={() => onSelectChat(chat.id)}
-                className="flex items-center gap-4 p-4 rounded-2xl hover:bg-[#FDFBF7] cursor-pointer transition-colors group relative"
+                className={`flex items-center gap-4 p-4 rounded-2xl hover:bg-[#FDFBF7] cursor-pointer transition-colors group relative ${chat.status === 'expired' ? 'opacity-60' : ''}`}
               >
                 <div className="relative shrink-0">
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#E5E0D8] group-hover:border-[#1B4332] transition-colors">
@@ -99,11 +107,19 @@ export function Chats({ onSelectChat }: ChatsProps) {
                     <span className="text-xs whitespace-nowrap text-[#8B7355]">{timeAgo(chat.lastMessageAt)}</span>
                   </div>
                   <p className="text-sm truncate text-[#5C574F]">{chat.lastMessage}</p>
-                  {(chat.partner.location || chat.partner.city) && (
+                  {chat.status === 'expired' ? (
+                    <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-widest text-[#8B7355] bg-[#F0EEE8] border border-[#E5E0D8] rounded-full px-2 py-0.5">
+                      <Clock className="w-3 h-3" /> Closed — went quiet
+                    </span>
+                  ) : chat.iceDeadline ? (
+                    <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                      <Hourglass className="w-3 h-3" /> Say salaam · {iceLeft(chat.iceDeadline)} left
+                    </span>
+                  ) : (chat.partner.location || chat.partner.city) ? (
                     <p className="text-[10px] text-[#8B7355] uppercase tracking-widest font-bold mt-2">
                       {chat.partner.location || chat.partner.city}
                     </p>
-                  )}
+                  ) : null}
                 </div>
               </motion.div>
             ))}
