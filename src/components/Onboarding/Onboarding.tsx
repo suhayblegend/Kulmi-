@@ -167,7 +167,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
       // included. This way a dropped connection mid-signup never leaves a stuck,
       // photoless profile row — nothing is saved until everything is ready.
       const mainFile = (photos[highlight] ?? photos[0]).file;
-      if (!(await isAcceptablePhoto(mainFile))) throw new Error('Please use a clear, high-quality photo of your face — at least 500×500px. Blurry or low-resolution photos are not accepted.');
+      if (!(await isAcceptablePhoto(mainFile))) throw new Error('Please use a clear, high-quality photo of your face — at least 700×700px. Blurry or low-resolution photos are not accepted.');
       const mainHash = await sha256Hex(mainFile);
       const main = await uploadPhoto(mainFile);
       if (!main) throw new Error('Your main photo did not upload. Please check your connection and try again.');

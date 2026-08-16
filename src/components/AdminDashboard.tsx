@@ -12,7 +12,7 @@ import {
   adminListSessions, adminListChats, adminListReports, adminListSuccesses, adminUpdateReport, readTranscript,
   adminListContactMessages, adminMarkContactHandled,
   adminCountRecipients, adminBroadcast, adminListDeletions,
-  adminListPosts, adminSavePost, adminDeletePost, uploadBlogImage,
+  adminListPosts, adminSavePost, adminDeletePost, uploadBlogImage, getAdminAnalytics, type AdminAnalytics,
   getMyProfile, signOut, avatarFor, resolveMediaUrl,
   type AdminStats, type Profile, type AdminPair, type ReportRow, type Message, type ContactMessage, type BroadcastAudience, type DeletionRow, type BlogPost,
 } from '../lib/db';
@@ -190,6 +190,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'analytics', label: 'Analytics', icon: <Activity className="w-5 h-5" /> },
     { id: 'users', label: 'Users', icon: <Users className="w-5 h-5" /> },
     { id: 'verifications', label: `Verifications${stats?.pendingVerifications ? ` (${stats.pendingVerifications})` : ''}`, icon: <UserCheck className="w-5 h-5" /> },
     { id: 'sessions', label: 'Sessions', icon: <Heart className="w-5 h-5" /> },
@@ -207,6 +208,10 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     setMessages((ms) => ms.map((m) => (m.id === id ? { ...m, handled } : m)));
     try { await adminMarkContactHandled(id, handled); } catch { await reload(); }
   };
+
+  // ---- Analytics ----
+  const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
+  useEffect(() => { getAdminAnalytics().then(setAnalytics).catch(() => {}); }, []);
 
   // ---- Blog authoring ----
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -292,6 +297,75 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const openTranscript = async (pair: AdminPair) => {
     const messages = await readTranscript(pair.id);
     setTranscript({ title: `${pair.userA} & ${pair.userB}`, messages });
+  };
+
+  const renderAnalytics = () => {
+    if (!analytics) return <div className="py-16 flex justify-center text-[#8B7355]"><Loader2 className="w-7 h-7 animate-spin" /></div>;
+    const maxDay = Math.max(1, ...analytics.dailySignups.map((d) => d.count));
+    const timeAgo = (iso: string | null) => {
+      if (!iso) return 'never';
+      const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+      const d = Math.floor(h / 24); return `${d}d ago`;
+    };
+    const cards = [
+      ['Active today', analytics.activeToday, 'members opened Kulmi today'],
+      ['Active this week', analytics.active7d, 'in the last 7 days'],
+      ['New today', analytics.newToday, 'sign-ups today'],
+      ['New this week', analytics.new7d, 'sign-ups in 7 days'],
+      ['New this month', analytics.new30d, 'sign-ups in 30 days'],
+    ] as [string, number, string][];
+    return (
+      <div className="space-y-6 max-w-3xl">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {cards.map(([label, val, sub]) => (
+            <div key={label} className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1">{label}</p>
+              <p className="font-serif text-3xl text-[#1B4332] leading-none">{val}</p>
+              <p className="text-xs text-[#8B7355] mt-1.5">{sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Sign-ups last 7 days */}
+        <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#1B4332] mb-5">Sign-ups — last 7 days</p>
+          <div className="flex items-end justify-between gap-3 h-40">
+            {analytics.dailySignups.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 h-full">
+                <span className="text-xs font-medium text-[#1B4332]">{d.count}</span>
+                <div className="w-full bg-[#1B4332] rounded-t-lg transition-all" style={{ height: `${(d.count / maxDay) * 100}%`, minHeight: d.count > 0 ? '6px' : '2px', opacity: d.count > 0 ? 1 : 0.25 }} />
+                <span className="text-[10px] text-[#8B7355]">{d.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recently active */}
+        <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#E5E0D8] bg-[#FDFBF7]">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#1B4332]">Recently active members</p>
+          </div>
+          {analytics.recent.length === 0 ? (
+            <div className="p-6 text-sm text-[#8B7355] text-center">No activity recorded yet — it appears once members open the app.</div>
+          ) : (
+            <div className="divide-y divide-[#F0EEE8]">
+              {analytics.recent.map((r, i) => (
+                <div key={i} className="flex items-center justify-between px-6 py-3">
+                  <span className="text-sm font-medium text-[#1B4332]">{r.name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-md ${r.verification_status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>{r.verification_status || 'unverified'}</span>
+                    <span className="text-xs text-[#8B7355] tabular-nums w-16 text-right">{timeAgo(r.last_active_at)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const renderOverview = () => (
@@ -694,6 +768,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     if (loading) return <div className="flex justify-center py-24 text-[#8B7355]"><Loader2 className="w-8 h-8 animate-spin" /></div>;
     switch (activeTab) {
       case 'overview': return renderOverview();
+      case 'analytics': return renderAnalytics();
       case 'users': return renderUsers();
       case 'verifications': return renderVerifications();
       case 'sessions': return renderSessions();

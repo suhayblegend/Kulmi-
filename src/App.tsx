@@ -30,7 +30,7 @@ import { Blog } from './components/Blog';
 import { Pricing } from './components/Pricing';
 import { Faq } from './components/FaqList';
 import { supabase } from './lib/supabase';
-import { getMyProfile, type Profile as DbProfile } from './lib/db';
+import { getMyProfile, touchLastActive, type Profile as DbProfile } from './lib/db';
 
 export type AppState =
   | 'landing'
@@ -211,6 +211,7 @@ function MemberApp() {
           setStaffSession(null);
           setUser(su);
           setAppState(routeFor(profile));
+          touchLastActive(); // stamp activity for admin analytics (best-effort)
           return;
         }
         // profile === null:

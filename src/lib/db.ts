@@ -309,7 +309,7 @@ export async function sha256Hex(data: Blob): Promise<string> {
 export async function isAcceptablePhoto(file: Blob): Promise<boolean> {
   try {
     const bmp = await createImageBitmap(file);
-    const ok = bmp.width >= 500 && bmp.height >= 500;
+    const ok = bmp.width >= 700 && bmp.height >= 700;
     (bmp as any).close?.();
     return ok;
   } catch {
@@ -1434,6 +1434,58 @@ export interface AdminStats {
   activeSessions: number;
   pendingReports: number;
   successes: number;
+}
+
+/** Stamp the current user's last-active time (best-effort, call on app load). */
+export async function touchLastActive(): Promise<void> {
+  try { await supabase.rpc('touch_last_active'); } catch { /* analytics-grade */ }
+}
+
+export interface AdminAnalytics {
+  newToday: number; new7d: number; new30d: number;
+  activeToday: number; active7d: number;
+  dailySignups: { label: string; count: number }[];
+  recent: { name: string; last_active_at: string | null; verification_status: string | null }[];
+}
+
+export async function getAdminAnalytics(): Promise<AdminAnalytics> {
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const iso = (d: Date) => d.toISOString();
+  const daysAgo = (n: number) => iso(new Date(Date.now() - n * 86400_000));
+  const cnt = (q: any) => q.then((r: any) => r.count ?? 0);
+
+  const [newToday, new7d, new30d, activeToday, active7d] = await Promise.all([
+    cnt(supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', iso(startToday))),
+    cnt(supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', daysAgo(7))),
+    cnt(supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', daysAgo(30))),
+    cnt(supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('last_active_at', iso(startToday))),
+    cnt(supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('last_active_at', daysAgo(7))),
+  ]);
+
+  // Signups per day for the last 7 days (bucket client-side).
+  const { data: recentSignups } = await supabase.from('profiles').select('created_at').gte('created_at', daysAgo(7));
+  const buckets: Record<string, number> = {};
+  const dayKeys: { key: string; label: string }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400_000);
+    const key = d.toISOString().slice(0, 10);
+    buckets[key] = 0;
+    dayKeys.push({ key, label: d.toLocaleDateString('en-GB', { weekday: 'short' }) });
+  }
+  (recentSignups ?? []).forEach((r: any) => {
+    const key = (r.created_at || '').slice(0, 10);
+    if (key in buckets) buckets[key]++;
+  });
+  const dailySignups = dayKeys.map((d) => ({ label: d.label, count: buckets[d.key] }));
+
+  const { data: recentRows } = await supabase
+    .from('profiles').select('first_name, last_active_at, verification_status')
+    .not('last_active_at', 'is', null)
+    .order('last_active_at', { ascending: false }).limit(8);
+  const recent = (recentRows ?? []).map((r: any) => ({ name: r.first_name || 'Member', last_active_at: r.last_active_at, verification_status: r.verification_status }));
+
+  return { newToday, new7d, new30d, activeToday, active7d, dailySignups, recent };
 }
 
 export async function getAdminStats(): Promise<AdminStats> {
