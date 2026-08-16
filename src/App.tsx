@@ -27,6 +27,7 @@ import { NotificationBell } from './components/NotificationBell';
 import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 import { Safety } from './components/Safety';
+import { About } from './components/About';
 import { Blog } from './components/Blog';
 import { Pricing } from './components/Pricing';
 import { Faq } from './components/FaqList';
@@ -54,6 +55,7 @@ export type AppState =
   | 'auth'
   | 'contact'
   | 'safety'
+  | 'about'
   | 'blog'
   | 'pricing'
   | 'faq'
@@ -65,13 +67,13 @@ export type AppState =
 // checks inside — this just removes it from casual discovery.
 const ADMIN_PATH = '/hooyomacan2001';
 
-const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'blog', 'pricing', 'faq', 'notfound'];
+const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'about', 'blog', 'pricing', 'faq', 'notfound'];
 
 // URL <-> state mapping so /admin, /wali, etc. work as real links.
 const STATE_PATHS: Partial<Record<AppState, string>> = {
   landing: '/', discover: '/discover', activity: '/activity', chats: '/chats', profile: '/profile',
   progress: '/progress', settings: '/settings', wali: '/wali', admin: ADMIN_PATH,
-  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety', blog: '/blog', pricing: '/pricing', faq: '/faq',
+  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety', about: '/about', blog: '/blog', pricing: '/pricing', faq: '/faq',
 };
 
 // Extra readable URLs that all resolve to the auth screen.
@@ -506,6 +508,12 @@ function MemberApp() {
             </motion.div>
           )}
 
+          {appState === 'about' && (
+            <motion.div key="about" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+              <About onBack={() => setAppState(user ? 'discover' : 'landing')} onContact={() => setAppState('contact')} />
+            </motion.div>
+          )}
+
           {appState === 'blog' && (
             <motion.div key="blog" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
               <Blog onBack={() => setAppState(user ? 'discover' : 'landing')} />
@@ -598,7 +606,7 @@ function MemberApp() {
 
       {/* Footer on public content pages (not the login screen) so navigation is
           always available. */}
-      {(['landing', 'terms', 'privacy', 'contact', 'safety', 'blog', 'pricing', 'faq', 'notfound'] as AppState[]).includes(appState) && (
+      {(['landing', 'terms', 'privacy', 'contact', 'safety', 'about', 'blog', 'pricing', 'faq', 'notfound'] as AppState[]).includes(appState) && (
         <Footer />
       )}
 

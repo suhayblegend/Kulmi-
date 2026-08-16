@@ -37,6 +37,7 @@ export function Footer() {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-4">Company</p>
           <ul className="space-y-2.5 text-sm">
+            <li><FooterLink to="/about">About us</FooterLink></li>
             <li><FooterLink to="/contact">Contact us</FooterLink></li>
             <li><FooterLink to="/pricing">Support us ☕</FooterLink></li>
           </ul>
@@ -51,7 +52,10 @@ export function Footer() {
       </div>
       <div className="border-t border-white/10">
         <div className="max-w-5xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/40">
-          <p>© {new Date().getFullYear()} Kulmi — kulmi.uk</p>
+          <p>
+            © {new Date().getFullYear()} Kulmi — kulmi.uk · Built by{' '}
+            <a href="https://egehagency.com/" target="_blank" rel="noreferrer" className="text-white/60 hover:text-white underline underline-offset-2">Egeh Agency</a>
+          </p>
           <p className="font-serif italic text-white/50">"And We created you in pairs" — Qur'an 78:8</p>
         </div>
       </div>

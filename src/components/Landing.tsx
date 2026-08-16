@@ -169,42 +169,23 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
         </div>
       </section>
 
-      {/* Founder story — a real person builds trust faster than any feature */}
+      {/* Meet the founders — teaser linking to the full About page */}
       <section className="w-full max-w-4xl mx-auto py-24 px-6">
-        <div className="bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-[220px_1fr]">
-            {/* Photo / monogram */}
-            <div className="bg-[#1B4332] flex flex-col items-center justify-center p-8 text-center">
-              <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/25 flex items-center justify-center mb-4">
-                <span className="font-serif text-4xl text-white italic">K</span>
-              </div>
-              <p className="text-white font-serif italic text-lg leading-tight">The Founder</p>
-              <p className="text-white/60 text-xs mt-1">Kulmi</p>
-            </div>
-            {/* Message */}
-            <div className="p-8 md:p-10">
-              <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#8B7355] mb-4">Why I built Kulmi</p>
-              <div className="space-y-4 text-[#5C574F] leading-relaxed">
-                <p className="font-serif text-lg text-[#1B4332] italic">Assalamu alaikum,</p>
-                <p>
-                  I built Kulmi because our community deserves a serious, halal way to find a spouse — not another
-                  swiping app that treats marriage like a game. Too many brothers and sisters told me the same thing:
-                  they wanted something built on our values, where they'd feel safe and respected.
-                </p>
-                <p>
-                  So Kulmi was made with a few promises at its heart: <span className="text-[#1B4332] font-medium">every
-                  member is verified by a live selfie</span>, <span className="text-[#1B4332] font-medium">your photos
-                  stay private until you both choose to connect</span>, your <span className="text-[#1B4332] font-medium">wali
-                  can be involved</span>, and your data is <span className="text-[#1B4332] font-medium">never sold — ever</span>.
-                </p>
-                <p>
-                  We're new, and I know trust is earned. If you ever have a question or concern, email me directly at{' '}
-                  <a href="mailto:support@kulmi.uk" className="text-[#1B4332] font-medium underline underline-offset-2">support@kulmi.uk</a>{' '}
-                  — a real person reads every message. May Allah bless your search and grant you a righteous spouse, insha'Allah.
-                </p>
-              </div>
-              <p className="font-serif italic text-[#1B4332] mt-6">— The Kulmi team</p>
-            </div>
+        <div className="bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden grid grid-cols-1 sm:grid-cols-[200px_1fr]">
+          <img src="/founders.jpg" alt="Fardowza and Suhayb, founders of Kulmi" className="w-full h-56 sm:h-full object-cover object-center" />
+          <div className="p-8 md:p-10 flex flex-col justify-center">
+            <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#8B7355] mb-3">Built by our community</p>
+            <h2 className="font-serif text-2xl md:text-3xl text-[#1B4332] italic mb-3">Made by two Somali developers who cared enough to build it</h2>
+            <p className="text-sm text-[#5C574F] leading-relaxed mb-5">
+              We're Suhayb &amp; Fardowza. We built Kulmi because our community deserves a serious, halal way to find a
+              spouse — verified, private, and wali-friendly. We're real people, and we'd love for you to know us.
+            </p>
+            <button
+              onClick={() => { window.history.pushState({}, '', '/about'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+              className="self-start text-sm font-medium text-[#1B4332] border border-[#E5E0D8] rounded-xl px-5 py-2.5 hover:bg-[#FDFBF7] transition-colors"
+            >
+              Read our story →
+            </button>
           </div>
         </div>
       </section>
