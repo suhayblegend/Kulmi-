@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Loader2, ArrowLeft, BookOpen, Calendar, Clock, Share2, Check } from 'lucide-react';
-import { listPublishedPosts, type BlogPost } from '../lib/db';
+import { listPublishedPosts, getPostReactions, reactToPost, type BlogPost } from '../lib/db';
+
+const REACTIONS: { key: 'love' | 'ameen' | 'helpful'; emoji: string; label: string }[] = [
+  { key: 'love', emoji: '❤️', label: 'Love it' },
+  { key: 'ameen', emoji: '🤲', label: 'Ameen' },
+  { key: 'helpful', emoji: '💡', label: 'Helpful' },
+];
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -15,9 +21,29 @@ export function Blog({ onBack }: { onBack: () => void }) {
   const [open, setOpen] = useState<BlogPost | null>(null);
   const [progress, setProgress] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [reactions, setReactions] = useState<Record<string, number>>({});
+  const [myReactions, setMyReactions] = useState<Set<string>>(new Set());
+
+  const loadReactions = (postId: string) => {
+    getPostReactions(postId).then(setReactions).catch(() => setReactions({}));
+    try {
+      const raw = localStorage.getItem(`kulmi_reacted_${postId}`);
+      setMyReactions(new Set(raw ? JSON.parse(raw) : []));
+    } catch { setMyReactions(new Set()); }
+  };
+
+  const react = async (postId: string, key: 'love' | 'ameen' | 'helpful') => {
+    if (myReactions.has(key)) return; // one of each per reader (this browser)
+    setReactions((r) => ({ ...r, [key]: (r[key] || 0) + 1 }));
+    const next = new Set(myReactions).add(key);
+    setMyReactions(next);
+    try { localStorage.setItem(`kulmi_reacted_${postId}`, JSON.stringify([...next])); } catch { /* ignore */ }
+    try { await reactToPost(postId, key); } catch { /* count is best-effort */ }
+  };
 
   const openPost = (p: BlogPost) => {
     setOpen(p);
+    loadReactions(p.id);
     window.history.replaceState({}, '', `/blog?post=${p.id}`);
     window.scrollTo(0, 0);
   };
@@ -35,7 +61,7 @@ export function Blog({ onBack }: { onBack: () => void }) {
         const id = new URLSearchParams(window.location.search).get('post');
         if (id) {
           const p = list.find((x) => x.id === id);
-          if (p) { setOpen(p); window.scrollTo(0, 0); }
+          if (p) { setOpen(p); loadReactions(p.id); window.scrollTo(0, 0); }
         }
       })
       .catch(() => {})
@@ -98,6 +124,29 @@ export function Blog({ onBack }: { onBack: () => void }) {
               </div>
               <h1 className="font-serif text-3xl text-[#1B4332] mb-6 leading-snug">{open.title}</h1>
               <div className="text-[15px] text-[#2D2926] leading-[1.9] whitespace-pre-wrap font-serif">{open.content}</div>
+
+              {/* Reactions */}
+              <div className="mt-8 pt-6 border-t border-[#F0EEE8]">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#8B7355] mb-3">Did this benefit you?</p>
+                <div className="flex flex-wrap gap-2.5">
+                  {REACTIONS.map((r) => {
+                    const reacted = myReactions.has(r.key);
+                    const n = reactions[r.key] || 0;
+                    return (
+                      <button
+                        key={r.key}
+                        onClick={() => react(open.id, r.key)}
+                        disabled={reacted}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm transition-colors ${reacted ? 'bg-[#E8F3ED] border-[#1B4332]/30 text-[#1B4332] font-medium' : 'bg-white border-[#E5E0D8] text-[#5C574F] hover:border-[#1B4332]/40'}`}
+                      >
+                        <span className="text-base leading-none">{r.emoji}</span>
+                        <span>{r.label}</span>
+                        {n > 0 && <span className="text-xs text-[#8B7355] tabular-nums">{n}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </article>
 

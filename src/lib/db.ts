@@ -1303,6 +1303,19 @@ export async function adminSavePost(post: { id?: string; title: string; excerpt?
   }
 }
 
+/** Reaction counts for a post, keyed by 'love' | 'ameen' | 'helpful'. */
+export async function getPostReactions(postId: string): Promise<Record<string, number>> {
+  const { data } = await supabase.from('post_reactions').select('emoji, count').eq('post_id', postId);
+  const m: Record<string, number> = {};
+  (data ?? []).forEach((r: any) => { m[r.emoji] = r.count; });
+  return m;
+}
+
+/** Add one reaction to a post (public — validated & counted server-side). */
+export async function reactToPost(postId: string, emoji: 'love' | 'ameen' | 'helpful'): Promise<void> {
+  await supabase.rpc('react_post', { p_post: postId, p_emoji: emoji });
+}
+
 export async function adminDeletePost(id: string): Promise<void> {
   const { error } = await supabase.from('posts').delete().eq('id', id);
   if (error) throw error;
