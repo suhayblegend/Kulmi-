@@ -470,9 +470,11 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               className="relative z-10 w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] max-h-[92vh] overflow-y-auto"
             >
               <button onClick={() => setViewProfile(null)} className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4 h-4" /></button>
-              <div className="relative h-72 bg-[#F0EEE8]">
-                <img src={avatarFor(viewProfile)} alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+              <div className="relative h-80 bg-[#0A261A] overflow-hidden">
+                {/* Blurred fill so the full photo shows (object-contain) without cropping or ugly bars. */}
+                <img src={avatarFor(viewProfile)} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />
+                <img src={avatarFor(viewProfile)} alt="" className="relative w-full h-full object-contain" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-5 right-5 text-white">
                   <div className="flex items-center gap-2">
                     <h2 className="text-2xl font-serif drop-shadow-sm">{viewProfile.first_name}{viewProfile.age ? `, ${viewProfile.age}` : ''}</h2>

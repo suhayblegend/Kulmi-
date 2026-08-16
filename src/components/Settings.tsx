@@ -316,9 +316,9 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
           <div className="p-6 border-b border-[#E5E0D8]">
             <div className="flex items-center gap-3 mb-2"><Eye className="w-5 h-5 text-[#1B4332]" /><h3 className="font-bold text-[#2D2926]">Privacy & Discovery</h3></div>
             <div className="space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <div><p className="font-medium text-sm text-[#2D2926]">Show in Discovery</p><p className="text-xs text-[#8B7355]">Allow your profile to be matched with others</p></div>
-                <Toggle on={profile.show_in_discovery !== false} onChange={(v) => setToggle('show_in_discovery', v)} />
+              <div className="flex items-center justify-between gap-4">
+                <div><p className="font-medium text-sm text-[#2D2926]">Pause my profile</p><p className="text-xs text-[#8B7355]">Hide yourself from Discover — great while you're focused on a conversation. Your existing chats and sessions are unaffected, and you can un-pause any time.</p></div>
+                <Toggle on={profile.show_in_discovery === false} onChange={(v) => setToggle('show_in_discovery', !v)} />
               </div>
               <div className="flex items-center justify-between">
                 <div><p className="font-medium text-sm text-[#2D2926]">Read Receipts</p><p className="text-xs text-[#8B7355]">Let matches know when you've read their messages</p></div>
