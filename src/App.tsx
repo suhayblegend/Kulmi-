@@ -53,14 +53,20 @@ export type AppState =
   | 'blog'
   | 'pricing'
   | 'faq'
+  | 'notfound'
   | 'onboarding';
 
-const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'blog', 'pricing', 'faq'];
+// The admin dashboard lives at an unguessable path (not /admin) so bots and
+// randoms can't even find the login. Real security is still the role + RLS
+// checks inside — this just removes it from casual discovery.
+const ADMIN_PATH = '/hooyomacan2001';
+
+const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'blog', 'pricing', 'faq', 'notfound'];
 
 // URL <-> state mapping so /admin, /wali, etc. work as real links.
 const STATE_PATHS: Partial<Record<AppState, string>> = {
   landing: '/', discover: '/discover', activity: '/activity', chats: '/chats', profile: '/profile',
-  progress: '/progress', settings: '/settings', wali: '/wali', admin: '/admin',
+  progress: '/progress', settings: '/settings', wali: '/wali', admin: ADMIN_PATH,
   auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety', blog: '/blog', pricing: '/pricing', faq: '/faq',
 };
 
@@ -110,7 +116,7 @@ export default function App() {
           let dest = '/';
           try {
             const p = await getMyProfile(true);
-            if (p?.role === 'admin') dest = '/admin';
+            if (p?.role === 'admin') dest = ADMIN_PATH;
             else if (p?.role === 'wali') dest = '/wali';
           } catch { /* ignore */ }
           window.location.hash = '';
@@ -120,7 +126,7 @@ export default function App() {
     );
   }
   const path = (typeof window !== 'undefined' ? window.location.pathname : '/').replace(/\/+$/, '') || '/';
-  if (path === '/admin') return <StaffArea kind="admin" />;
+  if (path === ADMIN_PATH) return <StaffArea kind="admin" />;
   if (path === '/wali') return <StaffArea kind="wali" />;
   return <MemberApp />;
 }
@@ -165,7 +171,11 @@ function MemberApp() {
     // cannot work, so the member must complete onboarding first.
     if (!exempt && (!profile.profile_picture_url || !(profile.gender ?? '').trim())) return 'onboarding';
     if (!exempt && profile.verification_status !== 'verified') return 'verify';
-    if (!target || target === 'landing' || target === 'auth') return 'discover';
+    if (target === 'landing' || target === 'auth') return 'discover';
+    // pathToState('/') === 'landing', so a null target here is a genuinely
+    // unknown URL → show a 404 rather than silently dumping them on Discover.
+    const clean = (initialPathRef.current || '/').replace(/\/+$/, '') || '/';
+    if (!target) return clean === '/' ? 'discover' : 'notfound';
     if (target === 'admin' && profile.role !== 'admin') return 'discover';
     if (target === 'wali' && !(profile.role === 'wali' || profile.role === 'admin')) return 'discover';
     return target;
@@ -273,10 +283,15 @@ function MemberApp() {
         // if the refresh truly fails) instead of flashing the homepage.
         if (!routedRef.current && HAS_STORED_SESSION && event === 'INITIAL_SESSION') return;
         if (!routedRef.current) {
-          const wantAuth = pathToState(initialPathRef.current) === 'auth';
+          const known = pathToState(initialPathRef.current);
+          const clean = (initialPathRef.current || '/').replace(/\/+$/, '') || '/';
           setUser(null);
           setMyProfile(null);
-          setAppState(wantAuth ? 'auth' : 'landing');
+          // Public pages (pricing, faq, terms…) render directly. Unknown URLs →
+          // 404. Member-only URLs while logged out, or root → landing.
+          if (known && PUBLIC_STATES.includes(known)) setAppState(known);
+          else if (!known && clean !== '/') setAppState('notfound');
+          else setAppState('landing');
         }
         setInitializing(false);
         return;
@@ -315,9 +330,10 @@ function MemberApp() {
   useEffect(() => {
     const onPop = () => {
       const p = window.location.pathname.replace(/\/+$/, '') || '/';
-      if (p === '/admin' || p === '/wali') { window.location.href = p; return; } // hand off to the separate staff area
+      if (p === ADMIN_PATH || p === '/wali') { window.location.href = p; return; } // hand off to the separate staff area
       const target = pathToState(p);
       if (target) setAppState(target);
+      else if (p !== '/') setAppState('notfound');
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -445,7 +461,7 @@ function MemberApp() {
         {staffSession && PUBLIC_STATES.includes(appState) && (
           <div className="w-full max-w-3xl mx-auto mb-6 bg-[#1B4332] text-white rounded-2xl px-5 py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm">
             <span>You're signed in as <b className="capitalize">{staffSession}</b> — not shown as a member here.</span>
-            <button onClick={() => { window.location.href = staffSession === 'admin' ? '/admin' : '/wali'; }} className="underline font-medium">Go to dashboard</button>
+            <button onClick={() => { window.location.href = staffSession === 'admin' ? ADMIN_PATH : '/wali'; }} className="underline font-medium">Go to dashboard</button>
             <button onClick={() => supabase.auth.signOut()} className="underline">Sign out</button>
           </div>
         )}
@@ -489,6 +505,12 @@ function MemberApp() {
           {appState === 'faq' && (
             <motion.div key="faq" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
               <Faq onBack={() => setAppState(user ? 'discover' : 'landing')} onContact={() => setAppState('contact')} />
+            </motion.div>
+          )}
+
+          {appState === 'notfound' && (
+            <motion.div key="notfound" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+              <NotFound onHome={() => setAppState(user ? 'discover' : 'landing')} loggedIn={!!user} />
             </motion.div>
           )}
 
@@ -602,6 +624,21 @@ function MemberApp() {
           </button>
         </nav>
       )}
+    </div>
+  );
+}
+
+function NotFound({ onHome, loggedIn }: { onHome: () => void; loggedIn: boolean }) {
+  return (
+    <div className="w-full max-w-md mx-auto text-center py-24 px-6">
+      <p className="font-serif text-7xl text-[#1B4332] italic mb-2">404</p>
+      <h1 className="font-serif text-2xl text-[#1B4332] mb-3">This page doesn't exist</h1>
+      <p className="text-[#8B7355] text-sm leading-relaxed mb-8">
+        The link may be broken or the page may have moved. Let's get you back on track, insha'Allah.
+      </p>
+      <button onClick={onHome} className="bg-[#1B4332] text-white hover:bg-[#143326] px-8 py-3 rounded-xl font-medium tracking-wide transition-colors">
+        {loggedIn ? 'Back to Discover' : 'Back to home'}
+      </button>
     </div>
   );
 }
