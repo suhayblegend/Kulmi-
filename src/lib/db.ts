@@ -52,6 +52,7 @@ export interface Profile {
   compat_questions?: string[] | null;
   intro_audio_url?: string | null;
   intro_public?: boolean | null;
+  is_premium?: boolean | null;
   latitude?: number | null;
   longitude?: number | null;
   show_in_discovery?: boolean | null;
@@ -90,7 +91,7 @@ export interface Message {
 // If that view isn't present yet (the privacy migration hasn't been run),
 // transparently fall back to the base `profiles` table so the app still works.
 const PUBLIC_PROFILE_COLS =
-  'id, first_name, age, gender, location, bio, role, profile_picture_url, country, city, occupation, education, languages, marital_status, height, heritage, marriage_intent, timeline, relocate, children, has_children, prayer_level, islamic_practice, faith_statement, religious_dress, smoking, khat, open_to_polygyny, personality_traits, future_goals, communication_style, photo_verified, verification_status, intro_audio_url';
+  'id, first_name, age, gender, location, bio, role, profile_picture_url, country, city, occupation, education, languages, marital_status, height, heritage, marriage_intent, timeline, relocate, children, has_children, prayer_level, islamic_practice, faith_statement, religious_dress, smoking, khat, open_to_polygyny, personality_traits, future_goals, communication_style, photo_verified, verification_status, intro_audio_url, is_premium';
 
 let PROFILE_SRC = 'public_profiles';
 // Only fall back when the VIEW genuinely doesn't exist (missing relation),
@@ -386,7 +387,9 @@ export async function getMatchGallery(partnerId: string): Promise<string[]> {
  *  Returns a playable (signed) URL. */
 export async function uploadIntro(blob: Blob): Promise<string> {
   const path = await uploadSecure(blob, 'intro', 'webm');
-  await updateMyProfile({ intro_audio_url: path });
+  // Public by default — a voice intro is meant to help others get to know you in
+  // Discover. Members can hide it with the toggle (setIntroPublic).
+  await updateMyProfile({ intro_audio_url: path, intro_public: true });
   return (await resolveMediaUrl(path)) ?? path;
 }
 

@@ -64,10 +64,17 @@ const ModalSection = ({ title, children }: { title: string; children: React.Reac
   return (
     <div className="mb-5">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2">{title}</p>
-      <div className="grid grid-cols-2 gap-2">{children}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">{children}</div>
     </div>
   );
 };
+
+// "Kulmi+" badge shown next to premium members' names.
+const KulmiPlus = () => (
+  <span className="flex items-center gap-1 bg-[#1B4332] text-[#F0EEE8] text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
+    <Sparkles className="w-3 h-3" /> Kulmi+
+  </span>
+);
 
 const TagSection = ({ title, items }: { title: string; items?: string[] | null }) =>
   items && items.length ? (
@@ -366,6 +373,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                         <BadgeCheck className="w-3 h-3" /> Verified
                       </span>
                     )}
+                    {(current as any).is_premium && <KulmiPlus />}
                   </div>
                   {(current.location || current.city) && (
                     <p className="flex items-center gap-1.5 text-sm opacity-90 mt-0.5">
@@ -459,7 +467,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               initial={{ opacity: 0, scale: 0.96, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
-              className="relative z-10 w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] max-h-[92vh] overflow-y-auto"
+              className="relative z-10 w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] max-h-[92vh] overflow-y-auto"
             >
               <button onClick={() => setViewProfile(null)} className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4 h-4" /></button>
               <div className="relative h-72 bg-[#F0EEE8]">
@@ -471,6 +479,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                     {(viewProfile.verification_status === 'verified' || viewProfile.photo_verified) && (
                       <span className="flex items-center gap-1 bg-white/90 text-[#1B4332] text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"><BadgeCheck className="w-3 h-3" /> Verified</span>
                     )}
+                    {(viewProfile as any).is_premium && <KulmiPlus />}
                   </div>
                   {(viewProfile.location || viewProfile.city) && (
                     <p className="flex items-center gap-1.5 text-sm opacity-90 mt-0.5"><MapPin className="w-3.5 h-3.5" /> {viewProfile.location || [viewProfile.city, viewProfile.country].filter(Boolean).join(', ')}</p>
