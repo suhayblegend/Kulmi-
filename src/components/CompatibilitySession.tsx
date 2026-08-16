@@ -25,6 +25,33 @@ interface Props {
 const MIN_WORDS = 15;
 const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 
+const scoreLabel = (n: number) =>
+  n >= 80 ? 'Strong match' : n >= 60 ? 'Good potential' : n >= 40 ? 'Worth exploring' : 'Notable differences';
+
+// Animated circular gauge for the compatibility score.
+function ScoreRing({ value }: { value: number }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setShown(value), 100);
+    return () => clearTimeout(t);
+  }, [value]);
+  const r = 52, c = 2 * Math.PI * r;
+  const off = c * (1 - Math.max(0, Math.min(100, shown)) / 100);
+  return (
+    <div className="relative w-32 h-32 shrink-0">
+      <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+        <circle cx="60" cy="60" r={r} fill="none" stroke="#E5E0D8" strokeWidth="10" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="#1B4332" strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(0.22,1,0.36,1)' }} />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-serif text-3xl text-[#1B4332] leading-none">{value}%</span>
+        <span className="text-[10px] uppercase tracking-widest text-[#8B7355] mt-1">match</span>
+      </div>
+    </div>
+  );
+}
+
 // Module scope so it keeps a stable identity across renders — otherwise the
 // answer textareas remount on every keystroke and lose focus.
 function SessionCard({ onExit, summary, children }: { onExit: () => void; summary: SessionSummary | null; children: React.ReactNode }) {
@@ -371,62 +398,75 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
   return (
     <SessionCard onExit={onExit} summary={summary}>
       <div className="space-y-10">
-        <div className="rounded-2xl border border-[#1B4332]/20 bg-[#FDFBF7] p-6">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="rounded-3xl border border-[#1B4332]/15 bg-gradient-to-br from-[#FDFBF7] to-[#F0EEE8] p-6 md:p-8">
+          <div className="flex items-center gap-2 mb-5">
             <Sparkles className="w-4 h-4 text-[#1B4332]" />
             <h3 className="text-xs font-bold uppercase tracking-widest text-[#1B4332]">Compatibility Analysis</h3>
           </div>
           {!analysis ? (
             <div className="flex items-center gap-3 text-[#8B7355] py-4"><Loader2 className="w-5 h-5 animate-spin" /> Preparing your compatibility summary…</div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl font-serif text-[#1B4332]">{analysis.score}%</div>
-                <p className="text-sm text-[#5C574F] flex-1">{analysis.summary}</p>
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <ScoreRing value={analysis.score} />
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="font-serif text-2xl text-[#1B4332] italic mb-2">{scoreLabel(analysis.score)}</p>
+                  <p className="text-sm text-[#5C574F] leading-relaxed">{analysis.summary}</p>
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-2">Strengths</p>
-                  <ul className="space-y-1.5">
+                <div className="bg-[#E8F3ED] border border-[#1B4332]/15 rounded-2xl p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-2.5 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Strengths</p>
+                  <ul className="space-y-2">
                     {analysis.strengths.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-[#5C574F]"><CheckCircle2 className="w-4 h-4 text-[#1B4332] shrink-0 mt-0.5" /> {s}</li>
+                      <li key={i} className="flex gap-2 text-sm text-[#2D2926]"><span className="text-[#1B4332] mt-0.5">•</span> {s}</li>
                     ))}
                   </ul>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2">To Discuss</p>
-                  <ul className="space-y-1.5">
+                <div className="bg-white border border-[#E5E0D8] rounded-2xl p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2.5 flex items-center gap-1.5"><Heart className="w-3.5 h-3.5" /> To discuss together</p>
+                  <ul className="space-y-2">
                     {analysis.considerations.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-[#5C574F]"><Heart className="w-4 h-4 text-[#8B7355] shrink-0 mt-0.5" /> {s}</li>
+                      <li key={i} className="flex gap-2 text-sm text-[#5C574F]"><span className="text-[#8B7355] mt-0.5">•</span> {s}</li>
                     ))}
                   </ul>
                 </div>
               </div>
+              <p className="text-[11px] text-[#8B7355] text-center italic">A guide, not a verdict — make your decision with sincerity, istikhara and your wali's counsel.</p>
             </div>
           )}
         </div>
 
         {/* Answers side by side (text and/or voice) */}
-        <div className="space-y-6">
-          {questions.map((q, i) => (
-            <div key={i} className="border-t border-[#F0EEE8] pt-4">
-              <p className="text-sm font-medium text-[#1B4332] mb-3">{i + 1}. {q}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-4 rounded-xl bg-[#F0EEE8]">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1">You</p>
-                  {mine[i] && <p className="text-sm text-[#2D2926] font-serif italic">{mine[i]}</p>}
-                  {mineAudio[i] && <audio controls src={mineAudio[i]} className="w-full mt-2" />}
-                  {!mine[i] && !mineAudio[i] && <p className="text-sm text-[#2D2926] font-serif italic">—</p>}
+        <div>
+          <h3 className="font-serif text-xl text-[#1B4332] italic mb-1 text-center">How you each answered</h3>
+          <p className="text-xs text-[#8B7355] text-center mb-6">Read both sides — the words matter more than the score.</p>
+          <div className="space-y-5">
+            {questions.map((q, i) => (
+              <div key={i} className="bg-white border border-[#E5E0D8] rounded-2xl p-5 shadow-sm">
+                <div className="flex gap-3 mb-4">
+                  <span className="w-6 h-6 shrink-0 rounded-full bg-[#1B4332] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                  <p className="text-sm font-medium text-[#1B4332] leading-snug">{q}</p>
                 </div>
-                <div className="p-4 rounded-xl bg-white border border-[#1B4332]/20">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-1">{summary.partner.first_name}</p>
-                  {theirs[i] && <p className="text-sm text-[#1B4332] font-serif italic">{theirs[i]}</p>}
-                  {theirsAudio[i] && <audio controls src={theirsAudio[i]} className="w-full mt-2" />}
-                  {!theirs[i] && !theirsAudio[i] && <p className="text-sm text-[#1B4332] font-serif italic">—</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl bg-[#FDFBF7] border border-[#E5E0D8]">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1.5">You</p>
+                    {mine[i] && <p className="text-sm text-[#2D2926] font-serif italic leading-relaxed">{mine[i]}</p>}
+                    {mineAudio[i] && <audio controls src={mineAudio[i]} className="w-full mt-2" />}
+                    {!mine[i] && !mineAudio[i] && <p className="text-sm text-[#8B7355]">—</p>}
+                  </div>
+                  <div className="p-4 rounded-xl bg-[#E8F3ED] border border-[#1B4332]/15">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-1.5 flex items-center gap-1.5">
+                      <img src={avatarFor(summary.partner)} alt="" className="w-4 h-4 rounded-full object-cover" /> {summary.partner.first_name}
+                    </p>
+                    {theirs[i] && <p className="text-sm text-[#1B4332] font-serif italic leading-relaxed">{theirs[i]}</p>}
+                    {theirsAudio[i] && <audio controls src={theirsAudio[i]} className="w-full mt-2" />}
+                    {!theirs[i] && !theirsAudio[i] && <p className="text-sm text-[#8B7355]">—</p>}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <AnimatePresence mode="wait">
