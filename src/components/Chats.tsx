@@ -53,7 +53,7 @@ export function Chats({ onSelectChat }: ChatsProps) {
     : chats;
 
   return (
-    <div className="w-full max-w-3xl mx-auto h-[80vh] flex flex-col bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden mt-4">
+    <div className="w-full max-w-3xl mx-auto h-[calc(100dvh-12rem)] sm:h-[80vh] flex flex-col bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden sm:mt-4">
       {/* Header */}
       <div className="p-6 md:p-8 border-b border-[#E5E0D8] bg-[#FDFBF7]">
         <div className="flex items-center justify-between mb-6">

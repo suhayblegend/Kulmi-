@@ -1666,12 +1666,14 @@ export async function adminReviewVerification(userId: string, approve: boolean, 
     );
   }
 
-  // On rejection, email the member the reason (best-effort — never blocks the review).
-  if (!approve) {
-    try {
-      await supabase.functions.invoke(BROADCAST_FN, { body: { action: 'notify-rejection', userId, reason: note ?? '' } });
-    } catch { /* email is best-effort */ }
-  }
+  // Email the member either way (best-effort — never blocks the review).
+  try {
+    await supabase.functions.invoke(BROADCAST_FN, {
+      body: approve
+        ? { action: 'notify-approval', userId }
+        : { action: 'notify-rejection', userId, reason: note ?? '' },
+    });
+  } catch { /* email is best-effort */ }
 }
 
 export async function adminSetRole(userId: string, role: 'user' | 'wali' | 'admin'): Promise<void> {

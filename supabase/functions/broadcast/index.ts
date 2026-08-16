@@ -448,6 +448,22 @@ serve(async (req) => {
       return json({ sent });
     }
 
+    // ---- Email a member that they are now verified ----
+    if (body.action === "notify-approval") {
+      const { data: target } = await admin.from("profiles").select("email, first_name").eq("id", body.userId).single();
+      if (!target?.email) return json({ sent: false, note: "No email on file." });
+      const sent = await sendEmail(target.email, "You're verified on Kulmi",
+        `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+          <h2 style="color:#1B4332;font-family:Georgia,serif">You're verified &#10003;</h2>
+          <p>Assalamu alaikum${target.first_name ? " " + esc(target.first_name) : ""},</p>
+          <p>Alhamdulillah &mdash; your identity has been verified on <b>Kulmi</b>. Your profile is now visible to other members, and you can send and receive introductions.</p>
+          <p>May Allah bless your search and grant you a righteous spouse, insha'Allah.</p>
+          <p><a href="https://kulmi.uk/discover" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Start discovering</a></p>
+          <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi &mdash; kulmi.uk &mdash; Isla Kulma, Isla Noolada</p>
+        </div>`);
+      return json({ sent });
+    }
+
     // ---- Formal warning email (step before removal) ----
     if (body.action === "warn-user") {
       const { data: target } = await admin.from("profiles").select("email, first_name").eq("id", body.userId).single();

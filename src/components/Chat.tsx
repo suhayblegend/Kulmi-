@@ -272,7 +272,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto h-[80vh] flex gap-6 mt-4 relative">
+    <div className="w-full max-w-5xl mx-auto h-[calc(100dvh-12rem)] sm:h-[80vh] flex gap-6 sm:mt-4 relative">
       <AnimatePresence>
         {showEndConfirm && (
           <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl">

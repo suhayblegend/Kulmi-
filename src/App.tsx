@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Compass, Bell, MessageCircle, TrendingUp, User, Settings as SettingsIcon } from 'lucide-react';
 import { Landing } from './components/Landing';
 import { Home } from './components/Home';
 import { Activity } from './components/Activity';
@@ -459,7 +460,7 @@ function MemberApp() {
         </div>
       </header>
 
-      <main className="pt-20 sm:pt-32 pb-24 sm:pb-16 px-3 sm:px-4 min-h-screen flex flex-col items-center justify-center w-full max-w-6xl mx-auto">
+      <main className="pt-20 sm:pt-32 pb-28 sm:pb-16 px-4 sm:px-4 min-h-screen flex flex-col items-center justify-start w-full max-w-6xl mx-auto">
         {staffSession && PUBLIC_STATES.includes(appState) && (
           <div className="w-full max-w-3xl mx-auto mb-6 bg-[#1B4332] text-white rounded-2xl px-5 py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm">
             <span>You're signed in as <b className="capitalize">{staffSession}</b> — not shown as a member here.</span>
@@ -590,46 +591,36 @@ function MemberApp() {
 
       {/* Mobile Navigation */}
       {!PUBLIC_STATES.includes(appState) && (
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-[#E5E0D8] z-50 flex items-center justify-around py-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          <button
-            onClick={() => setAppState('discover')}
-            className={`flex flex-col items-center gap-1 ${appState === 'discover' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider">Discover</span>
-          </button>
-          <button
-            onClick={() => setAppState('activity')}
-            className={`relative flex flex-col items-center gap-1 ${appState === 'activity' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider">Activity</span>
-            {activityCount > 0 && (
-              <span className="absolute -top-1.5 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[#1B4332] text-white text-[9px] font-bold flex items-center justify-center">{activityCount}</span>
-            )}
-          </button>
-          <button
-            onClick={() => setAppState('chats')}
-            className={`flex flex-col items-center gap-1 ${appState === 'chats' || appState === 'chat' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider">Chats</span>
-          </button>
-          <button
-            onClick={() => setAppState('progress')}
-            className={`flex flex-col items-center gap-1 ${appState === 'progress' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider">Progress</span>
-          </button>
-          <button
-            onClick={() => setAppState('profile')}
-            className={`flex flex-col items-center gap-1 ${appState === 'profile' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider">Profile</span>
-          </button>
-          <button
-            onClick={() => setAppState('settings')}
-            className={`flex flex-col items-center gap-1 ${appState === 'settings' ? 'text-[#1B4332]' : 'text-[#8B7355] opacity-70 hover:opacity-100'}`}
-          >
-            <span className="text-[10px] uppercase font-bold tracking-wider">Settings</span>
-          </button>
+        <nav
+          className="sm:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-[#E5E0D8] z-50 flex items-stretch justify-around px-1 pt-1.5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6px)' }}
+        >
+          {[
+            { key: 'discover', label: 'Discover', icon: Compass, active: appState === 'discover' },
+            { key: 'activity', label: 'Activity', icon: Bell, active: appState === 'activity', badge: activityCount },
+            { key: 'chats', label: 'Chats', icon: MessageCircle, active: appState === 'chats' || appState === 'chat' },
+            { key: 'progress', label: 'Progress', icon: TrendingUp, active: appState === 'progress' },
+            { key: 'profile', label: 'Profile', icon: User, active: appState === 'profile' },
+            { key: 'settings', label: 'Settings', icon: SettingsIcon, active: appState === 'settings' },
+          ].map(({ key, label, icon: Icon, active, badge }) => (
+            <button
+              key={key}
+              onClick={() => setAppState(key as AppState)}
+              className={`relative flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-colors ${
+                active ? 'text-[#1B4332]' : 'text-[#8B7355]'
+              }`}
+            >
+              <span className="relative">
+                <Icon className="w-[22px] h-[22px]" strokeWidth={active ? 2.4 : 1.8} />
+                {!!badge && badge > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] px-1 rounded-full bg-[#1B4332] text-white text-[9px] font-bold flex items-center justify-center">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </span>
+              <span className={`text-[9.5px] tracking-tight leading-none ${active ? 'font-bold' : 'font-medium'}`}>{label}</span>
+            </button>
+          ))}
         </nav>
       )}
     </div>
