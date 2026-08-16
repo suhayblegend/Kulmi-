@@ -144,24 +144,34 @@ serve(async (req) => {
   // ---- Wali confirms guardianship (GET link from the invite email) ----
   const w = url.searchParams.get("w");
   const e64 = url.searchParams.get("e");
+  const x = url.searchParams.get("x"); // expiry timestamp (ms), part of the signature
   if (w && e64 && t) {
     let ok = false;
     let wardName = "";
+    let reason = "invalid"; // invalid | expired
     try {
       const email = atob(e64.replace(/-/g, "+").replace(/_/g, "/"));
-      ok = t === (await hmacHex(`wali|${w}|${email.toLowerCase()}`));
-      if (ok) {
+      const exp = x ? parseInt(x, 10) : 0;
+      const sigValid = !!x && t === (await hmacHex(`wali|${w}|${email.toLowerCase()}|${exp}`));
+      if (!sigValid) {
+        reason = "invalid";
+      } else if (Date.now() > exp) {
+        reason = "expired";
+      } else {
         const { data: row } = await admin
           .from("profiles").select("first_name, wali_email").eq("id", w).single();
         if (row && (row.wali_email || "").toLowerCase() === email.toLowerCase()) {
           await admin.from("profiles").update({ wali_confirmed: true }).eq("id", w);
           wardName = row.first_name || "your ward";
-        } else ok = false;
+          ok = true;
+        } else {
+          reason = "invalid";
+        }
       }
-    } catch { ok = false; }
+    } catch { reason = "invalid"; }
     // Redirect to a static branded page (reliable — no Content-Type quirks).
     return Response.redirect(
-      `https://kulmi.uk/wali-confirmed.html?ok=${ok ? 1 : 0}&name=${encodeURIComponent(wardName)}`, 302);
+      `https://kulmi.uk/wali-confirmed.html?ok=${ok ? 1 : 0}&reason=${reason}&name=${encodeURIComponent(wardName)}`, 302);
   }
 
   // ---- Unsubscribe (GET link, or one-click POST) ----
@@ -254,9 +264,12 @@ serve(async (req) => {
       if (!premium) return json({ error: "Wali oversight is a Kulmi+ feature. Please upgrade to invite your wali." }, 403);
       const waliEmail = (meRow?.wali_email || "").trim().toLowerCase();
       if (!waliEmail) return json({ error: "No wali email saved on your profile." }, 400);
-      const token = await hmacHex(`wali|${caller}|${waliEmail}`);
+      // The confirmation link expires — change WALI_LINK_TTL_MIN to adjust.
+      const WALI_LINK_TTL_MIN = 60 * 24 * 3; // 3 days
+      const exp = Date.now() + WALI_LINK_TTL_MIN * 60 * 1000;
+      const token = await hmacHex(`wali|${caller}|${waliEmail}|${exp}`);
       const e64 = btoa(waliEmail).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-      const link = `${FN_URL}?w=${caller}&e=${e64}&t=${token}`;
+      const link = `${FN_URL}?w=${caller}&e=${e64}&x=${exp}&t=${token}`;
       const name = meRow?.first_name || "A family member";
       const sent = await sendEmail(waliEmail, `${name} chose you as their wali on Kulmi`,
         `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
@@ -265,6 +278,7 @@ serve(async (req) => {
           <p>As their wali you'll be able to oversee their introductions — seeing who they're speaking with, with full transparency.</p>
           <p>If you accept this responsibility, please confirm:</p>
           <p><a href="${link}" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Confirm — I am their wali</a></p>
+          <p style="font-size:13px;color:#8B7355">This link expires in <b>3 days</b>. If it expires, ${esc(name)} can re-send it from their Kulmi settings.</p>
           <p style="font-size:13px;color:#8B7355">If you don't recognise this person, you can safely ignore this email — nothing will be shared with you.</p>
           <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi — kulmi.uk</p>
         </div>`);

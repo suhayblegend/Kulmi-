@@ -25,6 +25,7 @@
 <script>
   const q = new URLSearchParams(location.search);
   const ok = q.get('ok') === '1';
+  const reason = q.get('reason') || 'invalid';
   const name = (q.get('name') || 'your family member').replace(/[<>]/g,'');
   if (ok) {
     document.getElementById('logo').textContent = '✓';
@@ -34,10 +35,18 @@
       '</b> on Kulmi. Sign in with this email address to oversee their introductions.';
     document.getElementById('cta').textContent = 'Go to the Wali dashboard';
     document.getElementById('cta').href = 'https://kulmi.uk/wali';
+  } else if (reason === 'expired') {
+    document.getElementById('logo').textContent = '⏳';
+    document.getElementById('logo').style.background = '#B45309';
+    document.getElementById('title').textContent = 'This link has expired';
+    document.getElementById('msg').textContent =
+      'For your security, confirmation links expire after 3 days. Please ask your family member to open Kulmi → Settings and tap "Resend email" to get a fresh link.';
+    document.getElementById('cta').textContent = 'Open Kulmi';
+    document.getElementById('cta').href = 'https://kulmi.uk';
   } else {
     document.getElementById('logo').textContent = '!';
     document.getElementById('logo').style.background = '#B45309';
-    document.getElementById('title').textContent = 'Link invalid or expired';
+    document.getElementById('title').textContent = 'Link not valid';
     document.getElementById('msg').textContent =
       'This confirmation link is not valid. Please ask your family member to re-send it from their Kulmi settings.';
     document.getElementById('cta').textContent = 'Open Kulmi';
