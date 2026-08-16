@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, ChevronRight, Check, Eye, EyeOff } from 'lucide-react';
+import { Shield, ChevronRight, Check, Eye, EyeOff, MailCheck, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface AuthProps {
@@ -28,6 +28,28 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
 
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [awaitingConfirm, setAwaitingConfirm] = useState<string | null>(null); // email we just signed up
+  const [resent, setResent] = useState(false);
+
+  const handleResend = async () => {
+    if (!awaitingConfirm) return;
+    setError('');
+    setResent(false);
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: awaitingConfirm,
+        options: { emailRedirectTo: window.location.origin + '/auth' },
+      });
+      if (error) throw error;
+      setResent(true);
+    } catch (err: any) {
+      setError(err.message || 'Could not resend the email.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleForgot = async () => {
     setError('');
@@ -81,18 +103,20 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { first_name: firstName.trim(), last_name: lastName.trim() } },
+          options: {
+            data: { first_name: firstName.trim(), last_name: lastName.trim() },
+            emailRedirectTo: window.location.origin + '/auth',
+          },
         });
 
         if (error) throw error;
 
         if (data.session) {
-          // Email confirmation is disabled → the user is signed in now.
+          // Email confirmation is disabled in Supabase → the user is signed in now.
           onSuccess();
         } else {
-          // Confirmation required → tell them to verify, then sign in (green notice, not an error).
-          setNotice('Account created! Please check your email to verify your account, then sign in.');
-          setMode('signin');
+          // Confirmation required → show a clear, dedicated "check your inbox" screen.
+          setAwaitingConfirm(email);
         }
         setIsLoading(false);
         return;
@@ -113,6 +137,58 @@ export function Auth({ onSuccess, onTerms, onPrivacy, initialMode = 'signin', on
       setIsLoading(false);
     }
   };
+
+  if (awaitingConfirm) {
+    return (
+      <div className="w-full max-w-md mx-auto py-12">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl p-8 border border-[#E5E0D8] shadow-sm text-center">
+          <div className="w-16 h-16 bg-[#E8F3ED] rounded-2xl flex items-center justify-center mx-auto mb-5 text-[#1B4332]">
+            <MailCheck className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-serif text-[#1B4332] italic mb-2">Check your inbox</h2>
+          <p className="text-[#5C574F] text-sm leading-relaxed">
+            We've sent a confirmation link to
+          </p>
+          <p className="font-medium text-[#1B4332] my-2 break-all">{awaitingConfirm}</p>
+          <p className="text-[#5C574F] text-sm leading-relaxed">
+            Tap the link in that email to verify your account, then come back and sign in, insha'Allah.
+          </p>
+
+          <div className="mt-5 bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl p-3 text-left">
+            <p className="text-[12px] text-[#8B7355] leading-relaxed">
+              Can't find it? Check your <span className="font-medium text-[#5C574F]">spam / junk</span> folder — the email is from <span className="font-medium text-[#5C574F]">noreply@kulmi.uk</span>. It can take a minute to arrive.
+            </p>
+          </div>
+
+          {resent && (
+            <div className="mt-4 p-3 bg-[#E8F3ED] text-[#1B4332] text-sm rounded-xl border border-[#1B4332]/10">
+              Confirmation email sent again — check your inbox.
+            </div>
+          )}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100">
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleResend}
+            disabled={isLoading}
+            className="w-full mt-6 bg-white border border-[#E5E0D8] hover:border-[#1B4332] text-[#1B4332] py-3.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            {isLoading ? 'Sending…' : 'Resend confirmation email'}
+          </button>
+          <button
+            onClick={() => { setAwaitingConfirm(null); setResent(false); setError(''); setPassword(''); setConfirmPassword(''); setMode('signin'); }}
+            className="w-full mt-3 bg-[#1B4332] hover:bg-[#143326] text-white py-3.5 rounded-xl font-medium transition-colors"
+          >
+            Back to sign in
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto py-12">
