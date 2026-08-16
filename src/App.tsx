@@ -32,6 +32,7 @@ import { Pricing } from './components/Pricing';
 import { Faq } from './components/FaqList';
 import { supabase } from './lib/supabase';
 import { getMyProfile, touchLastActive, type Profile as DbProfile } from './lib/db';
+import { cacheClear } from './lib/cache';
 
 export type AppState =
   | 'landing'
@@ -274,6 +275,7 @@ function MemberApp() {
         setAppState('landing');
         routedRef.current = false;
         initialPathRef.current = '/';
+        cacheClear(); // drop cached lists so the next account starts clean
         try { localStorage.removeItem(HAS_PROFILE_KEY); } catch { /* ignore */ }
         setInitializing(false); // in case we were still holding the splash
         return;

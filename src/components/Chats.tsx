@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Search, Heart, BadgeCheck, Hourglass, Clock } from 'lucide-react';
 import { listChats, avatarFor, type ChatSummary } from '../lib/db';
+import { cacheGet, cacheSet } from '../lib/cache';
 import { ListRowSkeleton } from './ui/Skeleton';
 
 interface ChatsProps {
@@ -29,15 +30,16 @@ function iceLeft(iso: string | null): string {
 }
 
 export function Chats({ onSelectChat }: ChatsProps) {
-  const [chats, setChats] = useState<ChatSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = cacheGet<ChatSummary[]>('chats');
+  const [chats, setChats] = useState<ChatSummary[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached); // instant if we've loaded before
   const [query, setQuery] = useState('');
 
   useEffect(() => {
     let active = true;
     listChats()
-      .then((data) => active && setChats(data))
-      .catch(() => active && setChats([]))
+      .then((data) => { if (!active) return; setChats(data); cacheSet('chats', data); })
+      .catch(() => { /* keep showing cached data on a network blip */ })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, X, MapPin, Send, Inbox, BadgeCheck, Clock, Sparkles, ArrowLeft, HeartHandshake } from 'lucide-react';
 import { ListRowSkeleton } from './ui/Skeleton';
+import { cacheGet, cacheSet } from '../lib/cache';
 import {
   listIncomingInvitations,
   listActiveSessions,
@@ -53,17 +54,18 @@ const SectionCard = ({
 );
 
 export function Activity({ onOpenSession, onBack, onChanged, onCount }: ActivityProps) {
-  const [loading, setLoading] = useState(true);
+  const cached = cacheGet<{ invites: InvitationWithProfile[]; sessions: SessionSummary[]; sent: SentInvitation[]; premium: boolean; viewers: ViewerRow[] }>('activity');
+  const [loading, setLoading] = useState(!cached); // instant if we've loaded before
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const [invites, setInvites] = useState<InvitationWithProfile[]>([]);
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [sent, setSent] = useState<SentInvitation[]>([]);
+  const [invites, setInvites] = useState<InvitationWithProfile[]>(cached?.invites ?? []);
+  const [sessions, setSessions] = useState<SessionSummary[]>(cached?.sessions ?? []);
+  const [sent, setSent] = useState<SentInvitation[]>(cached?.sent ?? []);
   const [viewingInvite, setViewingInvite] = useState<InvitationWithProfile | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(loadDismissed);
-  const [premium, setPremium] = useState(false);
-  const [viewers, setViewers] = useState<ViewerRow[]>([]);
+  const [premium, setPremium] = useState(cached?.premium ?? false);
+  const [viewers, setViewers] = useState<ViewerRow[]>(cached?.viewers ?? []);
   const actionRef = useRef(false);
 
   const dismissDecline = (id: string) => {
@@ -75,7 +77,6 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
   };
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError('');
     try {
       const [incoming, active, mySent] = await Promise.all([
@@ -91,9 +92,12 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
       const me = await getMyProfile();
       const prem = isPremium(me);
       setPremium(prem);
-      if (prem) listMyViewers().then(setViewers).catch(() => {});
+      let vw: ViewerRow[] = [];
+      if (prem) { try { vw = await listMyViewers(); setViewers(vw); } catch { /* ignore */ } }
+      cacheSet('activity', { invites: incoming, sessions: active, sent: mySent, premium: prem, viewers: vw });
     } catch (err: any) {
-      setError(err.message || 'Could not load your activity.');
+      // Keep showing cached data on a network blip; only surface an error cold.
+      if (!cached) setError(err.message || 'Could not load your activity.');
     } finally {
       setLoading(false);
     }

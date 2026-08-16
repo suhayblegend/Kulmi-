@@ -24,6 +24,19 @@ import {
 } from '../lib/db';
 import { ReferSomeone } from './ReferSomeone';
 import { DiscoverCardSkeleton } from './ui/Skeleton';
+import { cacheGet, cacheSet } from '../lib/cache';
+
+interface DiscoverCache {
+  candidates: Profile[];
+  invites: InvitationWithProfile[];
+  sessions: SessionSummary[];
+  openThreads: number;
+  pendingSent: number;
+  premium: boolean;
+  viewersCount: number;
+  myProfile: Profile | null;
+  index: number;
+}
 
 interface HomeProps {
   onOpenSession: (sessionId: string) => void;
@@ -93,28 +106,30 @@ const TagSection = ({ title, items }: { title: string; items?: string[] | null }
 const norm = (v?: string | null) => (v ?? '').trim().toLowerCase();
 
 export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomeProps) {
-  const [loading, setLoading] = useState(true);
+  const cached = cacheGet<DiscoverCache>('discover');
+  const [loading, setLoading] = useState(!cached); // instant on revisit
   const [error, setError] = useState('');
-  const [candidates, setCandidates] = useState<Profile[]>([]);
-  const [invites, setInvites] = useState<InvitationWithProfile[]>([]);
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [index, setIndex] = useState(0);
+  const [candidates, setCandidates] = useState<Profile[]>(cached?.candidates ?? []);
+  const [invites, setInvites] = useState<InvitationWithProfile[]>(cached?.invites ?? []);
+  const [sessions, setSessions] = useState<SessionSummary[]>(cached?.sessions ?? []);
+  const [index, setIndex] = useState(cached?.index ?? 0);
   const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [openThreads, setOpenThreads] = useState(0);
-  const [premium, setPremium] = useState(false);
-  const [pendingSent, setPendingSent] = useState(0);
+  const [openThreads, setOpenThreads] = useState(cached?.openThreads ?? 0);
+  const [premium, setPremium] = useState(cached?.premium ?? false);
+  const [pendingSent, setPendingSent] = useState(cached?.pendingSent ?? 0);
   const [viewProfile, setViewProfile] = useState<Profile | null>(null);
-  const [myProfile, setMyProfile] = useState<Profile | null>(null);
-  const [viewersCount, setViewersCount] = useState(0);
+  const [myProfile, setMyProfile] = useState<Profile | null>(cached?.myProfile ?? null);
+  const [viewersCount, setViewersCount] = useState(cached?.viewersCount ?? 0);
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
   const [draftFilters, setDraftFilters] = useState<DiscoverFilters>(EMPTY_FILTERS);
   const activeFilterCount = Object.values(filters).filter((v) => v !== undefined && v !== '' && v !== null).length;
 
-  const load = useCallback(async (f: DiscoverFilters = {}) => {
-    setLoading(true);
+  // silent=true → refresh in the background without a skeleton (used on revisit).
+  const load = useCallback(async (f: DiscoverFilters = {}, silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const [cands, incoming, active, open, mySent, meProf] = await Promise.all([
@@ -126,20 +141,28 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
         getMyProfile(),
       ]);
       const prem = isPremium(meProf);
+      const pending = mySent.filter((s) => s.status === 'pending').length;
       setPremium(prem);
       setMyProfile(meProf);
-      if (prem) listMyViewers().then((v) => setViewersCount(v.length)).catch(() => {});
+      let vc = 0;
+      if (prem) { try { vc = (await listMyViewers()).length; setViewersCount(vc); } catch { /* ignore */ } }
       setCandidates(cands);
       setInvites(incoming);
       setSessions(active);
       setOpenThreads(open);
-      setPendingSent(mySent.filter((s) => s.status === 'pending').length);
-      setIndex(0);
+      setPendingSent(pending);
+      // Fresh load starts at the top; a silent refresh keeps your place.
+      const nextIndex = silent ? Math.min(indexRef.current, Math.max(0, cands.length - 1)) : 0;
+      setIndex(nextIndex);
       onActivityCount?.(incoming.length + active.filter((s) => s.status !== 'completed').length);
+      cacheSet<DiscoverCache>('discover', {
+        candidates: cands, invites: incoming, sessions: active, openThreads: open,
+        pendingSent: pending, premium: prem, viewersCount: vc, myProfile: meProf, index: nextIndex,
+      });
     } catch (err: any) {
-      setError(err.message || 'Could not load matches.');
+      if (!silent) setError(err.message || 'Could not load matches.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [onActivityCount]);
 
@@ -156,7 +179,18 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   };
   const setDF = (k: keyof DiscoverFilters, v: any) => setDraftFilters((d) => ({ ...d, [k]: v === '' ? undefined : v }));
 
-  useEffect(() => { load(); }, [load]);
+  // Keep a live ref of the index so a silent refresh can preserve the user's place.
+  const indexRef = useRef(index);
+  useEffect(() => { indexRef.current = index; }, [index]);
+  // Persist the current card position so returning to Discover resumes there.
+  useEffect(() => {
+    const c = cacheGet<DiscoverCache>('discover');
+    if (c && c.index !== index) cacheSet('discover', { ...c, index });
+  }, [index]);
+
+  // On first mount: skeleton only if we have nothing cached; otherwise refresh silently.
+  const hadCacheRef = useRef(!!cached);
+  useEffect(() => { load(filters, hadCacheRef.current); }, [load]);
 
   const current = candidates[index];
   useEffect(() => { if (current?.id) recordProfileView(current.id); }, [current?.id]);
