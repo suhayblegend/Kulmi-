@@ -28,6 +28,14 @@ async function sha256Hex(value: string): Promise<string> {
 }
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// Branded header prepended to every email. Pure inline CSS (no external image),
+// so it always renders — Gmail/Outlook block remote images by default.
+const LOGO_BLOCK = `
+<div style="text-align:center;padding:12px 0 18px">
+  <span style="display:inline-block;width:46px;height:46px;line-height:46px;border-radius:13px;background:#1B4332;color:#F0EEE8;font-family:Georgia,serif;font-size:24px;font-weight:bold;text-align:center;vertical-align:middle">K</span>
+  <div style="font-family:Georgia,serif;font-size:20px;font-weight:bold;letter-spacing:2px;color:#1B4332;margin-top:8px;text-transform:uppercase">Kulmi</div>
+</div>`;
+
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const RESEND = Deno.env.get("RESEND_API_KEY");
   if (!RESEND) return false;
@@ -35,7 +43,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+    body: JSON.stringify({ from: FROM, to: [to], subject, html: LOGO_BLOCK + html }),
   });
   return res.ok;
 }
@@ -397,7 +405,7 @@ serve(async (req) => {
       const batch = await Promise.all(slice.map(async (p: { id: string; email: string }) => {
         const unsub = `${FN_URL}?u=${p.id}&t=${await hmacHex(p.id)}`;
         const footer = `<p style="font-size:12px;color:#8B7355;margin-top:20px">Don't want these emails? <a href="${unsub}" style="color:#8B7355">Unsubscribe</a>.</p>`;
-        return { from: FROM, to: [p.email], subject, html: bodyHtml + footer, headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } };
+        return { from: FROM, to: [p.email], subject, html: LOGO_BLOCK + bodyHtml + footer, headers: { "List-Unsubscribe": `<${unsub}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } };
       }));
       const res = await fetch("https://api.resend.com/emails/batch", { method: "POST", headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" }, body: JSON.stringify(batch) });
       if (res.ok) {
