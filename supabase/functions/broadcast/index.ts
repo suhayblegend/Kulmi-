@@ -101,7 +101,12 @@ serve(async (req) => {
     const sigHeader = req.headers.get("stripe-signature") || "";
     const parts = Object.fromEntries(sigHeader.split(",").map((p) => p.split("=") as [string, string]));
     const expected = await hmacHexWith(whSecret, `${parts.t}.${raw}`);
-    if (!parts.v1 || parts.v1 !== expected) return json({ error: "Bad signature" }, 400);
+    // Constant-time-ish compare + reject stale signatures (replay protection).
+    const sigOk = !!parts.v1 && parts.v1.length === expected.length &&
+      parts.v1.split("").reduce((acc, c, i) => acc | (c.charCodeAt(0) ^ expected.charCodeAt(i)), 0) === 0;
+    if (!sigOk) return json({ error: "Bad signature" }, 400);
+    const ts = parseInt(parts.t || "0", 10);
+    if (!ts || Math.abs(Date.now() / 1000 - ts) > 300) return json({ error: "Stale signature" }, 400);
 
     const event = JSON.parse(raw);
     const obj = event?.data?.object ?? {};
