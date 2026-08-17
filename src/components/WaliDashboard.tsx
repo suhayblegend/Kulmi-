@@ -93,7 +93,7 @@ export function WaliDashboard({ onBack }: WaliDashboardProps) {
       </div>
 
       {transcript && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setTranscript(null)} />
           <div className="relative bg-white w-full max-w-lg max-h-[80vh] rounded-2xl border border-[#E5E0D8] shadow-xl flex flex-col overflow-hidden">
             <div className="p-4 border-b border-[#E5E0D8] flex items-center justify-between bg-[#FDFBF7]">

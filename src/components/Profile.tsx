@@ -7,6 +7,27 @@ import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
 import { MARITAL, HAS_KIDS, MARRIAGE_INTENT, TIMELINE, RELOCATE, WANT_KIDS, PRAYER, PRACTICE, TRAITS, GOALS, STYLES, SMOKING, KHAT, HIJAB, BEARD, POLYGYNY } from '../lib/options';
 
+// Animated profile-strength ring shown on the hero banner.
+function StrengthRing({ value }: { value: number }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setShown(value), 150); return () => clearTimeout(t); }, [value]);
+  const r = 26, c = 2 * Math.PI * r;
+  const off = c * (1 - Math.max(0, Math.min(100, shown)) / 100);
+  return (
+    <div className="relative w-16 h-16">
+      <svg viewBox="0 0 64 64" className="w-full h-full -rotate-90">
+        <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="5" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={off}
+          style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1)' }} />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+        <span className="text-sm font-bold leading-none">{value}%</span>
+      </div>
+    </div>
+  );
+}
+
 type ProfileForm = {
   firstName: string;
   gender: string;
@@ -359,63 +380,69 @@ export function Profile() {
     <div className="w-full max-w-4xl mx-auto py-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
 
-        {/* Profile completeness meter */}
-        {completeness.pct < 100 && (
-          <div className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm p-5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-bold text-[#1B4332]">Profile strength: {completeness.pct}%</p>
-              <p className="text-[11px] text-[#8B7355]">Complete profiles get more serious interest</p>
-            </div>
-            <div className="h-2 rounded-full bg-[#F0EEE8] overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${completeness.pct >= 80 ? 'bg-[#1B4332]' : completeness.pct >= 50 ? 'bg-amber-500' : 'bg-red-400'}`}
-                style={{ width: `${Math.max(completeness.pct, 4)}%` }}
-              />
-            </div>
-            {completeness.missing.length > 0 && (
-              <p className="text-xs text-[#8B7355] mt-2">
-                Next: add {completeness.missing.join(', ')}.
-              </p>
+        {/* Hero — banner, overlapping avatar, identity & strength ring */}
+        <div className="bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden">
+          {/* Banner */}
+          <div className="relative h-28 md:h-32 bg-gradient-to-br from-[#1B4332] via-[#22523C] to-[#143326]">
+            <p className="absolute top-4 left-5 font-serif italic text-sm text-white/40 select-none">Isla Kulma, Isla Noolada</p>
+            {completeness.pct < 100 && (
+              <div className="absolute top-3.5 right-4 flex items-center gap-2.5">
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Profile strength</p>
+                  <p className="text-[11px] text-white/50">Complete profiles get more interest</p>
+                </div>
+                <StrengthRing value={completeness.pct} />
+              </div>
             )}
           </div>
-        )}
 
-        {/* Header section with photo and edit toggle */}
-        <div className="bg-white rounded-3xl p-6 md:p-10 border border-[#E5E0D8] shadow-sm relative flex flex-col md:flex-row items-center md:items-start gap-8">
-          <button 
-            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-            className="absolute top-6 right-6 p-2 rounded-xl bg-[#F0EEE8] text-[#1B4332] hover:bg-[#E5E0D8] transition-colors flex items-center gap-2"
-          >
-            {isEditing ? (
-              <>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span className="text-sm font-medium pr-1">{saving ? 'Saving…' : 'Save Profile'}</span>
-              </>
-            ) : (
-              <>
-                <Edit3 className="w-4 h-4" />
-                <span className="text-sm font-medium pr-1">Edit Profile</span>
-              </>
-            )}
-          </button>
-
-          <div className="relative group shrink-0">
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-[#F0EEE8] bg-[#E5E0D8]">
-              <img src={avatarFor({ profile_picture_url: pictureUrl })} alt="Profile" className="w-full h-full object-cover" />
-            </div>
-            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarPick} />
-            {isEditing && (
+          <div className="px-6 md:px-10 pb-6 md:pb-8">
+            {/* Avatar overlapping the banner + edit toggle */}
+            <div className="flex items-end justify-between -mt-14 md:-mt-16 mb-5">
+              <div className="relative group shrink-0">
+                <div className="w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden border-4 border-white bg-[#E5E0D8] shadow-lg">
+                  <img src={avatarFor({ profile_picture_url: pictureUrl })} alt="Profile" className="w-full h-full object-cover" />
+                </div>
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarPick} />
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute bottom-1 right-1 p-2.5 bg-[#1B4332] text-white rounded-full shadow-lg hover:bg-[#143326] transition-colors"
+                  >
+                    <Camera className="w-4.5 h-4.5" />
+                  </button>
+                )}
+              </div>
               <button
-                type="button"
-                onClick={() => avatarInputRef.current?.click()}
-                className="absolute bottom-2 right-2 p-3 bg-[#1B4332] text-white rounded-full shadow-lg hover:bg-[#143326] transition-colors"
+                onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                className="mb-1 px-4 py-2.5 rounded-xl bg-[#1B4332] text-white hover:bg-[#143326] transition-colors flex items-center gap-2 shadow-sm"
               >
-                <Camera className="w-5 h-5" />
+                {isEditing ? (
+                  <>
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span className="text-sm font-medium">{saving ? 'Saving…' : 'Save'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="w-4 h-4" />
+                    <span className="text-sm font-medium">Edit</span>
+                  </>
+                )}
               </button>
-            )}
-          </div>
+            </div>
 
-          <div className="flex-1 text-center md:text-left w-full mt-4 md:mt-0">
+            {/* Next steps to 100% */}
+            {completeness.pct < 100 && completeness.missing.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-5">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-[#8B7355] mr-1">Next:</span>
+                {completeness.missing.map((m) => (
+                  <span key={m} className="text-[11px] font-medium text-[#1B4332] bg-[#E8F3ED] border border-[#1B4332]/10 rounded-full px-2.5 py-1">+ {m}</span>
+                ))}
+              </div>
+            )}
+
+            <div className="w-full">
             {isEditing ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
                 <div>
@@ -460,6 +487,7 @@ export function Profile() {
                 </div>
               </>
             )}
+            </div>
           </div>
         </div>
 
@@ -997,7 +1025,7 @@ export function Profile() {
       {/* Verification Modal */}
       <AnimatePresence>
         {showVerificationModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
