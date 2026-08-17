@@ -21,6 +21,7 @@ import {
   type Profile,
 } from '../lib/db';
 import { ChatHeader } from './Chat/ChatHeader';
+import { haptic } from '../lib/native';
 
 interface ChatProps {
   chatId: string;
@@ -175,7 +176,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     setSendError('');
     try {
       const saved = await sendMessage(chatId, text);
-      if (saved) setMessages((prev) => upsert(prev, saved));
+      if (saved) { setMessages((prev) => upsert(prev, saved)); haptic('light'); }
     } catch {
       setMessage(text); // restore on failure
       setSendError("Message didn't send — check your connection and try again.");

@@ -15,6 +15,7 @@ import {
   type SessionSummary,
   type CompatibilityAnalysis,
 } from '../lib/db';
+import { haptic } from '../lib/native';
 
 interface Props {
   sessionId: string;
@@ -76,7 +77,7 @@ function SessionCard({ onExit, summary, children }: { onExit: () => void; summar
 }
 
 export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
-  const goMatched = (chatId: string) => { notifyMatch(chatId); onMatched(chatId); };
+  const goMatched = (chatId: string) => { haptic('heavy'); notifyMatch(chatId); onMatched(chatId); };
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [questions, setQuestions] = useState<string[]>(COMPATIBILITY_QUESTIONS);

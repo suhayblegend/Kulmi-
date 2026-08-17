@@ -25,6 +25,7 @@ import {
 import { ReferSomeone } from './ReferSomeone';
 import { DiscoverCardSkeleton } from './ui/Skeleton';
 import { cacheGet, cacheSet } from '../lib/cache';
+import { haptic } from '../lib/native';
 
 interface DiscoverCache {
   candidates: Profile[];
@@ -211,6 +212,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
     setError('');
     try {
       await sendInvitation(current.id);
+      haptic('medium');
       setSentTo(current.first_name || 'them');
       setOpenThreads((n) => n + 1);
       setPendingSent((n) => n + 1);

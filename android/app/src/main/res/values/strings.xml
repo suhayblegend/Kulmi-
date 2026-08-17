@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kulmi</string>
+    <string name="title_activity_main">Kulmi</string>
+    <string name="package_name">uk.kulmi.app</string>
+    <string name="custom_url_scheme">uk.kulmi.app</string>
+</resources>
