@@ -28,8 +28,8 @@ export function Footer() {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-4">Platform</p>
           <ul className="space-y-2.5 text-sm">
+            <li><FooterLink to="/how-it-works">How Kulmi works</FooterLink></li>
             <li><FooterLink to="/pricing">Pricing</FooterLink></li>
-            <li><FooterLink to="/safety">Trust &amp; Safety</FooterLink></li>
             <li><FooterLink to="/blog">The Journal</FooterLink></li>
             <li><FooterLink to="/faq">FAQ</FooterLink></li>
           </ul>
@@ -47,6 +47,7 @@ export function Footer() {
           <ul className="space-y-2.5 text-sm">
             <li><FooterLink to="/terms">Terms of Service</FooterLink></li>
             <li><FooterLink to="/privacy">Privacy Policy</FooterLink></li>
+            <li><FooterLink to="/safety">Trust &amp; Safety</FooterLink></li>
           </ul>
         </div>
       </div>

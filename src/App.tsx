@@ -28,6 +28,7 @@ import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 import { Safety } from './components/Safety';
 import { About } from './components/About';
+import { HowItWorks } from './components/HowItWorks';
 import { Blog } from './components/Blog';
 import { Pricing } from './components/Pricing';
 import { Faq } from './components/FaqList';
@@ -59,6 +60,7 @@ export type AppState =
   | 'contact'
   | 'safety'
   | 'about'
+  | 'howto'
   | 'blog'
   | 'pricing'
   | 'faq'
@@ -70,13 +72,13 @@ export type AppState =
 // checks inside — this just removes it from casual discovery.
 const ADMIN_PATH = '/hooyomacan2001';
 
-const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'about', 'blog', 'pricing', 'faq', 'notfound'];
+const PUBLIC_STATES: AppState[] = ['landing', 'terms', 'privacy', 'auth', 'contact', 'safety', 'about', 'howto', 'blog', 'pricing', 'faq', 'notfound'];
 
 // URL <-> state mapping so /admin, /wali, etc. work as real links.
 const STATE_PATHS: Partial<Record<AppState, string>> = {
   landing: '/', discover: '/discover', activity: '/activity', chats: '/chats', profile: '/profile',
   progress: '/progress', settings: '/settings', wali: '/wali', admin: ADMIN_PATH,
-  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety', about: '/about', blog: '/blog', pricing: '/pricing', faq: '/faq',
+  auth: '/login', terms: '/terms', privacy: '/privacy', contact: '/contact', safety: '/safety', about: '/about', howto: '/how-it-works', blog: '/blog', pricing: '/pricing', faq: '/faq',
 };
 
 // Extra readable URLs that all resolve to the auth screen.
@@ -418,6 +420,7 @@ function MemberApp() {
       appState === 'terms' ? <Terms onBack={back} /> :
       appState === 'privacy' ? <Privacy onBack={back} /> :
       appState === 'about' ? <About onBack={back} onContact={() => setAppState('contact')} /> :
+      appState === 'howto' ? <HowItWorks onBack={back} onStart={() => (user ? setAppState('discover') : goAuth('signup'))} onSafety={() => setAppState('safety')} onFaq={() => setAppState('faq')} /> :
       appState === 'safety' ? <Safety onBack={back} onContact={() => setAppState('contact')} /> :
       appState === 'faq' ? <Faq onBack={back} onContact={() => setAppState('contact')} /> :
       appState === 'pricing' ? <Pricing onJoin={() => (user ? setAppState('settings') : goAuth('signup'))} onBack={back} /> :
@@ -570,6 +573,12 @@ function MemberApp() {
             </motion.div>
           )}
 
+          {appState === 'howto' && (
+            <motion.div key="howto" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
+              <HowItWorks onBack={() => setAppState(user ? 'discover' : 'landing')} onStart={() => (user ? setAppState('discover') : goAuth('signup'))} onSafety={() => setAppState('safety')} onFaq={() => setAppState('faq')} />
+            </motion.div>
+          )}
+
           {appState === 'about' && (
             <motion.div key="about" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <About onBack={() => setAppState(user ? 'discover' : 'landing')} onContact={() => setAppState('contact')} />
@@ -668,7 +677,7 @@ function MemberApp() {
 
       {/* Footer on public content pages (not the login screen) so navigation is
           always available. */}
-      {(['landing', 'terms', 'privacy', 'contact', 'safety', 'about', 'blog', 'pricing', 'faq', 'notfound'] as AppState[]).includes(appState) && (
+      {(['landing', 'terms', 'privacy', 'contact', 'safety', 'about', 'howto', 'blog', 'pricing', 'faq', 'notfound'] as AppState[]).includes(appState) && (
         <Footer />
       )}
 
