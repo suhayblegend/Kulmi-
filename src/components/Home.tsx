@@ -25,7 +25,6 @@ import {
 import { DiscoverCardSkeleton } from './ui/Skeleton';
 import { SmartImage } from './ui/SmartImage';
 import { ComparePanel } from './ComparePanel';
-import { SwipeCard } from './SwipeCard';
 import { detectNearby } from '../lib/geo';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { haptic } from '../lib/native';
@@ -432,13 +431,13 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
           </div>
 
           <AnimatePresence mode="wait">
-            <SwipeCard
+            <motion.div
               key={current.id}
-              onInvite={handleInvite}
-              onSkip={handleSkip}
-              disabled={busy}
-              canInvite={openThreads < (premium ? MAX_OPEN_PLUS : MAX_OPEN_FREE)}
-              onBlocked={() => setError(`You can have ${premium ? MAX_OPEN_PLUS : MAX_OPEN_FREE} introductions at a time. Finish or end one before starting another — quality over quantity.`)}
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+              className="w-full border border-[#E5E0D8] bg-white shadow-[0_8px_40px_rgba(27,67,50,0.10)] rounded-3xl overflow-hidden"
             >
               <div className="relative h-80 bg-[#F0EEE8]">
                 <SmartImage src={avatarFor(current)} className="absolute inset-0 w-full h-full" fit="cover" />
@@ -519,9 +518,8 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                   {remaining > 1 ? `${remaining - 1} more suitable ${remaining - 1 === 1 ? 'introduction' : 'introductions'} after this` : 'Last suggestion for now'}
                 </p>
               </div>
-            </SwipeCard>
+            </motion.div>
           </AnimatePresence>
-          <p className="text-center text-[11px] text-[#8B7355]">Swipe right to invite · left to skip — or use the buttons</p>
         </>
       ) : (
         <div className="w-full overflow-hidden border border-[#E5E0D8] bg-white shadow-sm rounded-3xl">
@@ -550,20 +548,19 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
       {/* Full profile modal */}
       <AnimatePresence>
         {viewProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#2D2926]/50 backdrop-blur-sm" onClick={() => setViewProfile(null)} />
+          <div className="fixed inset-0 z-50 flex justify-center sm:items-center sm:p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#2D2926]/50 sm:backdrop-blur-sm" onClick={() => setViewProfile(null)} />
             <motion.div
-              initial={{ opacity: 0, scale: 0.98, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, y: 16 }}
-              className="relative z-10 w-full h-full sm:h-auto sm:max-w-2xl bg-white sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] sm:max-h-[92vh] flex flex-col"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="relative z-10 flex flex-col w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-white sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8]"
             >
-              <button onClick={() => setViewProfile(null)} style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }} className="absolute right-3 z-20 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4.5 h-4.5" /></button>
-              <div className="flex-1 overflow-y-auto min-h-0">
-              <div className="relative h-80 bg-[#0A261A] overflow-hidden">
-                {/* Blurred fill so the full photo shows (object-contain) without cropping or ugly bars. */}
-                <img src={avatarFor(viewProfile)} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />
-                <SmartImage src={avatarFor(viewProfile)} className="relative w-full h-full" fit="contain" />
+              <button onClick={() => setViewProfile(null)} style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }} className="absolute right-3 z-20 w-9 h-9 rounded-full bg-black/45 text-white flex items-center justify-center active:bg-black/60"><X className="w-4.5 h-4.5" /></button>
+              {/* Photo header — clean cover fill, stays pinned while details scroll. */}
+              <div className="relative shrink-0 h-[42vh] sm:h-80 bg-[#F0EEE8]">
+                <SmartImage src={avatarFor(viewProfile)} className="absolute inset-0 w-full h-full" fit="cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-5 right-5 text-white">
                   <div className="flex items-center gap-2">
@@ -579,7 +576,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="flex-1 overflow-y-auto p-6 min-h-0">
                 {viewProfile.bio && <p className="text-sm text-[#5C574F] leading-relaxed font-serif italic mb-5">"{viewProfile.bio}"</p>}
 
                 {/* How you compare — interactive alignment panel */}
@@ -630,12 +627,11 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
 
                 <p className="text-[11px] text-[#8B7355] text-center">More photos unlock after you both match.</p>
               </div>
-              </div>
 
               {/* Always-visible action bar (never scrolled off or cropped). */}
               <div
                 className="shrink-0 flex gap-3 border-t border-[#E5E0D8] bg-white px-5 pt-3"
-                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
               >
                 <button disabled={busy} onClick={() => { setViewProfile(null); handleSkip(); }} className="flex-1 px-6 py-3.5 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium active:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not now</button>
                 <button disabled={busy} onClick={() => { setViewProfile(null); handleInvite(); }} className="flex-[1.4] px-6 py-3.5 rounded-xl bg-[#1B4332] text-white font-medium active:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Heart className="w-4 h-4" /> Send invitation</button>
