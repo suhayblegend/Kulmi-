@@ -99,7 +99,12 @@ async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[
   let sa: any; try { sa = JSON.parse(raw); } catch { return; }
   const at = await fcmAccessToken(sa);
   if (!at) return;
-  const { data: toks } = await admin.from("device_tokens").select("token").in("user_id", userIds);
+  // Respect each member's push toggle — only send to those who left it on.
+  const { data: optedIn } = await admin.from("profiles").select("id").in("id", userIds).neq("push_notifications", false);
+  const allow = new Set(((optedIn as any[]) ?? []).map((p) => p.id));
+  const targets = userIds.filter((id) => allow.has(id));
+  if (targets.length === 0) return;
+  const { data: toks } = await admin.from("device_tokens").select("token").in("user_id", targets);
   const url = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
   for (const t of ((toks as any[]) ?? [])) {
     await fetch(url, {
