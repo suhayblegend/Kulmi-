@@ -23,6 +23,7 @@ import {
 } from '../lib/db';
 import { ChatHeader } from './Chat/ChatHeader';
 import { haptic } from '../lib/native';
+import { KulmiPlus } from './ui/KulmiPlus';
 
 interface ChatProps {
   chatId: string;
@@ -542,8 +543,9 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
               ))}
             </div>
           )}
-          <h2 className="text-2xl font-serif font-medium text-center text-[#1B4332] mb-1">
+          <h2 className="text-2xl font-serif font-medium text-center text-[#1B4332] mb-1 flex items-center justify-center gap-2">
             {partnerName}{partner?.age ? `, ${partner.age}` : ''}
+            {(partner as any)?.is_premium && <KulmiPlus />}
           </h2>
           <p className="text-center text-[10px] uppercase tracking-[0.2em] font-bold text-[#8B7355] mb-8">
             {[partner?.occupation, partner?.location || partner?.city].filter(Boolean).join(' • ') || 'Kulmi member'}
@@ -605,6 +607,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
         <ChatHeader
           partnerName={partnerName}
           partnerAvatar={partner ? avatarFor(partner) : undefined}
+          isPremium={!!(partner as any)?.is_premium}
           onExit={onExit}
           setShowStatusModal={setShowStatusModal}
           setShowEndConfirm={setShowEndConfirm}

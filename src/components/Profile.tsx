@@ -3,7 +3,8 @@ import { toast } from '../lib/toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Mic, Square, Trash2, Loader2 } from 'lucide-react';
 import { Skeleton } from './ui/Skeleton';
-import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, resolveMediaUrl, getMyCompatQuestions, setMyCompatQuestions, COMPATIBILITY_QUESTIONS, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
+import { KulmiPlus } from './ui/KulmiPlus';
+import { getMyProfile, updateMyProfile, uploadAvatar, addGalleryPhoto, removeGalleryPhoto, getMyGallery, uploadIntro, removeIntro, setIntroPublic as setIntroPublicApi, submitPhotoVerification, signOut, avatarFor, isPremium, resolveMediaUrl, getMyCompatQuestions, setMyCompatQuestions, COMPATIBILITY_QUESTIONS, type Profile as DbProfile, type GalleryPhoto } from '../lib/db';
 import { LogOut } from 'lucide-react';
 import { CameraCapture } from './CameraCapture';
 import { MARITAL, HAS_KIDS, MARRIAGE_INTENT, TIMELINE, RELOCATE, WANT_KIDS, PRAYER, PRACTICE, TRAITS, GOALS, STYLES, SMOKING, KHAT, HIJAB, BEARD, POLYGYNY } from '../lib/options';
@@ -115,6 +116,7 @@ export function Profile() {
   const [photoVerified, setPhotoVerified] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'unverified' | 'pending' | 'verified' | 'rejected'>('unverified');
   const [role, setRole] = useState<string>('user');
+  const [plusMember, setPlusMember] = useState(false);
 
   const [profile, setProfile] = useState<ProfileForm>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<ProfileForm>(EMPTY_FORM);
@@ -260,6 +262,7 @@ export function Profile() {
         setPhotoVerified(!!p.photo_verified);
         setVerificationStatus((p.verification_status as any) ?? (p.photo_verified ? 'verified' : 'unverified'));
         setRole(p.role || 'user');
+        setPlusMember(isPremium(p));
         getMyGallery().then((g) => { if (active) setGallery(g); }).catch(() => {});
         // Intros are stored as private paths — resolve to a playable URL.
         if (p.intro_audio_url) {
@@ -465,7 +468,7 @@ export function Profile() {
               </div>
             ) : (
               <>
-                <h1 className="text-3xl md:text-4xl font-serif text-[#1B4332] mb-2">{profile.firstName}, {profile.age}</h1>
+                <h1 className="text-3xl md:text-4xl font-serif text-[#1B4332] mb-2 flex items-center gap-2.5 flex-wrap">{profile.firstName}, {profile.age}{plusMember && <KulmiPlus />}</h1>
                 <p className="text-[#8B7355] text-lg">{profile.city}, {profile.country}</p>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-6">
                   {verificationStatus === 'verified' ? (

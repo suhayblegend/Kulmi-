@@ -25,6 +25,7 @@ import {
 import { DiscoverCardSkeleton } from './ui/Skeleton';
 import { SmartImage } from './ui/SmartImage';
 import { ComparePanel } from './ComparePanel';
+import { KulmiPlus } from './ui/KulmiPlus';
 import { detectNearby } from '../lib/geo';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { haptic } from '../lib/native';
@@ -88,12 +89,9 @@ const ModalSection = ({ title, children }: { title: string; children: React.Reac
   );
 };
 
-// "Kulmi+" badge shown next to premium members' names.
-const KulmiPlus = () => (
-  <span className="flex items-center gap-1 bg-[#1B4332] text-[#F0EEE8] text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full">
-    <Sparkles className="w-3 h-3" /> Kulmi+
-  </span>
-);
+// "Kulmi+" badge — shared component (shown next to premium members' names).
+// Re-exported here so existing usages keep working.
+
 
 const TagSection = ({ title, items }: { title: string; items?: string[] | null }) =>
   items && items.length ? (

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Check, X, MapPin, Send, Inbox, BadgeCheck, Clock, Sparkles, ArrowLeft, HeartHandshake } from 'lucide-react';
 import { ListRowSkeleton } from './ui/Skeleton';
 import { cacheGet, cacheSet } from '../lib/cache';
+import { KulmiPlus } from './ui/KulmiPlus';
 import {
   listIncomingInvitations,
   listActiveSessions,
@@ -187,7 +188,7 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
                       <img src={avatarFor(inv.sender)} alt="" className="w-12 h-12 rounded-full object-cover border border-[#E5E0D8]" />
                       <div className="flex-1 min-w-0">
                         <p className="font-serif font-medium text-[#1B4332] truncate">
-                          {inv.sender.first_name}{inv.sender.age ? `, ${inv.sender.age}` : ''}
+                          {inv.sender.first_name}{inv.sender.age ? `, ${inv.sender.age}` : ''}{(inv.sender as any).is_premium && <KulmiPlus className="ml-1.5" />}
                         </p>
                         <p className="text-xs text-[#1B4332] truncate font-medium group-hover:underline">Tap to view profile →</p>
                       </div>
@@ -309,7 +310,7 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                 <div className="absolute bottom-4 left-5 right-5 text-white">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-serif drop-shadow-sm">{viewingInvite.sender.first_name}{viewingInvite.sender.age ? `, ${viewingInvite.sender.age}` : ''}</h2>
+                    <h2 className="text-2xl font-serif drop-shadow-sm flex items-center gap-2">{viewingInvite.sender.first_name}{viewingInvite.sender.age ? `, ${viewingInvite.sender.age}` : ''}{(viewingInvite.sender as any).is_premium && <KulmiPlus />}</h2>
                     {(viewingInvite.sender.verification_status === 'verified' || viewingInvite.sender.photo_verified) && (
                       <span className="flex items-center gap-1 bg-white/90 text-[#1B4332] text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"><BadgeCheck className="w-3 h-3" /> Verified</span>
                     )}

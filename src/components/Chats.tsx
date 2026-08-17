@@ -4,6 +4,7 @@ import { Search, Heart, BadgeCheck, Hourglass, Clock } from 'lucide-react';
 import { listChats, avatarFor, type ChatSummary } from '../lib/db';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { ListRowSkeleton } from './ui/Skeleton';
+import { KulmiPlus } from './ui/KulmiPlus';
 
 interface ChatsProps {
   onSelectChat: (chatId: string) => void;
@@ -106,6 +107,7 @@ export function Chats({ onSelectChat }: ChatsProps) {
                       {(chat.partner.verification_status === 'verified' || chat.partner.photo_verified) && (
                         <BadgeCheck className="w-4 h-4 text-[#1B4332] shrink-0" />
                       )}
+                      {(chat.partner as any).is_premium && <KulmiPlus />}
                     </h3>
                     <span className="text-xs whitespace-nowrap text-[#8B7355]">{timeAgo(chat.lastMessageAt)}</span>
                   </div>

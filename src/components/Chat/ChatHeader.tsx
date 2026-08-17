@@ -1,8 +1,10 @@
 import React from 'react';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
+import { KulmiPlus } from '../ui/KulmiPlus';
 
 interface ChatHeaderProps {
   partnerName: string;
+  isPremium?: boolean;
   partnerAvatar?: string;
   onExit: () => void;
   setShowStatusModal: (v: boolean) => void;
@@ -10,7 +12,7 @@ interface ChatHeaderProps {
   setShowStopConfirm: (v: boolean) => void;
 }
 
-export function ChatHeader({ partnerName, partnerAvatar, onExit, setShowStatusModal, setShowEndConfirm, setShowStopConfirm }: ChatHeaderProps) {
+export function ChatHeader({ partnerName, partnerAvatar, isPremium, onExit, setShowStatusModal, setShowEndConfirm, setShowStopConfirm }: ChatHeaderProps) {
   return (
     <div className="h-[72px] border-b border-[#E5E0D8] bg-[#FDFBF7] flex items-center justify-between px-6 sm:px-8 shrink-0">
       <div className="flex items-center gap-4">
@@ -23,7 +25,7 @@ export function ChatHeader({ partnerName, partnerAvatar, onExit, setShowStatusMo
           {partnerAvatar && <img src={partnerAvatar} alt={partnerName} className="w-full h-full object-cover" />}
         </div>
         <div>
-          <h2 className="font-serif text-xl font-medium text-[#1B4332]">{partnerName}</h2>
+          <h2 className="font-serif text-xl font-medium text-[#1B4332] flex items-center gap-2">{partnerName}{isPremium && <KulmiPlus />}</h2>
           <p className="text-[10px] text-[#8B7355] font-bold uppercase tracking-widest mt-0.5">Introduced</p>
         </div>
       </div>
