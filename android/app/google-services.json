@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "972363509556",
+    "project_id": "kulmi-12bce",
+    "storage_bucket": "kulmi-12bce.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:972363509556:android:896defc77c759696ebbf61",
+        "android_client_info": {
+          "package_name": "uk.kulmi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJoDm_-RXFGuDE3uij3WuCN_yqKqwD0cg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

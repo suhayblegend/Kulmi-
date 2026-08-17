@@ -35,7 +35,8 @@ import { supabase } from './lib/supabase';
 import { getMyProfile, touchLastActive, type Profile as DbProfile } from './lib/db';
 import { cacheClear } from './lib/cache';
 import { prefetchAppData } from './lib/prefetch';
-import { registerPush } from './lib/native';
+import { registerPush, isNative } from './lib/native';
+import { AppWelcome } from './components/AppWelcome';
 
 export type AppState =
   | 'landing'
@@ -376,6 +377,19 @@ function MemberApp() {
   //      auto-signs them in and routes straight to onboarding). ----
   if (signupWelcome !== null) {
     return <SignupWelcome firstName={signupWelcome} onContinue={() => setSignupWelcome(null)} />;
+  }
+
+  // ---- Native app: a clean single-screen welcome instead of the long
+  //      marketing landing (which is web-only). ----
+  if (appState === 'landing' && isNative()) {
+    return (
+      <AppWelcome
+        onSignup={() => goAuth('signup')}
+        onSignin={() => goAuth('signin')}
+        onTerms={() => setAppState('terms')}
+        onPrivacy={() => setAppState('privacy')}
+      />
+    );
   }
 
   // ---- Full-screen states (no app chrome) ----

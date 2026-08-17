@@ -28,10 +28,17 @@
 html.native, html.native body {
   /* Stop the whole page rubber-banding like a web page. */
   overscroll-behavior-y: none;
-  /* Respect the notch / home-indicator safe areas. */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
   background-color: #FDFBF7;
+}
+/* The fixed top bar must clear the status bar / notch, and the content below
+   it must start lower to match — otherwise text gets cropped under the notch. */
+html.native header {
+  height: auto;
+  min-height: 4rem;
+  padding-top: env(safe-area-inset-top);
+}
+html.native main {
+  padding-top: calc(5rem + env(safe-area-inset-top));
 }
 html.native * {
   /* Kill the grey tap flash and the web text-selection long-press. */
