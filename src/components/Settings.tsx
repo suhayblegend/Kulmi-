@@ -341,7 +341,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                 <Toggle on={profile.push_notifications !== false} onChange={(v) => setToggle('push_notifications', v)} />
               </div>
               <div className="flex items-center justify-between gap-4">
-                <div><p className="font-medium text-sm text-[#2D2926]">Product &amp; tips emails</p><p className="text-xs text-[#8B7355]">News, tips and announcements from Kulmi. Account emails (like password resets) always send.</p></div>
+                <div><p className="font-medium text-sm text-[#2D2926]">Email notifications</p><p className="text-xs text-[#8B7355]">Introductions, matches, replies and news by email — great if you use Kulmi in the browser. Account emails (like password resets) always send.</p></div>
                 <Toggle on={profile.email_unsubscribed !== true} onChange={(v) => setToggle('email_unsubscribed', !v)} />
               </div>
             </div>

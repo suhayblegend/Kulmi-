@@ -361,6 +361,17 @@ serve(async (req) => {
           link: "/activity",
         }]).then(() => {}, () => {});
         await sendPush(admin, [inv.sender_id], "Your invitation was accepted 💚", `${name} said yes — your compatibility session is ready.`, "/activity");
+        const { data: sndA } = await admin.from("profiles").select("email, first_name, email_unsubscribed").eq("id", inv.sender_id).maybeSingle();
+        if (sndA?.email && !sndA.email_unsubscribed) {
+          await sendEmail(sndA.email, "Your invitation was accepted",
+            `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+              <h2 style="color:#1B4332;font-family:Georgia,serif">Alhamdulillah &mdash; they said yes</h2>
+              <p>Assalamu alaikum${sndA.first_name ? " " + esc(sndA.first_name) : ""},</p>
+              <p><b>${esc(name)}</b> accepted your invitation. Your compatibility session is ready &mdash; answer thoughtfully, insha'Allah.</p>
+              <p><a href="https://kulmi.uk/activity" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Open your session</a></p>
+              <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage emails in Settings. Kulmi &mdash; kulmi.uk</p>
+            </div>`);
+        }
       } else {
         await admin.from("notifications").insert([{
           user_id: inv.sender_id, type: "invitation",
@@ -368,6 +379,17 @@ serve(async (req) => {
           link: "/discover",
         }]).then(() => {}, () => {});
         await sendPush(admin, [inv.sender_id], "An update on your invitation", "Not this time — your slot is free to reach out to someone new, insha'Allah.", "/discover");
+        const { data: sndD } = await admin.from("profiles").select("email, first_name, email_unsubscribed").eq("id", inv.sender_id).maybeSingle();
+        if (sndD?.email && !sndD.email_unsubscribed) {
+          await sendEmail(sndD.email, "An update on your invitation",
+            `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+              <h2 style="color:#1B4332;font-family:Georgia,serif">Not this time</h2>
+              <p>Assalamu alaikum${sndD.first_name ? " " + esc(sndD.first_name) : ""},</p>
+              <p>Your invitation wasn't accepted this time. That's okay &mdash; what is written for you will not miss you. Your introduction slot is now free to reach out to someone new, insha'Allah.</p>
+              <p><a href="https://kulmi.uk/discover" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Continue your search</a></p>
+              <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage emails in Settings. Kulmi &mdash; kulmi.uk</p>
+            </div>`);
+        }
       }
       return json({ sent: true });
     }
@@ -387,6 +409,22 @@ serve(async (req) => {
       const { data: s } = await admin.from("profiles").select("first_name").eq("id", caller).maybeSingle();
       const name = (s?.first_name || "Your match").toString();
       await sendPush(admin, [recipient], `New message from ${name}`, "They're waiting to hear from you on Kulmi.", "/chats");
+      // Web-only members (no app device) get an email instead — capped to ~1/day.
+      const { data: devs } = await admin.from("device_tokens").select("token").eq("user_id", recipient).limit(1);
+      if (!devs || devs.length === 0) {
+        const { data: rp } = await admin.from("profiles").select("email, first_name, email_unsubscribed, last_reengage_email_at").eq("id", recipient).maybeSingle();
+        if (rp?.email && !rp.email_unsubscribed && !(rp.last_reengage_email_at && Date.now() - new Date(rp.last_reengage_email_at).getTime() < 20 * 3600_000)) {
+          await admin.from("profiles").update({ last_reengage_email_at: new Date().toISOString() }).eq("id", recipient);
+          await sendEmail(rp.email, `New message from ${name} on Kulmi`,
+            `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#2D2926">
+              <h2 style="color:#1B4332;font-family:Georgia,serif">You have a new message</h2>
+              <p>Assalamu alaikum${rp.first_name ? " " + esc(rp.first_name) : ""},</p>
+              <p><b>${esc(name)}</b> sent you a message on Kulmi. Don't keep them waiting, insha'Allah.</p>
+              <p><a href="https://kulmi.uk/chats" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Open your chat</a></p>
+              <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage emails in Settings. Kulmi &mdash; kulmi.uk</p>
+            </div>`);
+        }
+      }
       return json({ sent: true });
     }
 

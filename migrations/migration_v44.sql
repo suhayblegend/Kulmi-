@@ -1,9 +1,9 @@
 -- =============================================================
 --  KULMI migration v44 — seed the Journal with guidance articles. Idempotent
---  (fixed ids + on conflict do nothing; safe to re-run, edits in admin survive).
+--  (fixed ids + upsert: re-running setup refreshes these five articles).
 -- =============================================================
 
-insert into public.posts (id, title, excerpt, content, published) values
+insert into public.posts (id, title, excerpt, content, published, image_url) values
 (
   'a0000000-0000-4000-8000-000000000001',
   'How to stay safe while looking for marriage online',
@@ -32,7 +32,8 @@ We built verification, private photos, wali oversight and screenshot-blocking in
 
 May Allah protect you and grant you a righteous spouse through halal means.
 — Suhayb & Fardowza, Kulmi',
-  true
+  true,
+  'https://kulmi.uk/blog-covers/safety.jpg'
 ),
 (
   'a0000000-0000-4000-8000-000000000002',
@@ -40,7 +41,7 @@ May Allah protect you and grant you a righteous spouse through halal means.
   'Beauty fades and butterflies settle. Here''s what to actually look for in a spouse — from the sunnah, from our elders, and from what we''ve seen work.',
   'Assalamu alaikum. Everyone will tell you what they think you should want in a spouse. Tall. From a good family. Finished university. Masha''Allah to all of it — but none of it is what keeps a marriage standing at year ten.
 
-The Prophet ﷺ told us plainly: a person is married for four things — wealth, lineage, beauty, and deen — "so choose the one with deen, may your hands be covered in dust." That hadith is not asking you to ignore everything else. It is telling you what to weigh heaviest when things compete.
+The Prophet (peace be upon him) told us plainly: a person is married for four things — wealth, lineage, beauty, and deen — "so choose the one with deen, may your hands be covered in dust." That hadith is not asking you to ignore everything else. It is telling you what to weigh heaviest when things compete.
 
 So what does "choosing deen" actually look like in a conversation?
 
@@ -63,7 +64,8 @@ And one thing NOT to look for: perfection. You are not perfect; neither are they
 
 Make istikhara. Involve your family. Take your time. And trust that what Allah has written for you will not miss you.
 — Suhayb & Fardowza, Kulmi',
-  true
+  true,
+  'https://kulmi.uk/blog-covers/choosing.jpg'
 ),
 (
   'a0000000-0000-4000-8000-000000000003',
@@ -87,13 +89,14 @@ Step 5: Istikhara — and an honest answer
 Pray istikhara sincerely, then pay attention to how things unfold — ease or obstacles, comfort or persistent unease. Istikhara is not a dream or a sign in the clouds; it is asking Allah to open the good path and close the harmful one. Trust what He shows you, even when it is not what you hoped.
 
 Step 6: Meher, nikah, and keeping it light
-Keep the meher and the wedding within everyone''s means. The most blessed marriage, our Prophet ﷺ taught, is the one easiest in expense. A marriage that starts buried in wedding debt starts with a weight it did not need.
+Keep the meher and the wedding within everyone''s means. The most blessed marriage, our Prophet (peace be upon him) taught, is the one easiest in expense. A marriage that starts buried in wedding debt starts with a weight it did not need.
 
 There is no prize for speed and no shame in a road that takes months. Move with intention, involve those who love you, and let every step be one you can stand behind.
 
 May Allah write for you a home of tranquility, love and mercy.
 — Suhayb & Fardowza, Kulmi',
-  true
+  true,
+  'https://kulmi.uk/blog-covers/roadmap.jpg'
 ),
 (
   'a0000000-0000-4000-8000-000000000004',
@@ -131,7 +134,8 @@ Mocking your deen or your standards. If they belittle your prayer, your hijab, y
 
 One bad sign in a good person is a conversation to have. A pattern is an answer. May Allah give you eyes that see clearly and a heart at peace with what they see.
 — Suhayb & Fardowza, Kulmi',
-  true
+  true,
+  'https://kulmi.uk/blog-covers/flags.jpg'
 ),
 (
   'a0000000-0000-4000-8000-000000000005',
@@ -140,7 +144,7 @@ One bad sign in a good person is a conversation to have. A pattern is an answer.
   'Assalamu alaikum. For some of us who grew up in the West, "my family will be involved in my marriage search" can sound like a loss of freedom. We want to gently offer another lens — because in our deen and our dhaqan, the wali is not a gatekeeper against you. He is a shield around you.
 
 What the wali actually is
-In Islam, the wali — a father, uncle, brother, or trusted elder — represents your interests in the most consequential decision of your life. Not to overrule your heart, but to see what your heart, mid-hope, might miss. The Prophet ﷺ connected marriage to the wali not to restrict women, but to guarantee that no woman ever stands alone in front of a man and his promises.
+In Islam, the wali — a father, uncle, brother, or trusted elder — represents your interests in the most consequential decision of your life. Not to overrule your heart, but to see what your heart, mid-hope, might miss. The Prophet (peace be upon him) connected marriage to the wali not to restrict women, but to guarantee that no woman ever stands alone in front of a man and his promises.
 
 Protection from the practical things
 An experienced elder asks the unromantic questions: How exactly does he earn? What are his obligations back home? What happened in his previous marriage? These questions are awkward for you to ask — and effortless for your wali. That is the division of labour: you assess the heart, he assesses the ground it stands on.
@@ -159,8 +163,11 @@ We know it is not simple for everyone. Some have lost their father; some have di
 
 Isla Kulma, Isla Noolada — come together, live together. Marriage in our tradition has never been two people alone; it is two families weaving together. Let those who love you walk this road with you.
 — Suhayb & Fardowza, Kulmi',
-  true
+  true,
+  'https://kulmi.uk/blog-covers/wali.jpg'
 )
-on conflict (id) do nothing;
+on conflict (id) do update set
+  title = excluded.title, excerpt = excluded.excerpt, content = excluded.content,
+  image_url = excluded.image_url, updated_at = now();
 
 notify pgrst, 'reload schema';
