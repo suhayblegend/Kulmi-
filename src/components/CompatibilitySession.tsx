@@ -11,6 +11,7 @@ import {
   uploadSessionAnswerAudio,
   analyzeCompatibility,
   chatForSession,
+  getMyProfile,
   notifyMatch,
   avatarFor,
   type SessionSummary,
@@ -33,7 +34,7 @@ const scoreLabel = (n: number) =>
   n >= 80 ? 'Strong match' : n >= 60 ? 'Good potential' : n >= 40 ? 'Worth exploring' : 'Notable differences';
 
 // Animated circular gauge for the compatibility score.
-function ScoreRing({ value }: { value: number }) {
+function ScoreRing({ value, light = false }: { value: number; light?: boolean }) {
   const [shown, setShown] = useState(0);
   useEffect(() => {
     const t = setTimeout(() => setShown(value), 100);
@@ -44,13 +45,13 @@ function ScoreRing({ value }: { value: number }) {
   return (
     <div className="relative w-32 h-32 shrink-0">
       <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-        <circle cx="60" cy="60" r={r} fill="none" stroke="#E5E0D8" strokeWidth="10" />
-        <circle cx="60" cy="60" r={r} fill="none" stroke="#1B4332" strokeWidth="10" strokeLinecap="round"
+        <circle cx="60" cy="60" r={r} fill="none" stroke={light ? "rgba(255,255,255,0.22)" : "#E5E0D8"} strokeWidth="10" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke={light ? "#FFFFFF" : "#1B4332"} strokeWidth="10" strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={off} style={{ transition: 'stroke-dashoffset 1.1s cubic-bezier(0.22,1,0.36,1)' }} />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-serif text-3xl text-[#1B4332] leading-none">{value}%</span>
-        <span className="text-[10px] uppercase tracking-widest text-[#8B7355] mt-1">match</span>
+        <span className={`font-serif text-3xl leading-none ${light ? "text-white" : "text-[#1B4332]"}`}>{value}%</span>
+        <span className={`text-[10px] uppercase tracking-widest mt-1 ${light ? "text-white/60" : "text-[#8B7355]"}`}>match</span>
       </div>
     </div>
   );
@@ -81,6 +82,8 @@ function SessionCard({ onExit, summary, children }: { onExit: () => void; summar
 export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
   const goMatched = (chatId: string) => { haptic('heavy'); playCelebration(); notifyMatch(chatId); onMatched(chatId); };
   const [loading, setLoading] = useState(true);
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
+  useEffect(() => { getMyProfile().then((p) => setMyAvatar(p ? avatarFor(p) : null)).catch(() => {}); }, []);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [questions, setQuestions] = useState<string[]>(COMPATIBILITY_QUESTIONS);
   const [mine, setMine] = useState<Record<number, string>>({});
@@ -403,28 +406,41 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
   return (
     <SessionCard onExit={onExit} summary={summary}>
       <div className="space-y-10">
-        <div className="rounded-3xl border border-[#1B4332]/15 bg-gradient-to-br from-[#FDFBF7] to-[#F0EEE8] p-6 md:p-8">
-          <div className="flex items-center gap-2 mb-5">
-            <Sparkles className="w-4 h-4 text-[#1B4332]" />
-            <h3 className="text-xs font-bold uppercase tracking-widest text-[#1B4332]">Compatibility Analysis</h3>
-          </div>
-          {!analysis ? (
-            <div className="flex items-center gap-3 text-[#8B7355] py-4"><Loader2 className="w-5 h-5 animate-spin" /> Preparing your compatibility summary…</div>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row items-center gap-6">
-                <ScoreRing value={analysis.score} />
-                <div className="flex-1 text-center sm:text-left">
-                  <p className="font-serif text-2xl text-[#1B4332] italic mb-2">{scoreLabel(analysis.score)}</p>
-                  <p className="text-sm text-[#5C574F] leading-relaxed">{analysis.summary}</p>
+        <div className="rounded-3xl overflow-hidden border border-[#1B4332]/15 shadow-sm">
+          {/* Dramatic hero: the two of you + the score */}
+          <div className="bg-gradient-to-br from-[#1B4332] via-[#22523C] to-[#12301F] px-6 py-8 text-center relative">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/50 mb-5 flex items-center justify-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Compatibility Analysis
+            </p>
+            {!analysis ? (
+              <div className="flex items-center justify-center gap-3 text-white/70 py-6"><Loader2 className="w-5 h-5 animate-spin" /> Preparing your compatibility summary…</div>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-4 mb-5">
+                  <motion.div initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="w-16 h-16 rounded-full overflow-hidden border-[3px] border-white/80 shadow-lg">
+                    <img src={myAvatar ?? avatarFor(summary.partner)} alt="You" className="w-full h-full object-cover" />
+                  </motion.div>
+                  <ScoreRing value={analysis.score} light />
+                  <motion.div initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="w-16 h-16 rounded-full overflow-hidden border-[3px] border-white/80 shadow-lg">
+                    <img src={avatarFor(summary.partner)} alt={summary.partner.first_name || ''} className="w-full h-full object-cover" />
+                  </motion.div>
                 </div>
-              </div>
+                <p className="font-serif text-2xl text-white italic mb-1.5">{scoreLabel(analysis.score)}</p>
+                <p className="text-sm text-white/70 leading-relaxed max-w-md mx-auto">{analysis.summary}</p>
+              </>
+            )}
+          </div>
+
+          {analysis && (
+            <div className="bg-[#FDFBF7] p-5 md:p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-[#E8F3ED] border border-[#1B4332]/15 rounded-2xl p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-2.5 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Strengths</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B4332] mb-2.5 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Your strengths</p>
                   <ul className="space-y-2">
                     {analysis.strengths.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-[#2D2926]"><span className="text-[#1B4332] mt-0.5">•</span> {s}</li>
+                      <motion.li key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.08 }} className="flex gap-2 text-sm text-[#2D2926]">
+                        <CheckCircle2 className="w-4 h-4 text-[#1B4332] shrink-0 mt-0.5" /> {s}
+                      </motion.li>
                     ))}
                   </ul>
                 </div>
@@ -432,7 +448,9 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-2.5 flex items-center gap-1.5"><Heart className="w-3.5 h-3.5" /> To discuss together</p>
                   <ul className="space-y-2">
                     {analysis.considerations.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-[#5C574F]"><span className="text-[#8B7355] mt-0.5">•</span> {s}</li>
+                      <motion.li key={i} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 + i * 0.08 }} className="flex gap-2 text-sm text-[#5C574F]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#B08968] shrink-0 mt-2" /> {s}
+                      </motion.li>
                     ))}
                   </ul>
                 </div>
@@ -485,10 +503,10 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
             <motion.div key="decide" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6 border-t border-[#E5E0D8]">
               <h3 className="text-xl font-serif text-[#1B4332] italic mb-2">Your private decision</h3>
               <p className="text-sm text-[#8B7355] mb-6">Would you like to continue getting to know {summary.partner.first_name}? This is never shared.</p>
-              <div className="flex gap-4 max-w-md mx-auto">
-                <button onClick={() => handleDecision('no')} disabled={deciding} className="flex-1 h-14 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not this time</button>
-                <button onClick={() => handleDecision('yes')} disabled={deciding} className="flex-1 h-14 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                  {deciding ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Yes, continue <Heart className="w-4 h-4" /></>}
+              <div className="flex items-center gap-3 max-w-md mx-auto">
+                <button onClick={() => handleDecision('no')} disabled={deciding} className="flex-1 py-4 rounded-full border-2 border-[#E5E0D8] text-[#8B7355] font-semibold text-[15px] active:bg-[#F0EEE8] transition-colors disabled:opacity-50">Not this time</button>
+                <button onClick={() => handleDecision('yes')} disabled={deciding} className="flex-[1.5] py-4 rounded-full bg-gradient-to-b from-[#226044] to-[#16382A] text-white font-semibold text-[15px] tracking-wide shadow-lg shadow-[#1B4332]/30 active:shadow-md transition-shadow disabled:opacity-50 flex items-center justify-center gap-2">
+                  {deciding ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Yes, continue <Heart className="w-[18px] h-[18px] fill-white/20" /></>}
                 </button>
               </div>
             </motion.div>
