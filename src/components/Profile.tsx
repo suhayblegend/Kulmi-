@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { toast } from '../lib/toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Shield, BookOpen, Settings, Edit3, Save, X, Camera, CheckCircle2, Heart, Lock, Target, MessageSquare, Mic, Square, Trash2, Loader2 } from 'lucide-react';
 import { Skeleton } from './ui/Skeleton';
@@ -131,7 +132,7 @@ export function Profile() {
       await addGalleryPhoto(file);
       setGallery(await getMyGallery());
     } catch (err: any) {
-      alert(err.message || 'Could not add photo.');
+      toast(err.message || 'Could not add photo.', 'error');
     } finally {
       setGalleryBusy(false);
       if (galleryInputRef.current) galleryInputRef.current.value = '';
@@ -166,7 +167,7 @@ export function Profile() {
   const saveQs = async () => {
     setCompatBusy(true);
     try { await setMyCompatQuestions(compatQs); setCompatSaved(true); setTimeout(() => setCompatSaved(false), 2500); }
-    catch (e: any) { alert(e.message || 'Could not save questions.'); }
+    catch (e: any) { toast(e.message || 'Could not save questions.', 'error'); }
     finally { setCompatBusy(false); }
   };
 
@@ -192,7 +193,7 @@ export function Profile() {
       introRecRef.current = mr;
       setIntroRecording(true);
     } catch {
-      alert('Microphone access is needed to record your intro.');
+      toast('Microphone access is needed to record your intro.');
     }
   };
 
@@ -206,7 +207,7 @@ export function Profile() {
       if (blob.size > 0) {
         setIntroBusy(true);
         try { setIntroUrl(await uploadIntro(blob)); }
-        catch (e: any) { alert(e.message || 'Could not save your intro.'); }
+        catch (e: any) { toast(e.message || 'Could not save your intro.', 'error'); }
         finally { setIntroBusy(false); }
       }
     };
@@ -230,7 +231,7 @@ export function Profile() {
       const url = await uploadAvatar(file);
       setPictureUrl(url);
     } catch (err: any) {
-      alert(err.message || 'Could not upload photo.');
+      toast(err.message || 'Could not upload photo.', 'error');
     }
   };
 
@@ -241,7 +242,7 @@ export function Profile() {
       setVerificationStatus('pending');
       setVerificationStep(2);
     } catch (err: any) {
-      alert(err.message || 'Could not submit verification.');
+      toast(err.message || 'Could not submit verification.', 'error');
     } finally {
       setIsUploading(false);
     }
@@ -325,7 +326,7 @@ export function Profile() {
       setProfile(editForm);
       setIsEditing(false);
     } catch (err: any) {
-      alert(err.message || 'Could not save profile.');
+      toast(err.message || 'Could not save profile.', 'error');
     } finally {
       setSaving(false);
     }

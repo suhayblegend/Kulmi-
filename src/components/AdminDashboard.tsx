@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from '../lib/toast';
 import { motion } from 'motion/react';
 import {
   Users, AlertTriangle, MessageSquare, Settings, Activity, Menu, X,
@@ -153,7 +154,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       setRemoveBan(false);
       await reload();
     } catch (e: any) {
-      alert(e?.message || 'Could not remove the user.');
+      toast(e?.message || 'Could not remove the user.', 'error');
     } finally {
       setRemoving(false);
     }
@@ -225,7 +226,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       const url = await uploadBlogImage(file);
       setPostDraft((d) => d && { ...d, image_url: url });
     } catch (e: any) {
-      alert(e?.message || 'Could not upload image. Have you run the latest SQL (blog bucket)?');
+      toast(e?.message || 'Could not upload image. Have you run the latest SQL (blog bucket)?', 'error');
     } finally {
       setUploadingCover(false);
     }
@@ -233,28 +234,28 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
   const loadPosts = () => adminListPosts().then(setPosts).catch(() => setPosts([]));
   useEffect(() => { loadPosts(); }, []);
   const savePost = async () => {
-    if (!postDraft || !postDraft.title.trim() || !postDraft.content.trim()) { alert('A title and the article text are required.'); return; }
+    if (!postDraft || !postDraft.title.trim() || !postDraft.content.trim()) { toast('A title and the article text are required.'); return; }
     setSavingPost(true);
     try {
       await adminSavePost(postDraft);
       setPostDraft(null);
       await loadPosts();
     } catch (e: any) {
-      alert(e?.message || 'Could not save. Have you run the latest kulmi_setup.sql (posts table)?');
+      toast(e?.message || 'Could not save. Have you run the latest kulmi_setup.sql (posts table)?', 'error');
     } finally {
       setSavingPost(false);
     }
   };
   const deletePost = async (id: string, title: string) => {
     if (!window.confirm(`Delete "${title}" permanently?`)) return;
-    try { await adminDeletePost(id); await loadPosts(); } catch (e: any) { alert(e?.message || 'Could not delete.'); }
+    try { await adminDeletePost(id); await loadPosts(); } catch (e: any) { toast(e?.message || 'Could not delete.', 'error'); }
   };
 
   const handleReview = async (userId: string, approve: boolean, note?: string) => {
     try {
       await adminReviewVerification(userId, approve, note);
     } catch (e: any) {
-      alert(e?.message || 'Could not update verification. Please try again.');
+      toast(e?.message || 'Could not update verification. Please try again.', 'error');
     }
     await reload();
   };
@@ -271,7 +272,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
       setRejectTarget(null);
       setRejectReason('');
     } catch (e: any) {
-      alert(e?.message || 'Could not reject.');
+      toast(e?.message || 'Could not reject.', 'error');
     } finally {
       setRejecting(false);
     }
@@ -288,9 +289,9 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
     if (reason === null) return; // cancelled
     try {
       const sent = await adminWarnUser(userId, reason.trim());
-      alert(sent ? `Warning email sent to ${name}.` : 'Could not send (no email on file or email service unavailable).');
+      toast(sent ? `Warning email sent to ${name}.` : 'Could not send (no email on file or email service unavailable).');
     } catch (e: any) {
-      alert(e?.message || 'Could not send the warning.');
+      toast(e?.message || 'Could not send the warning.', 'error');
     }
   };
 
@@ -595,7 +596,7 @@ export function AdminDashboard({ onExit }: AdminDashboardProps) {
                       if (u.verification_status === 'verified') {
                         // Un-verify quietly — NOT a rejection, no email.
                         if (!window.confirm(`Set ${u.first_name || 'this member'} back to unverified? They'll need to pass verification again. No email is sent.`)) return;
-                        try { await adminUnverify(u.id); } catch (e: any) { alert(e?.message || 'Could not update.'); }
+                        try { await adminUnverify(u.id); } catch (e: any) { toast(e?.message || 'Could not update.', 'error'); }
                         await reload();
                       } else {
                         await handleReview(u.id, true);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from '../lib/toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle, UserPlus, Share2 } from 'lucide-react';
 import { ReferSomeone } from './ReferSomeone';
@@ -115,7 +116,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
       try { await sendWaliInvite(); } catch { /* member can resend from Settings */ }
       setInviteStep(2);
     } catch (e: any) {
-      alert(e.message || 'Could not save.');
+      toast(e.message || 'Could not save.', 'error');
     } finally {
       setIsInviting(false);
     }
@@ -128,9 +129,9 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
       await claimFounding();
       const fresh = await getMyProfile(true);
       setProfile(fresh);
-      alert('MashaAllah — your Founding Membership is active until 30 September! 🌟');
+      toast('MashaAllah — your Founding Membership is active until 30 September! 🌟', 'success');
     } catch (e: any) {
-      alert(e?.message || 'Could not claim the offer.');
+      toast(e?.message || 'Could not claim the offer.', 'error');
     } finally {
       setClaiming(false);
     }
@@ -143,7 +144,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
       const url = await openBillingPortal();
       window.location.href = url;
     } catch (e: any) {
-      alert(e?.message || 'Could not open the billing portal.');
+      toast(e?.message || 'Could not open the billing portal.', 'error');
       setPortalBusy(false);
     }
   };
@@ -153,9 +154,9 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
     setResending(true);
     try {
       const sent = await sendWaliInvite();
-      alert(sent ? 'Confirmation email sent to your wali.' : 'Could not send right now — please try again shortly.');
+      toast(sent ? 'Confirmation email sent to your wali.' : 'Could not send right now — please try again shortly.', sent ? 'success' : 'error');
     } catch (e: any) {
-      alert(e.message || 'Could not send.');
+      toast(e.message || 'Could not send.', 'error');
     } finally {
       setResending(false);
     }
@@ -176,7 +177,7 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
       await signOut();
     } catch (e: any) {
       setDeleting(false);
-      alert(e?.message || 'Could not delete your account. Please try again or contact support.');
+      toast(e?.message || 'Could not delete your account. Please try again or contact support.', 'error');
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { toast } from '../lib/toast';
 import { ArrowLeft, ShieldAlert, Mic, Trash2, Users, AlertTriangle, Send, Loader2, Hourglass, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
@@ -236,7 +237,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
       mediaRecorderRef.current = mr;
       setIsRecording(true);
     } catch {
-      alert('Microphone access is needed to record a voice note.');
+      toast('Microphone access is needed to record a voice note.');
     }
   };
 
@@ -252,7 +253,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
           const saved = await sendVoiceMessage(chatId, blob);
           if (saved) setMessages((prev) => upsert(prev, saved));
         } catch {
-          alert('Could not send the voice note.');
+          toast('Could not send the voice note.');
         }
       }
     };
@@ -287,9 +288,9 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     if (!reason || !reason.trim()) return;
     try {
       await reportUser(partner.id, reason.trim());
-      alert('Thank you. Our team will review this report.');
+      toast('Thank you. Our team will review this report.');
     } catch {
-      alert('Could not submit the report.');
+      toast('Could not submit the report.');
     }
   };
 
@@ -433,10 +434,10 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
                       if (meta.confirmedStatus === 'married' || meta.confirmedStatus === 'engaged') {
                         setShowSuccessForm(true); // both agreed → confirmed success
                       } else if (relationshipStatus === 'married' || relationshipStatus === 'engaged') {
-                        alert(`Saved. Once ${partnerName} also marks "${relationshipStatus}", it's confirmed.`);
+                        toast(`Saved. Once ${partnerName} also marks "${relationshipStatus}", it's confirmed.`);
                       }
                     } catch {
-                      alert('Could not update status.');
+                      toast('Could not update status.');
                     }
                   }}
                   className="flex-1 px-6 py-3 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors"

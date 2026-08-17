@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { toast } from '../lib/toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, Heart, ArrowLeft, Sparkles, CheckCircle2, XCircle, Mic, Trash2, Square } from 'lucide-react';
 import {
@@ -199,7 +200,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
       mediaRecorderRef.current = mr;
       setRecording(true);
     } catch {
-      alert('Microphone access is needed to record a voice answer.');
+      toast('Microphone access is needed to record a voice answer.');
     }
   };
 
@@ -243,7 +244,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
         await refresh();
       }
     } catch (e: any) {
-      alert(e?.message || 'Could not save your answer.');
+      toast(e?.message || 'Could not save your answer.', 'error');
     } finally {
       setSaving(false);
     }
@@ -271,7 +272,7 @@ export function CompatibilitySession({ sessionId, onExit, onMatched }: Props) {
       if (chatId) goMatched(chatId);
       else startPollingForMatch();
     } catch (e: any) {
-      alert(e?.message || 'Could not save your decision. Please check your connection and try again.');
+      toast(e?.message || 'Could not save your decision. Please check your connection and try again.', 'error');
     } finally {
       setDeciding(false);
     }

@@ -430,6 +430,14 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
             ))}
           </div>
 
+          <div className="relative">
+            {/* Deck depth — a peek of the introductions still waiting behind. */}
+            {remaining > 1 && (
+              <div className="absolute inset-x-3 -bottom-2 h-8 bg-white border border-[#E5E0D8] rounded-3xl shadow-sm" aria-hidden />
+            )}
+            {remaining > 2 && (
+              <div className="absolute inset-x-6 -bottom-4 h-8 bg-[#FBF9F4] border border-[#E5E0D8] rounded-3xl" aria-hidden />
+            )}
           <AnimatePresence mode="wait">
             <motion.div
               key={current.id}
@@ -437,17 +445,30 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -16, scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-              className="w-full border border-[#E5E0D8] bg-white shadow-[0_8px_40px_rgba(27,67,50,0.10)] rounded-3xl overflow-hidden"
+              className="relative w-full border border-[#E5E0D8] bg-white shadow-[0_8px_40px_rgba(27,67,50,0.10)] rounded-3xl overflow-hidden"
             >
               <div className="relative h-80 bg-[#F0EEE8]">
                 <SmartImage src={avatarFor(current)} className="absolute inset-0 w-full h-full" fit="cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
 
-                {/* Suggested ribbon */}
-                <div className="absolute top-4 left-4">
+                {/* Suggested ribbon + values-alignment chip */}
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 bg-white/90 backdrop-blur text-[#1B4332] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm">
                     <Sparkles className="w-3 h-3" /> Suggested for you
                   </span>
+                  {(() => {
+                    if (!myProfile) return null;
+                    const nrm = (v?: string | null) => (v ?? '').trim().toLowerCase();
+                    const keys: (keyof Profile)[] = ['prayer_level', 'children', 'timeline', 'relocate', 'marital_status', 'smoking'];
+                    const comparable = keys.filter((k) => (myProfile as any)[k] && (current as any)[k]);
+                    const aligned = comparable.filter((k) => nrm((myProfile as any)[k]) === nrm((current as any)[k])).length;
+                    if (comparable.length < 2 || aligned === 0) return null;
+                    return (
+                      <span className="flex items-center gap-1 bg-[#1B4332]/85 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1.5 rounded-full shadow-sm">
+                        💚 {aligned} {aligned === 1 ? 'value aligns' : 'values align'}
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 <div className="absolute bottom-4 left-5 right-5 text-white">
@@ -520,6 +541,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               </div>
             </motion.div>
           </AnimatePresence>
+          </div>
         </>
       ) : (
         <div className="w-full overflow-hidden border border-[#E5E0D8] bg-white shadow-sm rounded-3xl">

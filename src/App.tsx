@@ -37,6 +37,7 @@ import { cacheClear } from './lib/cache';
 import { prefetchAppData } from './lib/prefetch';
 import { registerPush, isNative } from './lib/native';
 import { AppWelcome } from './components/AppWelcome';
+import { Toaster } from './lib/toast';
 
 export type AppState =
   | 'landing'
@@ -134,9 +135,16 @@ export default function App() {
     );
   }
   const path = (typeof window !== 'undefined' ? window.location.pathname : '/').replace(/\/+$/, '') || '/';
-  if (path === ADMIN_PATH) return <StaffArea kind="admin" />;
-  if (path === '/wali') return <StaffArea kind="wali" />;
-  return <MemberApp />;
+  const inner =
+    path === ADMIN_PATH ? <StaffArea kind="admin" /> :
+    path === '/wali' ? <StaffArea kind="wali" /> :
+    <MemberApp />;
+  return (
+    <>
+      <Toaster />
+      {inner}
+    </>
+  );
 }
 
 function MemberApp() {
