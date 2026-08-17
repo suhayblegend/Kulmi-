@@ -555,7 +555,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="relative z-10 flex flex-col w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-white sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8]"
+              className="relative z-10 flex flex-col w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-white sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8]"
             >
               <button onClick={() => setViewProfile(null)} style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }} className="absolute right-3 z-20 w-9 h-9 rounded-full bg-black/45 text-white flex items-center justify-center active:bg-black/60"><X className="w-4.5 h-4.5" /></button>
               {/* Photo header — clean cover fill, stays pinned while details scroll. */}

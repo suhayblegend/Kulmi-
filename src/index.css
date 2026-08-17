@@ -26,10 +26,15 @@
 
 /* ---- Native-app polish (only inside the packaged iOS/Android shell) ---- */
 html.native, html.native body {
-  /* Stop the whole page rubber-banding like a web page. */
-  overscroll-behavior-y: none;
+  /* Stop the Android "stretch" overscroll and rubber-banding on every axis. */
+  overscroll-behavior: none;
   background-color: #FDFBF7;
+  /* Block pinch-zoom / double-tap-zoom that made pages feel "stretchable". */
+  touch-action: pan-x pan-y;
 }
+html.native .overflow-y-auto,
+html.native .overflow-auto { overscroll-behavior: contain; }
+html.native img { -webkit-user-drag: none; user-select: none; }
 /* The fixed top bar must clear the status bar / notch, and the content below
    it must start lower to match — otherwise text gets cropped under the notch. */
 html.native header {
