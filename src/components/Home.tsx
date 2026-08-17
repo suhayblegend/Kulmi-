@@ -25,6 +25,7 @@ import {
 import { DiscoverCardSkeleton } from './ui/Skeleton';
 import { SmartImage } from './ui/SmartImage';
 import { ComparePanel } from './ComparePanel';
+import { SwipeCard } from './SwipeCard';
 import { detectNearby } from '../lib/geo';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { haptic } from '../lib/native';
@@ -431,13 +432,13 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
           </div>
 
           <AnimatePresence mode="wait">
-            <motion.div
+            <SwipeCard
               key={current.id}
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -16, scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-              className="w-full border border-[#E5E0D8] bg-white shadow-[0_8px_40px_rgba(27,67,50,0.10)] rounded-3xl overflow-hidden"
+              onInvite={handleInvite}
+              onSkip={handleSkip}
+              disabled={busy}
+              canInvite={openThreads < (premium ? MAX_OPEN_PLUS : MAX_OPEN_FREE)}
+              onBlocked={() => setError(`You can have ${premium ? MAX_OPEN_PLUS : MAX_OPEN_FREE} introductions at a time. Finish or end one before starting another — quality over quantity.`)}
             >
               <div className="relative h-80 bg-[#F0EEE8]">
                 <SmartImage src={avatarFor(current)} className="absolute inset-0 w-full h-full" fit="cover" />
@@ -518,8 +519,9 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                   {remaining > 1 ? `${remaining - 1} more suitable ${remaining - 1 === 1 ? 'introduction' : 'introductions'} after this` : 'Last suggestion for now'}
                 </p>
               </div>
-            </motion.div>
+            </SwipeCard>
           </AnimatePresence>
+          <p className="text-center text-[11px] text-[#8B7355]">Swipe right to invite · left to skip — or use the buttons</p>
         </>
       ) : (
         <div className="w-full overflow-hidden border border-[#E5E0D8] bg-white shadow-sm rounded-3xl">
