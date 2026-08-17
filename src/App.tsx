@@ -452,13 +452,18 @@ function MemberApp() {
       <header className="fixed top-0 left-0 right-0 h-16 sm:h-24 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-[#E5E0D8] z-50 flex items-center px-4 sm:px-6 lg:px-12">
         <div className="w-full flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Logo />
-            <button
-              onClick={() => setAppState(user ? 'discover' : 'landing')}
-              className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#1B4332] hover:opacity-80 transition-opacity uppercase"
-            >
-              Kulmi
-            </button>
+            {/* The app doesn't need to badge its own logo on every screen. */}
+            {!isNative() && (
+              <>
+                <Logo />
+                <button
+                  onClick={() => setAppState(user ? 'discover' : 'landing')}
+                  className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-[#1B4332] hover:opacity-80 transition-opacity uppercase"
+                >
+                  Kulmi
+                </button>
+              </>
+            )}
           </div>
           {PUBLIC_STATES.includes(appState) && !user ? (
             <nav className="flex items-center gap-6">

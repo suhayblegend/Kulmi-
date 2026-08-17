@@ -40,6 +40,15 @@ html.native header {
 html.native main {
   padding-top: calc(5rem + env(safe-area-inset-top));
 }
+/* backdrop-blur on a fixed bar is a real performance drag in a webview — use a
+   solid bar in the app so scrolling stays smooth. */
+html.native header {
+  background-color: #FDFBF7 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* Kill the 300ms webview highlight delay on taps for snappier buttons. */
+html.native a, html.native button { touch-action: manipulation; }
 html.native * {
   /* Kill the grey tap flash and the web text-selection long-press. */
   -webkit-tap-highlight-color: transparent;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle, UserPlus } from 'lucide-react';
+import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle, UserPlus, Share2 } from 'lucide-react';
 import { ReferSomeone } from './ReferSomeone';
 import { supabase } from '../lib/supabase';
 import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, premiumDaysLeft, openBillingPortal, claimFounding, type Profile } from '../lib/db';
@@ -85,6 +85,16 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const [shared, setShared] = useState(false);
+  const shareFoundingOffer = async () => {
+    const text = "Join me on Kulmi — serious, halal Somali matchmaking (not a dating app). Founding members get Kulmi+ free until 30 September, insha'Allah!";
+    const url = 'https://kulmi.uk';
+    try {
+      if (navigator.share) { await navigator.share({ title: 'Kulmi', text, url }); return; }
+    } catch { return; /* user cancelled the share sheet */ }
+    try { await navigator.clipboard.writeText(`${text} ${url}`); setShared(true); setTimeout(() => setShared(false), 2500); } catch { /* ignore */ }
+  };
 
   const setToggle = async (key: ToggleKey, value: boolean) => {
     setProfile((p) => (p ? { ...p, [key]: value } : p));
@@ -303,10 +313,18 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
             )}
           </div>
 
-          {/* Grow Kulmi — refer a serious person you know */}
+          {/* Grow Kulmi — refer a serious person you know + share the founding offer */}
           <div className="p-6 border-b border-[#E5E0D8]">
             <div className="flex items-center gap-3 mb-3"><UserPlus className="w-5 h-5 text-[#1B4332]" /><h3 className="font-bold text-[#2D2926]">Invite someone</h3></div>
             <ReferSomeone />
+            <button
+              onClick={shareFoundingOffer}
+              className="w-full mt-3 flex items-center justify-center gap-2 bg-[#1B4332] text-white rounded-2xl px-4 py-3.5 text-sm font-medium active:bg-[#143326] transition-colors"
+            >
+              <Share2 className="w-4 h-4" />
+              {shared ? 'Copied — share it!' : 'Share the founding offer'}
+            </button>
+            <p className="text-[11px] text-[#8B7355] text-center mt-2">Founding members get Kulmi+ free until 30 September — spread the word.</p>
           </div>
 
           {/* Notifications */}

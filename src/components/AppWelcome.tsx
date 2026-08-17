@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, Lock, HeartHandshake } from 'lucide-react';
+import { ShieldCheck, Lock, HeartHandshake, Sparkles } from 'lucide-react';
+import { FOUNDING_ACTIVE } from '../lib/billing';
 
 interface AppWelcomeProps {
   onSignup: () => void;
@@ -48,6 +49,17 @@ export function AppWelcome({ onSignup, onSignin, onTerms, onPrivacy }: AppWelcom
           ))}
         </div>
       </div>
+
+      {/* Founding offer — free Kulmi+ for early members */}
+      {FOUNDING_ACTIVE && (
+        <div className="mx-6 mb-3 rounded-2xl bg-[#1B4332] text-white px-4 py-3 flex items-center gap-3">
+          <Sparkles className="w-5 h-5 shrink-0 text-amber-300" />
+          <p className="text-[13px] leading-snug">
+            <span className="font-bold">Founding offer:</span> join now and get{' '}
+            <span className="font-bold">Kulmi+ free until 30 September</span> — no card needed.
+          </p>
+        </div>
+      )}
 
       {/* Get started */}
       <div className="px-6 space-y-3">

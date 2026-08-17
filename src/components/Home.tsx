@@ -24,6 +24,7 @@ import {
 } from '../lib/db';
 import { DiscoverCardSkeleton } from './ui/Skeleton';
 import { SmartImage } from './ui/SmartImage';
+import { ComparePanel } from './ComparePanel';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { haptic } from '../lib/native';
 
@@ -103,8 +104,6 @@ const TagSection = ({ title, items }: { title: string; items?: string[] | null }
     </div>
   ) : null;
 
-// Normalise a value for comparison (case/space-insensitive).
-const norm = (v?: string | null) => (v ?? '').trim().toLowerCase();
 
 export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomeProps) {
   const cached = cacheGet<DiscoverCache>('discover');
@@ -546,51 +545,8 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               <div className="p-6">
                 {viewProfile.bio && <p className="text-sm text-[#5C574F] leading-relaxed font-serif italic mb-5">"{viewProfile.bio}"</p>}
 
-                {/* How you compare */}
-                {(() => {
-                  if (!myProfile) return null;
-                  const dims: { label: string; key: keyof Profile }[] = [
-                    { label: 'Prayer', key: 'prayer_level' as keyof Profile },
-                    { label: 'Wants children', key: 'children' as keyof Profile },
-                    { label: 'Timeline', key: 'timeline' as keyof Profile },
-                    { label: 'Relocate', key: 'relocate' as keyof Profile },
-                    { label: 'Marital status', key: 'marital_status' as keyof Profile },
-                    { label: 'Smoking', key: 'smoking' as keyof Profile },
-                  ];
-                  const rows = dims
-                    .map((d) => ({ label: d.label, mine: (myProfile as any)[d.key] as string, theirs: (viewProfile as any)[d.key] as string }))
-                    .filter((r) => r.mine || r.theirs);
-                  if (rows.length === 0) return null;
-                  const comparable = rows.filter((r) => r.mine && r.theirs);
-                  const aligned = comparable.filter((r) => norm(r.mine) === norm(r.theirs)).length;
-                  const pct = comparable.length ? Math.round((aligned / comparable.length) * 100) : 0;
-                  return (
-                    <div className="bg-[#E8F3ED] border border-[#1B4332]/15 rounded-2xl p-4 mb-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-bold text-[#1B4332]">How you compare</p>
-                        {comparable.length > 0 && (
-                          <span className="text-xs font-bold text-[#1B4332] bg-white rounded-full px-2.5 py-1">{pct}% aligned</span>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-[1fr_20px_1fr] gap-x-2 text-[10px] uppercase tracking-wider text-[#8B7355] mb-1.5">
-                        <span className="text-right">You</span><span></span><span>{viewProfile.first_name}</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {rows.map((r) => {
-                          const match = r.mine && r.theirs && norm(r.mine) === norm(r.theirs);
-                          return (
-                            <div key={r.label} className="grid grid-cols-[1fr_20px_1fr] items-center gap-x-2">
-                              <span className="text-xs text-[#2D2926] text-right leading-tight">{r.mine || '—'}</span>
-                              <span className={`text-center text-sm ${match ? 'text-green-600' : 'text-[#C9C4BA]'}`}>{match ? '✓' : '·'}</span>
-                              <span className="text-xs text-[#2D2926] leading-tight">{r.theirs || '—'}</span>
-                              <span className="col-span-3 text-[10px] text-[#8B7355] -mt-1">{r.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
+                {/* How you compare — interactive alignment panel */}
+                {myProfile && <ComparePanel mine={myProfile} theirs={viewProfile} theirName={viewProfile.first_name || 'them'} />}
 
                 <ModalSection title="About">
                   <Fact label="Occupation" value={viewProfile.occupation} />
@@ -637,9 +593,12 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
 
                 <p className="text-[11px] text-[#8B7355] mb-4 text-center">More photos unlock after you both match.</p>
 
-                <div className="flex gap-3 sticky bottom-0 bg-white pt-2">
-                  <button disabled={busy} onClick={() => { setViewProfile(null); handleSkip(); }} className="flex-1 px-6 py-3 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not now</button>
-                  <button disabled={busy} onClick={() => { setViewProfile(null); handleInvite(); }} className="flex-[1.4] px-6 py-3 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Heart className="w-4 h-4" /> Send invitation</button>
+                <div
+                  className="flex gap-3 sticky bottom-0 bg-white/95 backdrop-blur-sm pt-3 border-t border-[#E5E0D8] -mx-6 px-6"
+                  style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+                >
+                  <button disabled={busy} onClick={() => { setViewProfile(null); handleSkip(); }} className="flex-1 px-6 py-3.5 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium active:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not now</button>
+                  <button disabled={busy} onClick={() => { setViewProfile(null); handleInvite(); }} className="flex-[1.4] px-6 py-3.5 rounded-xl bg-[#1B4332] text-white font-medium active:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Heart className="w-4 h-4" /> Send invitation</button>
                 </div>
               </div>
             </motion.div>
