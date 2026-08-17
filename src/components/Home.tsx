@@ -548,7 +548,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
       {/* Full profile modal */}
       <AnimatePresence>
         {viewProfile && (
-          <div className="fixed inset-0 z-50 flex justify-center sm:items-center sm:p-4">
+          <div className="fixed inset-0 z-[70] flex justify-center sm:items-center sm:p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#2D2926]/50 sm:backdrop-blur-sm" onClick={() => setViewProfile(null)} />
             <motion.div
               initial={{ opacity: 0, y: 20 }}

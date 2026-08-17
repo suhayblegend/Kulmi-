@@ -54,6 +54,14 @@ html.native header {
 }
 /* Kill the 300ms webview highlight delay on taps for snappier buttons. */
 html.native a, html.native button { touch-action: manipulation; }
+
+/* Native-style press feedback: buttons subtly compress under the finger. */
+html.native button {
+  transition: transform 0.12s ease;
+}
+html.native button:active {
+  transform: scale(0.97);
+}
 html.native * {
   /* Kill the grey tap flash and the web text-selection long-press. */
   -webkit-tap-highlight-color: transparent;
