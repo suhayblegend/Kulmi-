@@ -2,6 +2,7 @@ package uk.kulmi.app;
 
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
@@ -15,6 +16,10 @@ public class MainActivity extends BridgeActivity {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+
+    // Screenshot & screen-recording protection: members' photos and private
+    // conversations can't be captured or shown in the recents preview.
+    getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
 
     // Android 15+ forces edge-to-edge (the web view draws behind the status and
     // navigation bars). Pad the content by the system-bar insets so nothing —

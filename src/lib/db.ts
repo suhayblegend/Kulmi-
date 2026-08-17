@@ -67,8 +67,9 @@ export interface InvitationWithProfile {
   id: string;
   sender_id: string;
   receiver_id: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
   created_at: string;
+  expires_at?: string | null;
   sender: Profile;
 }
 
@@ -518,8 +519,9 @@ export async function discoverCandidates(filters: DiscoverFilters = {}): Promise
 export interface SentInvitation {
   id: string;
   receiver_id: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
   created_at: string;
+  expires_at?: string | null;
   receiver: Profile;
 }
 
@@ -529,7 +531,7 @@ export async function listMySentInvitations(): Promise<SentInvitation[]> {
   if (!uid) return [];
   const { data } = await supabase
     .from('invitations')
-    .select('id, receiver_id, status, created_at')
+    .select('id, receiver_id, status, created_at, expires_at')
     .eq('sender_id', uid)
     .in('status', ['pending', 'declined'])
     .order('created_at', { ascending: false });
@@ -562,12 +564,21 @@ export async function sendInvitation(receiverId: string): Promise<void> {
   notifyInvitation(receiverId); // email the receiver (best-effort, capped)
 }
 
+let lastInvSweep = 0;
+/** Best-effort server sweep: warn near-expiry invitations + expire overdue ones. */
+function sweepInvitations(): void {
+  if (Date.now() - lastInvSweep < 10 * 60_000) return;
+  lastInvSweep = Date.now();
+  try { supabase.functions.invoke(BROADCAST_FN, { body: { action: 'sweep-invitations' } }).then(() => {}, () => {}); } catch { /* best-effort */ }
+}
+
 export async function listIncomingInvitations(): Promise<InvitationWithProfile[]> {
+  sweepInvitations();
   const uid = await getCurrentUserId();
   if (!uid) return [];
   const { data, error } = await supabase
     .from('invitations')
-    .select('id, sender_id, receiver_id, status, created_at')
+    .select('id, sender_id, receiver_id, status, created_at, expires_at')
     .eq('receiver_id', uid)
     .eq('status', 'pending')
     .order('created_at', { ascending: false });

@@ -17,6 +17,7 @@ import {
   stopContact,
   resolveMediaUrl,
   getCurrentUserId,
+  getMyProfile,
   avatarFor,
   type Message,
   type Profile,
@@ -51,6 +52,8 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
   const [gallery, setGallery] = useState<string[]>([]);
   const [partnerIntro, setPartnerIntro] = useState<string | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
+  const [me, setMe] = useState<Profile | null>(null);
+  useEffect(() => { getMyProfile().then((p) => setMe(p)).catch(() => {}); }, []);
   const [iceDeadline, setIceDeadline] = useState<string | null>(null);
   const [chatStatus, setChatStatus] = useState<string>('active');
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -141,6 +144,24 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     return h >= 1 ? `${h}h ${m}m` : `${m}m`;
   })();
   const iWrote = myId ? senders.has(myId) : false;
+
+  // Guided first conversation — starters personalised from your shared values.
+  const starters = (() => {
+    const out: string[] = ['Asalamu alaikum! It was nice to be introduced to you.'];
+    if (me && partner) {
+      const nrm = (v?: string | null) => (v ?? '').trim().toLowerCase();
+      const goals = (me.future_goals ?? []).filter((g) => (partner.future_goals ?? []).includes(g));
+      if (goals.length) out.push(`Masha'Allah, we both hope for "${goals[0]}" — what does that look like for you?`);
+      if (me.prayer_level && partner.prayer_level && nrm(me.prayer_level) === nrm(partner.prayer_level)) {
+        out.push('I noticed we described our prayer life the same way — what has shaped your deen journey?');
+      }
+      if (me.timeline && partner.timeline && nrm(me.timeline) === nrm(partner.timeline)) {
+        out.push(`We share the same marriage timeline, alhamdulillah — how are you preparing for that step?`);
+      }
+    }
+    if (out.length < 3) out.push('What are you hoping to build in a marriage, insha’Allah?');
+    return out.slice(0, 3);
+  })();
   // The last message I sent that the partner has read → show a single "Read" marker.
   const lastReadMineId = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -650,19 +671,20 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
 
           {messages.length === 0 && (
             <div className="flex flex-col gap-2 mb-8 items-center">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-[#8B7355] mb-2">Conversation Starters</p>
-              <button
-                onClick={() => setMessage('Asalamu alaikum! It was nice to be introduced to you.')}
-                className="bg-white border border-[#1B4332]/20 hover:border-[#1B4332] text-sm text-[#1B4332] px-4 py-2 rounded-xl transition-colors shadow-sm max-w-sm text-center"
-              >
-                "Asalamu alaikum! It was nice to be introduced to you."
-              </button>
-              <button
-                onClick={() => setMessage('What are you hoping to build in a marriage, insha’Allah?')}
-                className="bg-white border border-[#1B4332]/20 hover:border-[#1B4332] text-sm text-[#1B4332] px-4 py-2 rounded-xl transition-colors shadow-sm max-w-sm text-center"
-              >
-                "What are you hoping to build in a marriage, insha'Allah?"
-              </button>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-[#8B7355] mb-2">✨ Start with what you share</p>
+              {starters.map((s, i) => (
+                <motion.button
+                  key={s}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + i * 0.09 }}
+                  onClick={() => setMessage(s)}
+                  className="bg-white border border-[#1B4332]/20 active:border-[#1B4332] text-sm text-[#1B4332] px-4 py-2.5 rounded-2xl transition-colors shadow-sm max-w-sm text-center leading-snug"
+                >
+                  "{s}"
+                </motion.button>
+              ))}
+              <p className="text-[10px] text-[#8B7355] mt-1">Tap one to use it — make it your own.</p>
             </div>
           )}
 

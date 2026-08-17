@@ -191,6 +191,17 @@ export function Activity({ onOpenSession, onBack, onChanged, onCount }: Activity
                           {inv.sender.first_name}{inv.sender.age ? `, ${inv.sender.age}` : ''}{(inv.sender as any).is_premium && <KulmiPlus className="ml-1.5" />}
                         </p>
                         <p className="text-xs text-[#1B4332] truncate font-medium group-hover:underline">Tap to view profile →</p>
+                        {inv.expires_at && (() => {
+                          const msLeft = new Date(inv.expires_at).getTime() - Date.now();
+                          if (msLeft <= 0) return null;
+                          const d = Math.floor(msLeft / 86_400_000);
+                          const urgent = d < 2;
+                          return (
+                            <span className={`inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 border ${urgent ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-[#8B7355] bg-[#FDFBF7] border-[#E5E0D8]'}`}>
+                              <Clock className="w-3 h-3" /> {d >= 1 ? `${d}d left` : `${Math.max(1, Math.floor(msLeft / 3_600_000))}h left`}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </button>
                     <button disabled={busy} onClick={() => handleRespond(inv, false)} className="w-9 h-9 rounded-full border border-[#E5E0D8] text-[#8B7355] flex items-center justify-center hover:bg-[#FDFBF7] transition-colors disabled:opacity-50" aria-label="Decline">

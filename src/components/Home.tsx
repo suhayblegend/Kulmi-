@@ -216,6 +216,24 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   useEffect(() => { if (current?.id) recordProfileView(current.id); }, [current?.id]);
   const remaining = candidates.length - index;
 
+  // Introduction of the Day — the most value-aligned candidate, stable for the
+  // whole day (date-seeded tie-break). The anti-swipe: one special person daily.
+  const introOfDay = React.useMemo(() => {
+    if (!myProfile || candidates.length < 2) return null;
+    const nrm = (v?: string | null) => (v ?? '').trim().toLowerCase();
+    const keys: (keyof Profile)[] = ['prayer_level', 'children', 'timeline', 'relocate', 'marital_status', 'smoking'];
+    const seed = new Date().toISOString().slice(0, 10);
+    const hash = (s: string) => { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+    let best: Profile | null = null;
+    let bestScore = -1;
+    for (const c of candidates) {
+      const aligned = keys.filter((k) => (myProfile as any)[k] && (c as any)[k] && nrm((myProfile as any)[k]) === nrm((c as any)[k])).length;
+      const score = aligned * 100 + (hash(seed + c.id) % 100);
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+    return best;
+  }, [candidates, myProfile]);
+
   // Preload the next two photos so advancing to the next card is instant.
   useEffect(() => {
     for (const p of candidates.slice(index + 1, index + 3)) {
@@ -328,6 +346,28 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
             <p className="text-[11px] text-[#8B7355] mt-0.5">Tap to see who's interested</p>
           </div>
           <ChevronRight className="w-5 h-5 text-[#8B7355] shrink-0" />
+        </button>
+      )}
+
+      {/* Introduction of the Day — one special, most-aligned person daily */}
+      {introOfDay && !loading && (
+        <button
+          onClick={() => { recordProfileView(introOfDay.id); setViewProfile(introOfDay); }}
+          className="w-full flex items-center gap-3.5 bg-gradient-to-r from-[#1B4332] to-[#2B6B4C] text-white rounded-2xl px-4 py-3.5 text-left shadow-md shadow-[#1B4332]/20 relative overflow-hidden"
+        >
+          <span className="absolute -top-4 -right-3 text-[64px] opacity-10 select-none" aria-hidden>★</span>
+          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-amber-300/80 shrink-0">
+            <img src={avatarFor(introOfDay)} alt="" className="w-full h-full object-cover" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> Introduction of the day
+            </p>
+            <p className="text-sm font-medium leading-tight mt-0.5 truncate">
+              {introOfDay.first_name}{introOfDay.age ? `, ${introOfDay.age}` : ''} — your strongest value match today
+            </p>
+          </div>
+          <ChevronRight className="w-5 h-5 opacity-80 shrink-0" />
         </button>
       )}
 

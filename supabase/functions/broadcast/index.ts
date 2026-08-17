@@ -344,6 +344,43 @@ serve(async (req) => {
       return json({ sent: true });
     }
 
+    // ---- Sweep invitations: warn near-expiry receivers, expire overdue, free slots ----
+    // Called best-effort by any member's app load (same pattern as the chat sweep).
+    if (body.action === "sweep-invitations") {
+      const nowIso = new Date().toISOString();
+      const soonIso = new Date(Date.now() + 36 * 3600_000).toISOString();
+
+      // 1) Warn receivers whose invitation expires within ~36h (once).
+      const { data: expiring } = await admin.from("invitations")
+        .select("id, receiver_id")
+        .eq("status", "pending").eq("expiry_warned", false)
+        .gt("expires_at", nowIso).lt("expires_at", soonIso).limit(50);
+      for (const inv of ((expiring as any[]) ?? [])) {
+        await admin.from("invitations").update({ expiry_warned: true }).eq("id", inv.id);
+        await admin.from("notifications").insert([{
+          user_id: inv.receiver_id, type: "invitation",
+          body: "An introduction is waiting for you — it expires soon. Take a look before it's gone.",
+          link: "/activity",
+        }]).then(() => {}, () => {});
+        await sendPush(admin, [inv.receiver_id], "Your invitation expires soon", "Someone is waiting for your answer on Kulmi — don't let it slip away.", "/activity");
+      }
+
+      // 2) Expire overdue invitations and free the sender's slot.
+      const { data: overdue } = await admin.from("invitations")
+        .select("id, sender_id")
+        .eq("status", "pending").lt("expires_at", nowIso).limit(50);
+      for (const inv of ((overdue as any[]) ?? [])) {
+        await admin.from("invitations").update({ status: "expired" }).eq("id", inv.id);
+        await admin.from("notifications").insert([{
+          user_id: inv.sender_id, type: "invitation",
+          body: "One of your invitations received no response and has expired — you're free to reach out to someone new, insha'Allah.",
+          link: "/discover",
+        }]).then(() => {}, () => {});
+        await sendPush(admin, [inv.sender_id], "An invitation expired", "No response this time — you're free to send a new introduction.", "/discover");
+      }
+      return json({ warned: (expiring ?? []).length, expired: (overdue ?? []).length });
+    }
+
     // ---- "Refer someone" — send a warm invite to a serious person a member knows ----
     if (body.action === "refer-someone") {
       const { data: ref } = await admin
