@@ -35,6 +35,7 @@ import { supabase } from './lib/supabase';
 import { getMyProfile, touchLastActive, type Profile as DbProfile } from './lib/db';
 import { cacheClear } from './lib/cache';
 import { prefetchAppData } from './lib/prefetch';
+import { registerPush } from './lib/native';
 
 export type AppState =
   | 'landing'
@@ -219,7 +220,7 @@ function MemberApp() {
           setAppState(routeFor(profile));
           touchLastActive(); // stamp activity for admin analytics (best-effort)
           // Warm Discover/Chats/Activity in the background so they open instantly.
-          if (profile.verification_status === 'verified') prefetchAppData();
+          if (profile.verification_status === 'verified') { prefetchAppData(); registerPush(); }
           return;
         }
         // profile === null:

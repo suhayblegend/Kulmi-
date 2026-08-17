@@ -30,6 +30,34 @@ export async function initNative(): Promise<void> {
   } catch { /* ignore */ }
 }
 
+// Register for native push notifications and save the device token. Call after
+// login. No-op on the website.
+export async function registerPush(): Promise<void> {
+  if (!isNative()) return;
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
+    let perm = await PushNotifications.checkPermissions();
+    if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') {
+      perm = await PushNotifications.requestPermissions();
+    }
+    if (perm.receive !== 'granted') return;
+
+    PushNotifications.addListener('registration', async (t) => {
+      const { savePushToken } = await import('./db');
+      await savePushToken(t.value, Capacitor.getPlatform());
+    });
+    // Tapping a push with a `link` deep-links inside the app.
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      const link = (action.notification?.data as any)?.link;
+      if (link && typeof link === 'string') {
+        window.history.pushState({}, '', link);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+    });
+    await PushNotifications.register();
+  } catch { /* plugin missing / not native */ }
+}
+
 // Light tactile feedback on key actions (invite, match, send). No-op on web.
 export async function haptic(style: 'light' | 'medium' | 'heavy' = 'light'): Promise<void> {
   if (!isNative()) return;

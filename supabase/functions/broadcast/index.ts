@@ -61,6 +61,54 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   return res.ok;
 }
 
+// ---- Native push via FCM HTTP v1 (Android + iOS through Firebase) ----
+// Set the FCM_SERVICE_ACCOUNT secret to the Firebase service-account JSON.
+let _fcmTok: { token: string; exp: number } | null = null;
+function b64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+async function importPkcs8(pem: string): Promise<CryptoKey> {
+  const body = pem.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s+/g, "");
+  const der = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey("pkcs8", der.buffer, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+}
+async function fcmAccessToken(sa: any): Promise<string | null> {
+  if (_fcmTok && _fcmTok.exp > Date.now() + 60_000) return _fcmTok.token;
+  const now = Math.floor(Date.now() / 1000);
+  const enc = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+  const unsigned = `${enc({ alg: "RS256", typ: "JWT" })}.${enc({
+    iss: sa.client_email, scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600,
+  })}`;
+  const key = await importPkcs8(sa.private_key);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(unsigned));
+  const jwt = `${unsigned}.${b64url(new Uint8Array(sig))}`;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!j.access_token) return null;
+  _fcmTok = { token: j.access_token, exp: Date.now() + (j.expires_in ?? 3600) * 1000 };
+  return j.access_token;
+}
+// Send a push to every device of the given users (best-effort; no-op without secret).
+async function sendPush(admin: ReturnType<typeof createClient>, userIds: string[], title: string, body: string, link?: string) {
+  const raw = Deno.env.get("FCM_SERVICE_ACCOUNT");
+  if (!raw || userIds.length === 0) return;
+  let sa: any; try { sa = JSON.parse(raw); } catch { return; }
+  const at = await fcmAccessToken(sa);
+  if (!at) return;
+  const { data: toks } = await admin.from("device_tokens").select("token").in("user_id", userIds);
+  const url = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
+  for (const t of ((toks as any[]) ?? [])) {
+    await fetch(url, {
+      method: "POST", headers: { Authorization: `Bearer ${at}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: { token: t.token, notification: { title, body }, data: link ? { link } : {} } }),
+    }).catch(() => {});
+  }
+}
+
 // Remove every file a user owns across all buckets (best-effort).
 async function removeUserStorage(admin: ReturnType<typeof createClient>, uid: string) {
   const folders: [string, string][] = [
@@ -262,6 +310,7 @@ serve(async (req) => {
           <p style="font-size:12px;color:#8B7355;margin-top:20px">You're receiving this because someone reached out to you on Kulmi. Manage emails in Settings. Kulmi &mdash; kulmi.uk</p>
         </div>`);
       await admin.from("profiles").update({ last_reengage_email_at: new Date().toISOString() }).eq("id", receiverId);
+      await sendPush(admin, [receiverId], "New introduction on Kulmi", "A verified member would like to get to know you.", "/activity");
       return json({ sent });
     }
 
@@ -286,6 +335,7 @@ serve(async (req) => {
             <p style="font-size:12px;color:#8B7355;margin-top:20px">Manage emails in Settings. Kulmi &mdash; kulmi.uk</p>
           </div>`);
       }
+      await sendPush(admin, [c.user1_id, c.user2_id], "It's a match on Kulmi 💚", "You both said yes — your private chat is now open.", "/chats");
       return json({ sent: true });
     }
 

@@ -51,15 +51,30 @@ In Xcode: set your Team (signing), pick a device, ▶ to run. To ship: **Product
 - ⚠️ Apple guideline **4.2 (minimum functionality)** dislikes "just a website" wrappers. We already add native splash/status-bar/back-button/haptics; adding **push notifications** (below) makes the case airtight.
 - Provide a **demo account** for the reviewer (a pre-verified login) in App Review notes.
 
-## Follow-up: push notifications (recommended before store launch)
-Scaffolding is installed (`@capacitor/push-notifications`). To finish:
-1. Firebase project → add Android app → drop `google-services.json` into `android/app/`.
-2. Apple: enable Push capability + APNs key; wire via Firebase (FCM) for both.
-3. Add a `device_tokens` table + register the token after login.
-4. Send from the existing Edge function (or FCM) on invitation/match/message.
+## Push notifications — mostly built, needs Firebase credentials
+The whole pipeline is already wired: the app registers a device token after
+login (`device_tokens` table, migration_v42), and the Edge function sends a
+native push on **invitation received** and **it's a match** (alongside the
+emails), deep-linking into the app when tapped. You only need to plug in Firebase:
 
-This turns the re-engagement emails we built into **push + email** — the single
-biggest retention lever for a marriage app.
+1. Create a **Firebase project** → **Project settings → Cloud Messaging**.
+2. **Android:** add an Android app with package `uk.kulmi.app`, download
+   `google-services.json`, and place it in `android/app/`. (FCM plugin autodetects it.)
+3. **iOS:** add an iOS app (bundle `uk.kulmi.app`); in the Apple Developer portal
+   create an **APNs key** and upload it to Firebase → Cloud Messaging. On a Mac,
+   enable the **Push Notifications** capability in Xcode.
+4. **Service account** (lets the server send): Firebase → Project settings →
+   **Service accounts → Generate new private key** (downloads a JSON). Add it as a
+   Supabase secret named **`FCM_SERVICE_ACCOUNT`** (paste the whole JSON):
+   ```bash
+   supabase secrets set FCM_SERVICE_ACCOUNT="$(cat service-account.json)"
+   ```
+5. Run the latest `kulmi_setup.sql` (adds `device_tokens`) and redeploy the
+   `smart-service` Edge function.
+
+Until `FCM_SERVICE_ACCOUNT` is set, push simply no-ops (emails still send). Once
+set, invitations and matches arrive as **push + email** — the biggest retention
+lever for a marriage app.
 
 ## Notes
 - The apps load the **bundled** app (offline-capable, fast). To push a web update

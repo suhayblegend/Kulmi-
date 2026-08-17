@@ -1002,6 +1002,18 @@ export async function getChatPartner(chatId: string): Promise<Profile | null> {
   return partners[0] ?? minimalPartner(partnerId);
 }
 
+/** Register this device's push token so the server can send native push. */
+export async function savePushToken(token: string, platform: string): Promise<void> {
+  const uid = await getCurrentUserId();
+  if (!uid || !token) return;
+  try {
+    await supabase.from('device_tokens').upsert(
+      { token, user_id: uid, platform, updated_at: new Date().toISOString() },
+      { onConflict: 'token' }
+    );
+  } catch { /* best-effort */ }
+}
+
 /** Mark the partner's messages in this chat as read (respects my read-receipts
  *  preference server-side). Best-effort — never blocks the UI. */
 export async function markChatRead(chatId: string): Promise<void> {
