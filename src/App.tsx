@@ -547,67 +547,67 @@ function MemberApp() {
         )}
         <AnimatePresence mode="wait">
           {appState === 'landing' && (
-            <motion.div key="landing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="landing" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Landing onStart={() => goAuth('signup')} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} onContact={() => setAppState('contact')} />
             </motion.div>
           )}
 
           {appState === 'auth' && (
-            <motion.div key={`auth-${authMode}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key={`auth-${authMode}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Auth initialMode={authMode} onModeChange={setAuthMode} onSuccess={() => { /* routing handled by the auth listener (SIGNED_IN) */ }} onSignedUp={(name) => setSignupWelcome(name || '')} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
             </motion.div>
           )}
 
           {appState === 'contact' && (
-            <motion.div key="contact" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="contact" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Contact onBack={() => setAppState(user ? 'discover' : 'landing')} />
             </motion.div>
           )}
 
           {appState === 'safety' && (
-            <motion.div key="safety" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="safety" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Safety onBack={() => setAppState(user ? 'settings' : 'landing')} onContact={() => setAppState('contact')} />
             </motion.div>
           )}
 
           {appState === 'about' && (
-            <motion.div key="about" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="about" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <About onBack={() => setAppState(user ? 'discover' : 'landing')} onContact={() => setAppState('contact')} />
             </motion.div>
           )}
 
           {appState === 'blog' && (
-            <motion.div key="blog" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="blog" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Blog onBack={() => setAppState(user ? 'discover' : 'landing')} />
             </motion.div>
           )}
 
           {appState === 'pricing' && (
-            <motion.div key="pricing" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="pricing" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Pricing onJoin={() => (user ? setAppState('settings') : goAuth('signup'))} onBack={() => setAppState(user ? 'discover' : 'landing')} />
             </motion.div>
           )}
 
           {appState === 'faq' && (
-            <motion.div key="faq" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="faq" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Faq onBack={() => setAppState(user ? 'discover' : 'landing')} onContact={() => setAppState('contact')} />
             </motion.div>
           )}
 
           {appState === 'notfound' && (
-            <motion.div key="notfound" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="notfound" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <NotFound onHome={() => setAppState(user ? 'discover' : 'landing')} loggedIn={!!user} />
             </motion.div>
           )}
 
           {appState === 'discover' && (
-            <motion.div key="discover" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="discover" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Home onOpenSession={openSession} onOpenActivity={() => setAppState('activity')} onActivityCount={setActivityCount} />
             </motion.div>
           )}
 
           {appState === 'activity' && (
-            <motion.div key="activity" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="activity" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Activity onOpenSession={openSession} onBack={() => setAppState('discover')} onCount={setActivityCount} />
             </motion.div>
           )}
@@ -623,43 +623,43 @@ function MemberApp() {
           )}
 
           {appState === 'chats' && (
-            <motion.div key="chats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full">
+            <motion.div key="chats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="w-full">
               <Chats onSelectChat={openChat} />
             </motion.div>
           )}
 
           {appState === 'chat' && selectedChatId && (
-            <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full">
+            <motion.div key="chat" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="w-full">
               <Chat chatId={selectedChatId} onExit={() => setAppState('chats')} onEndIntroduction={() => setAppState('chats')} />
             </motion.div>
           )}
 
           {appState === 'profile' && (
-            <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="profile" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Profile />
             </motion.div>
           )}
 
           {appState === 'progress' && (
-            <motion.div key="progress" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="progress" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Progress />
             </motion.div>
           )}
 
           {appState === 'settings' && (
-            <motion.div key="settings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="settings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Settings onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} onContact={() => setAppState('contact')} onSafety={() => setAppState('safety')} />
             </motion.div>
           )}
 
           {appState === 'terms' && (
-            <motion.div key="terms" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="terms" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Terms onBack={() => setAppState(user ? 'discover' : 'auth')} />
             </motion.div>
           )}
 
           {appState === 'privacy' && (
-            <motion.div key="privacy" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
+            <motion.div key="privacy" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: 'easeOut' }} className="w-full">
               <Privacy onBack={() => setAppState(user ? 'discover' : 'auth')} />
             </motion.div>
           )}

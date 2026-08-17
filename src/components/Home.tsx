@@ -218,6 +218,14 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   useEffect(() => { if (current?.id) recordProfileView(current.id); }, [current?.id]);
   const remaining = candidates.length - index;
 
+  // Preload the next two photos so advancing to the next card is instant.
+  useEffect(() => {
+    for (const p of candidates.slice(index + 1, index + 3)) {
+      const img = new Image();
+      img.src = avatarFor(p);
+    }
+  }, [index, candidates]);
+
   const actionRef = useRef(false); // synchronous guard against rapid double-clicks
   const handleInvite = async () => {
     if (!current || actionRef.current) return;
@@ -513,29 +521,29 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
 
                 <button
                   onClick={() => { if (current?.id) recordProfileView(current.id); setViewProfile(current); }}
-                  className="w-full mt-5 text-sm font-medium text-[#1B4332] border border-[#E5E0D8] rounded-2xl py-3 hover:bg-[#FDFBF7] transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-4 text-sm font-medium text-[#1B4332] py-2.5 flex items-center justify-center gap-1.5 active:opacity-70 transition-opacity"
                 >
                   View full profile <ChevronRight className="w-4 h-4" />
                 </button>
 
-                <div className="flex gap-3 mt-3">
+                <div className="flex items-center gap-3 mt-2">
                   <button
                     disabled={busy}
                     onClick={handleSkip}
-                    className="flex-1 px-6 py-3.5 rounded-2xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50"
+                    className="flex-1 py-4 rounded-full border-2 border-[#E5E0D8] text-[#8B7355] font-semibold text-[15px] active:bg-[#F0EEE8] active:border-[#D8D2C6] transition-colors disabled:opacity-50"
                   >
                     Not now
                   </button>
                   <button
                     disabled={busy}
                     onClick={handleInvite}
-                    className="flex-[1.4] px-6 py-3.5 rounded-2xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
+                    className="flex-[1.7] py-4 rounded-full bg-gradient-to-b from-[#226044] to-[#16382A] text-white font-semibold text-[15px] tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-[#1B4332]/30 active:shadow-md transition-shadow"
                   >
-                    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Heart className="w-4 h-4" />}
+                    {busy ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <Heart className="w-[18px] h-[18px] fill-white/20" />}
                     Send invitation
                   </button>
                 </div>
-                <p className="text-[11px] text-[#8B7355] text-center mt-3">
+                <p className="text-[11px] text-[#8B7355] text-center mt-3.5">
                   {remaining > 1 ? `${remaining - 1} more suitable ${remaining - 1 === 1 ? 'introduction' : 'introductions'} after this` : 'Last suggestion for now'}
                 </p>
               </div>
