@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Compass, Bell, MessageCircle, TrendingUp, User, Settings as SettingsIcon } from 'lucide-react';
+import { Compass, Bell, MessageCircle, TrendingUp, User, Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
 import { Landing } from './components/Landing';
 import { Home } from './components/Home';
 import { Activity } from './components/Activity';
@@ -390,6 +390,40 @@ function MemberApp() {
         onPrivacy={() => setAppState('privacy')}
       />
     );
+  }
+
+  // ---- Native app: auth + content/legal pages render full-screen (no web
+  //      header/footer), so they feel like app screens, not web pages. ----
+  if (isNative() && appState === 'auth') {
+    return (
+      <div className="fixed inset-0 bg-[#FDFBF7] overflow-y-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4px)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+        <button onClick={() => setAppState('landing')} className="flex items-center gap-2 text-sm font-medium text-[#8B7355] px-5 py-3">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+        <Auth initialMode={authMode} onModeChange={setAuthMode} onSuccess={() => {}} onSignedUp={(name) => setSignupWelcome(name || '')} onTerms={() => setAppState('terms')} onPrivacy={() => setAppState('privacy')} />
+      </div>
+    );
+  }
+  if (isNative()) {
+    const back = () => setAppState(user ? 'settings' : 'landing');
+    const contentNode =
+      appState === 'terms' ? <Terms onBack={back} /> :
+      appState === 'privacy' ? <Privacy onBack={back} /> :
+      appState === 'about' ? <About onBack={back} onContact={() => setAppState('contact')} /> :
+      appState === 'safety' ? <Safety onBack={back} onContact={() => setAppState('contact')} /> :
+      appState === 'faq' ? <Faq onBack={back} onContact={() => setAppState('contact')} /> :
+      appState === 'pricing' ? <Pricing onJoin={() => (user ? setAppState('settings') : goAuth('signup'))} onBack={back} /> :
+      appState === 'contact' ? <Contact onBack={back} /> :
+      appState === 'blog' ? <Blog onBack={back} /> :
+      appState === 'notfound' ? <NotFound onHome={() => setAppState(user ? 'discover' : 'landing')} loggedIn={!!user} /> :
+      null;
+    if (contentNode) {
+      return (
+        <div className="fixed inset-0 bg-[#FDFBF7] overflow-y-auto" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4px)', paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+          <div className="px-3">{contentNode}</div>
+        </div>
+      );
+    }
   }
 
   // ---- Full-screen states (no app chrome) ----
