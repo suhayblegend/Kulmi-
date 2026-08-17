@@ -304,21 +304,83 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
     }
   };
 
-  const handleReport = async () => {
-    if (!partner) return;
-    const reason = window.prompt(`Report ${partnerName}? Briefly, what's the issue?`);
-    if (!reason || !reason.trim()) return;
+  // Report modal — a proper in-app flow (window.prompt is unreliable in the
+  // native shell and looks broken).
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
+  const REPORT_REASONS = [
+    'Inappropriate messages',
+    'Not serious about marriage',
+    'Fake or misleading profile',
+    'Harassment or disrespect',
+    'Asked for money',
+    'Other',
+  ];
+  const submitReport = async () => {
+    if (!partner || !reportReason) return;
+    setReportBusy(true);
     try {
-      await reportUser(partner.id, reason.trim());
-      toast('Thank you. Our team will review this report.');
+      const reason = reportDetail.trim() ? `${reportReason} — ${reportDetail.trim()}` : reportReason;
+      await reportUser(partner.id, reason);
+      setShowReport(false);
+      setReportReason('');
+      setReportDetail('');
+      toast('Thank you. Our team will review this report carefully.', 'success');
     } catch {
-      toast('Could not submit the report.');
+      toast('Could not submit the report — please try again.', 'error');
+    } finally {
+      setReportBusy(false);
     }
   };
 
   return (
     <div className="w-full max-w-5xl mx-auto h-[calc(100dvh-12rem)] sm:h-[80vh] flex gap-6 sm:mt-4 relative">
       <AnimatePresence>
+        {showReport && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white border border-[#E5E0D8] p-7 rounded-2xl shadow-lg max-w-md w-full max-h-[90%] overflow-y-auto"
+            >
+              <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldAlert className="w-7 h-7 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-serif text-[#1B4332] font-medium mb-1.5 text-center">Report {partnerName}</h3>
+              <p className="text-sm text-[#8B7355] text-center mb-5">Your report is private — {partnerName} is never told. Our team reviews every report.</p>
+              <div className="space-y-2 mb-4">
+                {REPORT_REASONS.map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setReportReason(r)}
+                    className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                      reportReason === r ? 'bg-[#1B4332] text-white border-[#1B4332]' : 'bg-white border-[#E5E0D8] text-[#2D2926] hover:bg-[#FDFBF7]'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={reportDetail}
+                onChange={(e) => setReportDetail(e.target.value)}
+                rows={2}
+                maxLength={400}
+                placeholder="Anything else we should know? (optional)"
+                className="w-full bg-[#FDFBF7] border border-[#E5E0D8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1B4332] resize-none mb-5"
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setShowReport(false)} disabled={reportBusy} className="flex-1 px-5 py-3 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium hover:bg-[#FDFBF7] transition-colors disabled:opacity-50">Cancel</button>
+                <button onClick={submitReport} disabled={reportBusy || !reportReason} className="flex-1 px-5 py-3 rounded-xl bg-[#1B4332] text-white font-medium hover:bg-[#143326] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                  {reportBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Submit report
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
         {showEndConfirm && (
           <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl">
             <motion.div
@@ -614,7 +676,7 @@ export function Chat({ chatId, onExit, onEndIntroduction }: ChatProps) {
             </div>
 
             <div className="pt-6 border-t border-[#E5E0D8]">
-              <button onClick={handleReport} className="w-full flex items-center justify-center gap-2 text-sm text-[#8B7355] hover:text-[#1B4332] transition-colors py-2">
+              <button onClick={() => setShowReport(true)} className="w-full flex items-center justify-center gap-2 text-sm text-[#8B7355] hover:text-[#1B4332] transition-colors py-2">
                 <ShieldAlert className="w-4 h-4" />
                 <span>Report</span>
               </button>
