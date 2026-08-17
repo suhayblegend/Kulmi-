@@ -22,8 +22,8 @@ import {
   type SessionSummary,
   type DiscoverFilters,
 } from '../lib/db';
-import { ReferSomeone } from './ReferSomeone';
 import { DiscoverCardSkeleton } from './ui/Skeleton';
+import { SmartImage } from './ui/SmartImage';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { haptic } from '../lib/native';
 
@@ -304,9 +304,6 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
         </button>
       )}
 
-      {/* Grow the community — refer a serious person you know */}
-      <ReferSomeone />
-
       {/* Filters panel */}
       <AnimatePresence>
         {showFilters && (
@@ -410,7 +407,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               className="w-full border border-[#E5E0D8] bg-white shadow-[0_8px_40px_rgba(27,67,50,0.10)] rounded-3xl overflow-hidden"
             >
               <div className="relative h-80 bg-[#F0EEE8]">
-                <img src={avatarFor(current)} alt="" className="w-full h-full object-cover" />
+                <SmartImage src={avatarFor(current)} className="absolute inset-0 w-full h-full" fit="cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
 
                 {/* Suggested ribbon */}
@@ -518,19 +515,19 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
       {/* Full profile modal */}
       <AnimatePresence>
         {viewProfile && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#2D2926]/50 backdrop-blur-sm" onClick={() => setViewProfile(null)} />
             <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              initial={{ opacity: 0, scale: 0.98, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 16 }}
-              className="relative z-10 w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] max-h-[92vh] overflow-y-auto"
+              exit={{ opacity: 0, scale: 0.98, y: 16 }}
+              className="relative z-10 w-full h-full sm:h-auto sm:max-w-2xl bg-white sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] sm:max-h-[92vh] overflow-y-auto"
             >
-              <button onClick={() => setViewProfile(null)} className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4 h-4" /></button>
+              <button onClick={() => setViewProfile(null)} style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }} className="absolute right-3 z-20 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4.5 h-4.5" /></button>
               <div className="relative h-80 bg-[#0A261A] overflow-hidden">
                 {/* Blurred fill so the full photo shows (object-contain) without cropping or ugly bars. */}
                 <img src={avatarFor(viewProfile)} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />
-                <img src={avatarFor(viewProfile)} alt="" className="relative w-full h-full object-contain" />
+                <SmartImage src={avatarFor(viewProfile)} className="relative w-full h-full" fit="contain" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-5 right-5 text-white">
                   <div className="flex items-center gap-2">

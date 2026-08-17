@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Bell, Eye, LogOut, Users, X, Mail, Link as LinkIcon, CheckCircle2, Loader2, Lock, Key, LifeBuoy, FileText, ShieldCheck, ChevronRight, AlertTriangle, UserPlus } from 'lucide-react';
+import { ReferSomeone } from './ReferSomeone';
 import { supabase } from '../lib/supabase';
 import { getMyProfile, updateMyProfile, setWaliEmail, sendWaliInvite, signOut, deleteMyAccount, submitDeletionFeedback, isPremium, premiumDaysLeft, openBillingPortal, claimFounding, type Profile } from '../lib/db';
 import { STRIPE_LINK_MONTHLY, STRIPE_LINK_QUARTERLY, PRICE_MONTHLY, PRICE_QUARTERLY, BILLING_READY, DONATE_URL, FOUNDING_ACTIVE, checkoutUrl } from '../lib/billing';
@@ -300,6 +301,12 @@ export function Settings({ onTerms, onPrivacy, onContact, onSafety }: SettingsPr
                 Add Family Member
               </button>
             )}
+          </div>
+
+          {/* Grow Kulmi — refer a serious person you know */}
+          <div className="p-6 border-b border-[#E5E0D8]">
+            <div className="flex items-center gap-3 mb-3"><UserPlus className="w-5 h-5 text-[#1B4332]" /><h3 className="font-bold text-[#2D2926]">Invite someone</h3></div>
+            <ReferSomeone />
           </div>
 
           {/* Notifications */}
