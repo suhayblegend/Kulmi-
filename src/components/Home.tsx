@@ -25,6 +25,7 @@ import {
 import { DiscoverCardSkeleton } from './ui/Skeleton';
 import { SmartImage } from './ui/SmartImage';
 import { ComparePanel } from './ComparePanel';
+import { detectNearby } from '../lib/geo';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { haptic } from '../lib/native';
 
@@ -179,6 +180,27 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
   };
   const setDF = (k: keyof DiscoverFilters, v: any) => setDraftFilters((d) => ({ ...d, [k]: v === '' ? undefined : v }));
 
+  // "Show people near me" — detect location, set city/country, apply.
+  const [locating, setLocating] = useState(false);
+  const [nearbyErr, setNearbyErr] = useState('');
+  const handleNearby = async () => {
+    setLocating(true);
+    setNearbyErr('');
+    try {
+      const place = await detectNearby();
+      if (!place.city && !place.country) { setNearbyErr('Could not detect your area — try typing your city.'); return; }
+      const next: DiscoverFilters = { ...draftFilters, city: place.city, country: place.country };
+      setDraftFilters(next);
+      setFilters(next);
+      setShowFilters(false);
+      load(next);
+    } catch {
+      setNearbyErr('Location unavailable. Please allow location access, or type your city.');
+    } finally {
+      setLocating(false);
+    }
+  };
+
   // Keep a live ref of the index so a silent refresh can preserve the user's place.
   const indexRef = useRef(index);
   useEffect(() => { indexRef.current = index; }, [index]);
@@ -308,6 +330,18 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
         {showFilters && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
             <div className="border border-[#E5E0D8] bg-white rounded-2xl p-5 space-y-4">
+              <button
+                onClick={handleNearby}
+                disabled={locating}
+                className="w-full flex items-center justify-center gap-2 bg-[#1B4332] text-white rounded-xl px-4 py-3 text-sm font-medium active:bg-[#143326] transition-colors disabled:opacity-60"
+              >
+                {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                {locating ? 'Finding your area…' : 'Show people near me'}
+              </button>
+              {nearbyErr && <p className="text-[11px] text-red-600 text-center -mt-1">{nearbyErr}</p>}
+              <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-[#8B7355]">
+                <div className="flex-1 h-px bg-[#E5E0D8]" /> or filter manually <div className="flex-1 h-px bg-[#E5E0D8]" />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1">Min age</label>
@@ -324,7 +358,7 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                   <input value={draftFilters.country ?? ''} onChange={(e) => setDF('country', e.target.value)} placeholder="e.g. UK" className="w-full px-3 py-2 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm focus:outline-none focus:border-[#1B4332]" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1">City (nearby)</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[#8B7355] mb-1">City</label>
                   <input value={draftFilters.city ?? ''} onChange={(e) => setDF('city', e.target.value)} placeholder="e.g. London" className="w-full px-3 py-2 rounded-xl border border-[#E5E0D8] bg-[#FDFBF7] text-sm focus:outline-none focus:border-[#1B4332]" />
                 </div>
               </div>
@@ -520,9 +554,10 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
               initial={{ opacity: 0, scale: 0.98, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 16 }}
-              className="relative z-10 w-full h-full sm:h-auto sm:max-w-2xl bg-white sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] sm:max-h-[92vh] overflow-y-auto"
+              className="relative z-10 w-full h-full sm:h-auto sm:max-w-2xl bg-white sm:rounded-3xl overflow-hidden shadow-2xl border border-[#E5E0D8] sm:max-h-[92vh] flex flex-col"
             >
               <button onClick={() => setViewProfile(null)} style={{ top: 'calc(env(safe-area-inset-top) + 12px)' }} className="absolute right-3 z-20 w-9 h-9 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60"><X className="w-4.5 h-4.5" /></button>
+              <div className="flex-1 overflow-y-auto min-h-0">
               <div className="relative h-80 bg-[#0A261A] overflow-hidden">
                 {/* Blurred fill so the full photo shows (object-contain) without cropping or ugly bars. */}
                 <img src={avatarFor(viewProfile)} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />
@@ -591,15 +626,17 @@ export function Home({ onOpenSession, onOpenActivity, onActivityCount }: HomePro
                   </div>
                 )}
 
-                <p className="text-[11px] text-[#8B7355] mb-4 text-center">More photos unlock after you both match.</p>
+                <p className="text-[11px] text-[#8B7355] text-center">More photos unlock after you both match.</p>
+              </div>
+              </div>
 
-                <div
-                  className="flex gap-3 sticky bottom-0 bg-white/95 backdrop-blur-sm pt-3 border-t border-[#E5E0D8] -mx-6 px-6"
-                  style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
-                >
-                  <button disabled={busy} onClick={() => { setViewProfile(null); handleSkip(); }} className="flex-1 px-6 py-3.5 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium active:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not now</button>
-                  <button disabled={busy} onClick={() => { setViewProfile(null); handleInvite(); }} className="flex-[1.4] px-6 py-3.5 rounded-xl bg-[#1B4332] text-white font-medium active:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Heart className="w-4 h-4" /> Send invitation</button>
-                </div>
+              {/* Always-visible action bar (never scrolled off or cropped). */}
+              <div
+                className="shrink-0 flex gap-3 border-t border-[#E5E0D8] bg-white px-5 pt-3"
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+              >
+                <button disabled={busy} onClick={() => { setViewProfile(null); handleSkip(); }} className="flex-1 px-6 py-3.5 rounded-xl border border-[#E5E0D8] text-[#5C574F] font-medium active:bg-[#FDFBF7] transition-colors disabled:opacity-50">Not now</button>
+                <button disabled={busy} onClick={() => { setViewProfile(null); handleInvite(); }} className="flex-[1.4] px-6 py-3.5 rounded-xl bg-[#1B4332] text-white font-medium active:bg-[#143326] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"><Heart className="w-4 h-4" /> Send invitation</button>
               </div>
             </motion.div>
           </div>
