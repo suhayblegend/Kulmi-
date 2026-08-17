@@ -13,7 +13,9 @@ const SECTIONS: [string, React.ReactNode][] = [
   ['2. Eligibility & intent', <>
     You must be at least <b>18 years old</b> and seeking a Halal marriage (Nikah). Kulmi is strictly for
     marriage-minded individuals. Casual dating, hook-ups, solicitation, commercial use, or any conduct contrary
-    to the purpose of marriage is prohibited and will result in removal. You confirm that the information you
+    to the purpose of marriage is prohibited and will result in removal. To keep the community active and
+    respectful of everyone's time, invitations expire automatically after 7 days if unanswered, and new matches
+    close if neither person begins the conversation within 48 hours. You confirm that the information you
     provide is true and that you are legally free to marry.
   </>],
   ['3. Verification & identity', <>
@@ -34,7 +36,9 @@ const SECTIONS: [string, React.ReactNode][] = [
     Harassment, abuse, hate, discrimination, sexual content, deception, financial requests, off-platform
     solicitation, or contacting anyone against their wishes are forbidden. Ending contact with someone is
     final and mutual — you will not be shown to each other again. You must not scrape, copy, or misuse other
-    members' data, photos or messages.
+    members' data, photos or messages — including by screenshot or screen recording, which the mobile app
+    additionally blocks at the device level. Sharing another member's photos, messages or identity outside the
+    platform without their consent is a serious violation and grounds for permanent removal.
   </>],
   ['6. Membership & payments (Kulmi+)', <>
     The core Kulmi experience — creating a profile, verification, discovery, compatibility sessions and chatting
@@ -43,7 +47,8 @@ const SECTIONS: [string, React.ReactNode][] = [
     profile, more open introductions, and priority verification. Payments are processed securely by <b>Stripe</b>;
     Kulmi never sees or stores your card details. Subscriptions renew automatically until cancelled — you can
     cancel any time from Settings → Manage subscription, and cancellation takes effect at the end of the current
-    billing period. Prices may change with notice; changes never affect the period you have already paid for.
+    billing period. Promotional offers (such as free founding membership periods) are time-limited gifts and may end or change as
+    announced. Prices may change with notice; changes never affect the period you have already paid for.
     Except where required by law, payments are non-refundable. Optional donations ("Support Kulmi") are
     voluntary and non-refundable.
   </>],

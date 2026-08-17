@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, BadgeCheck, Lock, Users, Flag, EyeOff, Trash2, HeartHandshake, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, BadgeCheck, Lock, Users, Flag, EyeOff, Trash2, HeartHandshake, ArrowLeft, Camera, Clock } from 'lucide-react';
 
 const Item = ({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) => (
   <div className="flex gap-4 p-5 bg-white border border-[#E5E0D8] rounded-2xl">
@@ -35,6 +35,12 @@ export function Safety({ onBack, onContact }: { onBack: () => void; onContact: (
         </Item>
         <Item icon={<Lock className="w-5 h-5" />} title="Your photos and voice are private">
           Gallery photos unlock only after you both match. Voice introductions and voice answers are stored privately and are never publicly accessible. Nothing about you is visible to people you haven't chosen to meet.
+        </Item>
+        <Item icon={<Camera className="w-5 h-5" />} title="Screenshots are blocked in the app">
+          In the Kulmi mobile app, screenshots and screen recordings of profiles and conversations are blocked at the device level, and the app shows as a blank card in the phone's app switcher. What you share on Kulmi is far harder to capture and spread — a protection very few platforms offer.
+        </Item>
+        <Item icon={<Clock className="w-5 h-5" />} title="Nothing lingers — everything moves or closes">
+          Invitations expire after 7 days if unanswered, and new matches gently close if neither person says salaam within 48 hours. No one is left waiting indefinitely, no stale conversations pile up, and your open-introduction slots always come back to you.
         </Item>
         <Item icon={<Users className="w-5 h-5" />} title="Family involvement, done properly">
           You can appoint a wali (guardian) who can oversee your introductions with full transparency — and they get access only after they personally confirm by email. Read-only, no surprises, exactly as it should be.

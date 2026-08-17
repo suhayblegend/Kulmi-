@@ -13,8 +13,11 @@ const SECTIONS: [string, React.ReactNode][] = [
     approximate coordinates if you use "detect location"), photos, a live verification selfie, optional voice
     recordings, and the answers you write about your faith, values, lifestyle and marriage intentions. Optionally,
     your Wali's email. <br /><br />
-    <b>Automatically:</b> basic technical data needed to run the service (e.g. session tokens, and which profiles
-    you view, to power the "who viewed you" feature). <br /><br />
+    <b>Automatically:</b> basic technical data needed to run the service (e.g. session tokens, which profiles
+    you view to power the "who viewed you" feature, and read receipts — which you can switch off in Settings).
+    If you use the mobile app and allow notifications, we store a <b>device push token</b> so we can deliver them. <br /><br />
+    <b>If you refer a friend:</b> the name and email you enter, used once to send them a single invitation and
+    never for marketing. <br /><br />
     <b>Payments:</b> if you subscribe to Kulmi+, our payment processor Stripe collects your payment details —
     <b> Kulmi never sees or stores your card number.</b> We only receive a subscription status and a customer
     reference.
@@ -24,7 +27,9 @@ const SECTIONS: [string, React.ReactNode][] = [
     to run compatibility sessions, matching, chat and voice notes; to enable Wali oversight when you opt in; to
     keep the community safe (verification, moderation, reports, bans); to process Kulmi+ subscriptions; and to send
     you essential service emails (verification results, account and security notices) and — unless you opt out —
-    occasional product updates.
+    occasional product updates. With your permission we also send <b>push notifications</b> (new introductions,
+    matches, replies, expiry reminders) and <b>notification emails</b> — each has its own switch in Settings and
+    can be turned off at any time.
   </>],
   ['4. Modesty & who can see what', <>
     Only your <b>main photo</b> and safe profile details are visible in discovery, and only to <b>verified members
@@ -36,7 +41,8 @@ const SECTIONS: [string, React.ReactNode][] = [
   ['5. Where your data is stored (our processors)', <>
     We use trusted providers who process data on our behalf: <b>Supabase</b> (secure database, authentication and
     encrypted file storage for photos, selfies and voice), <b>Stripe</b> (payments), and <b>Resend</b> (sending
-    emails). Private media is kept in a non-public store and served only via short-lived, access-controlled links.
+    emails), and <b>Google Firebase Cloud Messaging</b> (delivering push notifications to the mobile app — it
+    receives only an anonymous device token, never your profile or messages). Private media is kept in a non-public store and served only via short-lived, access-controlled links.
     Our servers are hosted in the EU/UK region where available.
   </>],
   ['6. Cookies & local storage', <>
@@ -59,7 +65,8 @@ const SECTIONS: [string, React.ReactNode][] = [
     Access to your data is protected by strict database rules so members can only see what they are entitled to;
     passwords are handled by our authentication provider and never stored by us in plain text; private media is
     access-controlled. No system is perfectly secure, so please use a strong password and tell us immediately if
-    you suspect a problem.
+    you suspect a problem. In the mobile app, screenshots and screen recordings of profiles and chats are blocked
+    at the device level as an additional protection for everyone's photos and conversations.
   </>],
   ['10. Children', <>
     Kulmi is strictly for adults aged 18 and over. We do not knowingly collect data from anyone under 18; if we
