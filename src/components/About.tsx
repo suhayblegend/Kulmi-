@@ -20,9 +20,15 @@ export function About({ onBack, onContact }: AboutProps) {
         <p className="font-serif italic text-[#8B7355]">Isla Kulma, Isla Noolada — come together, live together.</p>
       </div>
 
-      {/* Founders photo + intro */}
+      {/* Founders intro */}
       <div className="bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden mb-8">
-        <img src="/founders.jpg" alt="Fardowza and Suhayb, founders of Kulmi" className="w-full max-h-[520px] object-cover object-center" />
+        <div className="bg-[#1B4332] px-7 py-9 flex flex-col items-center text-center">
+          <div className="w-20 h-20 rounded-full bg-white/10 border-2 border-white/25 flex items-center justify-center mb-4">
+            <span className="font-serif text-3xl text-white italic">K</span>
+          </div>
+          <p className="text-white font-serif italic text-xl leading-tight">Suhayb &amp; Fardowza</p>
+          <p className="text-white/60 text-xs uppercase tracking-widest mt-1.5">Founders of Kulmi</p>
+        </div>
         <div className="p-7 md:p-9">
           <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#8B7355] mb-4">Why we built Kulmi</p>
           <div className="space-y-4 text-[#5C574F] leading-relaxed">

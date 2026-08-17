@@ -172,7 +172,13 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
       {/* Meet the founders — teaser linking to the full About page */}
       <section className="w-full max-w-4xl mx-auto py-24 px-6">
         <div className="bg-white rounded-3xl border border-[#E5E0D8] shadow-sm overflow-hidden grid grid-cols-1 sm:grid-cols-[200px_1fr]">
-          <img src="/founders.jpg" alt="Fardowza and Suhayb, founders of Kulmi" className="w-full h-56 sm:h-full object-cover object-center" />
+          <div className="bg-[#1B4332] flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-white/10 border-2 border-white/25 flex items-center justify-center mb-3">
+              <span className="font-serif text-2xl text-white italic">K</span>
+            </div>
+            <p className="text-white font-serif italic text-base leading-tight">Suhayb &amp; Fardowza</p>
+            <p className="text-white/60 text-[10px] uppercase tracking-widest mt-1">Founders</p>
+          </div>
           <div className="p-8 md:p-10 flex flex-col justify-center">
             <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#8B7355] mb-3">Built by our community</p>
             <h2 className="font-serif text-2xl md:text-3xl text-[#1B4332] italic mb-3">Made by two Somali developers who cared enough to build it</h2>
