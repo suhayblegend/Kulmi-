@@ -614,6 +614,8 @@ export async function respondToInvitation(
     .update({ status: accept ? 'accepted' : 'declined' })
     .eq('id', invitationId);
   if (error) throw error;
+  // Tell the sender their answer arrived (push + bell; best-effort).
+  try { supabase.functions.invoke(BROADCAST_FN, { body: { action: 'notify-decision', invitationId } }).then(() => {}, () => {}); } catch { /* ignore */ }
   if (!accept || !inv) return null;
   const uid = await getCurrentUserId();
   const otherId = inv.sender_id === uid ? inv.receiver_id : inv.sender_id;
@@ -1085,6 +1087,8 @@ export async function sendMessage(
     .select()
     .single();
   if (error) throw error;
+  // Push the recipient (server throttles to 1 per chat / 30 min; best-effort).
+  try { supabase.functions.invoke(BROADCAST_FN, { body: { action: 'notify-message', chatId } }).then(() => {}, () => {}); } catch { /* ignore */ }
   return (data as Message) ?? null;
 }
 

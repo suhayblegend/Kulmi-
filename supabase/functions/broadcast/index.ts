@@ -344,6 +344,52 @@ serve(async (req) => {
       return json({ sent: true });
     }
 
+    // ---- Invitation answered: tell the sender (accepted -> session ready; declined -> gentle closure) ----
+    if (body.action === "notify-decision") {
+      const { data: inv } = await admin.from("invitations")
+        .select("id, sender_id, receiver_id, status")
+        .eq("id", body.invitationId).maybeSingle();
+      if (!inv || inv.receiver_id !== caller) return json({ sent: false });
+      if (inv.status !== "accepted" && inv.status !== "declined") return json({ sent: false });
+      const accepted = inv.status === "accepted";
+      const { data: r } = await admin.from("profiles").select("first_name").eq("id", caller).maybeSingle();
+      const name = (r?.first_name || "They").toString();
+      if (accepted) {
+        await admin.from("notifications").insert([{
+          user_id: inv.sender_id, type: "invitation",
+          body: `${name} accepted your invitation — your compatibility session is ready!`,
+          link: "/activity",
+        }]).then(() => {}, () => {});
+        await sendPush(admin, [inv.sender_id], "Your invitation was accepted 💚", `${name} said yes — your compatibility session is ready.`, "/activity");
+      } else {
+        await admin.from("notifications").insert([{
+          user_id: inv.sender_id, type: "invitation",
+          body: "Your invitation wasn't accepted this time — your search continues, and your slot is free for someone new, insha'Allah.",
+          link: "/discover",
+        }]).then(() => {}, () => {});
+        await sendPush(admin, [inv.sender_id], "An update on your invitation", "Not this time — your slot is free to reach out to someone new, insha'Allah.", "/discover");
+      }
+      return json({ sent: true });
+    }
+
+    // ---- New chat message: push the recipient (throttled to 1 per chat / 30 min) ----
+    if (body.action === "notify-message") {
+      const { data: c } = await admin.from("chats")
+        .select("id, user1_id, user2_id, last_msg_push_at")
+        .eq("id", body.chatId).maybeSingle();
+      if (!c) return json({ sent: false });
+      if (c.user1_id !== caller && c.user2_id !== caller) return json({ error: "Not a participant" }, 403);
+      if (c.last_msg_push_at && Date.now() - new Date(c.last_msg_push_at).getTime() < 30 * 60_000) {
+        return json({ sent: false, throttled: true });
+      }
+      await admin.from("chats").update({ last_msg_push_at: new Date().toISOString() }).eq("id", c.id);
+      const recipient = c.user1_id === caller ? c.user2_id : c.user1_id;
+      const { data: s } = await admin.from("profiles").select("first_name").eq("id", caller).maybeSingle();
+      const name = (s?.first_name || "Your match").toString();
+      await sendPush(admin, [recipient], `New message from ${name}`, "They're waiting to hear from you on Kulmi.", "/chats");
+      return json({ sent: true });
+    }
+
     // ---- Sweep invitations: warn near-expiry receivers, expire overdue, free slots ----
     // Called best-effort by any member's app load (same pattern as the chat sweep).
     if (body.action === "sweep-invitations") {
@@ -553,6 +599,7 @@ serve(async (req) => {
           <p><a href="https://kulmi.uk/discover" style="display:inline-block;background:#1B4332;color:#fff;text-decoration:none;padding:12px 24px;border-radius:12px;font-weight:500">Start discovering</a></p>
           <p style="font-size:12px;color:#8B7355;margin-top:20px">Kulmi &mdash; kulmi.uk &mdash; Isla Kulma, Isla Noolada</p>
         </div>`);
+      await sendPush(admin, [body.userId], "You're verified on Kulmi", "Your profile is now visible — start discovering, insha'Allah.", "/discover");
       return json({ sent });
     }
 
