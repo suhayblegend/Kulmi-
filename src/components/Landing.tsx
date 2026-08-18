@@ -83,11 +83,30 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
         >
           <button
             onClick={onStart}
-            className="w-full sm:w-auto bg-[#1B4332] hover:bg-[#143326] text-white px-8 py-4 rounded-2xl font-medium tracking-wide transition-colors text-base shadow-sm flex items-center justify-center gap-3"
+            className="w-full sm:w-auto bg-[#1B4332] hover:bg-[#143326] text-white px-8 py-4 rounded-2xl font-medium tracking-wide transition-colors text-base shadow-lg shadow-[#1B4332]/20 flex items-center justify-center gap-3"
           >
             <UserPlus className="w-5 h-5" />
             <span>Find Your Match</span>
           </button>
+          <button
+            onClick={() => { window.history.pushState({}, '', '/how-it-works'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+            className="w-full sm:w-auto border border-[#E5E0D8] bg-white text-[#1B4332] px-8 py-4 rounded-2xl font-medium tracking-wide hover:bg-[#FDFBF7] transition-colors text-base"
+          >
+            See how it works →
+          </button>
+        </motion.div>
+
+        {/* Instant objection-killers right at the decision point */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-8 text-[13px] text-[#5C574F]"
+        >
+          <span className="flex items-center gap-1.5"><span className="text-[#1B4332]">✓</span> Free to join</span>
+          <span className="flex items-center gap-1.5"><span className="text-[#1B4332]">✓</span> Every member selfie-verified</span>
+          <span className="flex items-center gap-1.5"><span className="text-[#1B4332]">✓</span> Photos private until you match</span>
+          <span className="flex items-center gap-1.5"><span className="text-[#1B4332]">✓</span> Wali-friendly</span>
         </motion.div>
       </section>
 

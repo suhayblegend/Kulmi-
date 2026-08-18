@@ -282,7 +282,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
 
             {step === 3 && (
               <>
-                <Field label="About You"><textarea rows={4} value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="Tell us about yourself and what you're looking for… (min 20 characters)" className={`${INPUT_CLS} resize-none`} /></Field>
+                <Field label="About You"><textarea rows={4} value={form.bio} onChange={(e) => set('bio', e.target.value)} placeholder="Tell us about yourself and what you're looking for… (min 20 characters)" className={`${INPUT_CLS} resize-none`} /><p className="text-[11px] text-[#8B7355] mt-1.5">💡 On Kulmi your words are your first impression — thoughtful bios receive far more serious introductions.</p></Field>
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Occupation"><input value={form.occupation} onChange={(e) => set('occupation', e.target.value)} placeholder="e.g. Teacher" className={INPUT_CLS} />{form.occupation && !looksReal(form.occupation) && <p className="text-[11px] text-red-600 mt-1">Please enter a real occupation.</p>}</Field>
                   <Field label="Education"><input value={form.education} onChange={(e) => set('education', e.target.value)} placeholder="e.g. Bachelor's degree" className={INPUT_CLS} />{form.education && !looksReal(form.education) && <p className="text-[11px] text-red-600 mt-1">Please enter a real answer.</p>}</Field>
@@ -334,7 +334,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
                 <Field label="Personality Traits (pick a few)"><ChipsField value={form.personality_traits} options={TRAITS} onToggle={(o) => toggle('personality_traits', o)} /></Field>
                 <Field label="Communication Style"><ChipsField value={form.communication_style} options={STYLES} onToggle={(o) => toggle('communication_style', o)} /></Field>
                 <Field label="Top Future Goals (up to 3)"><ChipsField value={form.future_goals} options={GOALS} max={3} onToggle={(o) => toggle('future_goals', o)} /></Field>
-                <Field label="Private Deal Breakers (only used by matching, never shown)"><textarea rows={2} value={form.deal_breakers} onChange={(e) => set('deal_breakers', e.target.value)} placeholder="e.g. Smoking, not praying" className={`${INPUT_CLS} resize-none`} /></Field>
+                <Field label="Private Deal Breakers — completely private, never shown to anyone"><textarea rows={2} value={form.deal_breakers} onChange={(e) => set('deal_breakers', e.target.value)} placeholder="e.g. Smoking, not praying" className={`${INPUT_CLS} resize-none`} /></Field>
               </>
             )}
           </motion.div>
