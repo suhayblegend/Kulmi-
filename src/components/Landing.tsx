@@ -50,7 +50,7 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-5xl md:text-7xl font-serif text-[#1B4332] mb-6 leading-[1.1]"
+          className="text-4xl sm:text-5xl md:text-7xl font-serif text-[#1B4332] mb-6 leading-[1.12] px-1"
         >
           No Swiping.<br/>
           <span className="italic text-[#8B7355]">Meaningful Introductions.</span>
@@ -224,41 +224,65 @@ export function Landing({ onStart, onTerms, onPrivacy, onContact }: LandingProps
           </p>
         </div>
 
-        <div className="overflow-x-auto rounded-3xl border border-[#E5E0D8] shadow-sm bg-white">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="border-b border-[#E5E0D8]">
-                <th className="text-left p-4 md:p-5 font-medium text-[#8B7355] w-1/2"></th>
-                <th className="p-4 md:p-5 text-center font-serif text-base text-[#8B7355]">Muslim swipe apps</th>
-                <th className="p-4 md:p-5 text-center bg-[#1B4332] text-white font-serif text-base rounded-t-none">Kulmi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#F0EEE8]">
-              {[
-                ['Endless swiping through faces', '✓ The core of the app', '✗ One thoughtful introduction at a time'],
-                ['Every member human-verified by live selfie', 'Optional or automated', '✓ Mandatory — nobody unverified appears'],
-                ['Values conversation before any chat', '✗ Chat opens instantly', '✓ 8 questions on deen, family & life first'],
-                ['Photos private until you match', '✗ Whole gallery public', '✓ Only one photo public — rest unlock on match'],
-                ['Wali / family involvement', '✗ Not part of the design', '✓ Built-in, with the wali\'s own consent'],
-                ['Limit on open conversations', '✗ Unlimited — quantity wins', '✓ Max 3 — quality wins'],
-                ['Built for the Somali community', '✗ Generic', '✓ Deen iyo dhaqan, by design'],
-                ['Pressure to pay to be seen', 'Boosts, gold tiers, ads', '✗ None of that'],
-              ].map(([feature, them, us]) => (
-                <tr key={feature as string}>
-                  <td className="p-4 md:p-5 text-[#2D2926] font-medium">{feature}</td>
-                  <td className="p-4 md:p-5 text-center text-[#8B7355]">{them}</td>
-                  <td className="p-4 md:p-5 text-center bg-[#E8F3ED]/60 text-[#1B4332] font-medium">{us}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {(() => {
+          const ROWS: [string, string, string][] = [
+            ['Endless swiping through faces', '✓ The core of the app', '✗ One thoughtful introduction at a time'],
+            ['Every member human-verified by live selfie', 'Optional or automated', '✓ Mandatory — nobody unverified appears'],
+            ['Values conversation before any chat', '✗ Chat opens instantly', '✓ 8 questions on deen, family & life first'],
+            ['Photos private until you match', '✗ Whole gallery public', '✓ Only one photo public — rest unlock on match'],
+            ['Wali / family involvement', '✗ Not part of the design', '✓ Built-in, with the wali\'s own consent'],
+            ['Limit on open conversations', '✗ Unlimited — quantity wins', '✓ Max 3 — quality wins'],
+            ['Built for the Somali community', '✗ Generic', '✓ Deen iyo dhaqan, by design'],
+            ['Pressure to pay to be seen', 'Boosts, gold tiers, ads', '✗ None of that'],
+          ];
+          return (
+            <>
+              {/* Mobile: stacked cards (a 3-column table can't fit a phone) */}
+              <div className="sm:hidden space-y-3">
+                {ROWS.map(([feature, them, us]) => (
+                  <div key={feature} className="bg-white rounded-2xl border border-[#E5E0D8] shadow-sm overflow-hidden">
+                    <p className="px-4 pt-3.5 pb-2 text-sm font-semibold text-[#2D2926] leading-snug">{feature}</p>
+                    <div className="px-4 pb-2 flex items-start gap-2 text-[13px] text-[#8B7355]">
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider mt-0.5 w-16">Others</span>
+                      <span className="leading-snug">{them}</span>
+                    </div>
+                    <div className="px-4 py-2.5 flex items-start gap-2 text-[13px] bg-[#E8F3ED]/70 text-[#1B4332] font-medium">
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider mt-0.5 w-16">Kulmi</span>
+                      <span className="leading-snug">{us}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop / tablet: the full table */}
+              <div className="hidden sm:block overflow-x-auto rounded-3xl border border-[#E5E0D8] shadow-sm bg-white">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead>
+                    <tr className="border-b border-[#E5E0D8]">
+                      <th className="text-left p-4 md:p-5 font-medium text-[#8B7355] w-1/2"></th>
+                      <th className="p-4 md:p-5 text-center font-serif text-base text-[#8B7355]">Muslim swipe apps</th>
+                      <th className="p-4 md:p-5 text-center bg-[#1B4332] text-white font-serif text-base rounded-t-none">Kulmi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F0EEE8]">
+                    {ROWS.map(([feature, them, us]) => (
+                      <tr key={feature}>
+                        <td className="p-4 md:p-5 text-[#2D2926] font-medium">{feature}</td>
+                        <td className="p-4 md:p-5 text-center text-[#8B7355]">{them}</td>
+                        <td className="p-4 md:p-5 text-center bg-[#E8F3ED]/60 text-[#1B4332] font-medium">{us}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          );
+        })()}
         <p className="text-center text-[11px] text-[#8B7355] mt-4">Comparison reflects the typical design of swipe-based apps; features vary by app.</p>
       </section>
 
       {/* CTA */}
       <section className="w-full max-w-3xl mx-auto text-center py-24 px-6">
-        <h2 className="text-4xl font-serif text-[#1B4332] mb-6">Ready to find your match?</h2>
+        <h2 className="text-3xl sm:text-4xl font-serif text-[#1B4332] mb-6">Ready to find your match?</h2>
         <p className="text-[#5C574F] mb-10 leading-relaxed max-w-lg mx-auto">
           Join a community of serious individuals looking for marriage built on shared values and mutual respect.
         </p>
