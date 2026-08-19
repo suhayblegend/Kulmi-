@@ -355,6 +355,7 @@ function MemberApp() {
       const p = window.location.pathname.replace(/\/+$/, '') || '/';
       if (p === ADMIN_PATH || p === '/wali') { window.location.href = p; return; } // hand off to the separate staff area
       const target = pathToState(p);
+      if (target === 'auth') setAuthMode(pathWantsSignup(p) ? 'signup' : 'signin');
       if (target) setAppState(target);
       else if (p !== '/') setAppState('notfound');
     };
